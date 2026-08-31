@@ -1,0 +1,408 @@
+<title>Do zrobienia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F1F4F2;
+    --surface: #FFFFFF;
+    --surface-2: #E7ECE9;
+    --text: #172420;
+    --text-muted: #5B6D67;
+    --border: #D7DED9;
+    --accent: #2F6F6B;
+    --accent-text: #FFFFFF;
+    --accent-soft: #DCEAE7;
+    --danger: #B5503A;
+    --danger-soft: #F3DED7;
+    --shadow: 0 1px 2px rgba(23, 36, 32, 0.06), 0 8px 24px -12px rgba(23, 36, 32, 0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1B18;
+      --surface: #142925;
+      --surface-2: #1B332E;
+      --text: #E7EFEC;
+      --text-muted: #93A9A3;
+      --border: #244039;
+      --accent: #55B0A7;
+      --accent-text: #08211D;
+      --accent-soft: #1D3A34;
+      --danger: #E08867;
+      --danger-soft: #3A241D;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0E1B18;
+    --surface: #142925;
+    --surface-2: #1B332E;
+    --text: #E7EFEC;
+    --text-muted: #93A9A3;
+    --border: #244039;
+    --accent: #55B0A7;
+    --accent-text: #08211D;
+    --accent-soft: #1D3A34;
+    --danger: #E08867;
+    --danger-soft: #3A241D;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app {
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 28px 20px 16px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.75rem;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .counter {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+
+  main {
+    flex: 1;
+    padding: 12px 20px 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .empty {
+    margin-top: 20vh;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .empty .glyph {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 2rem;
+    font-style: italic;
+    color: var(--text);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px 8px 6px 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+    animation: rise 0.2s ease-out;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    li { animation: none; }
+  }
+
+  .check {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: transparent;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .check svg { width: 18px; height: 18px; }
+
+  li.done .check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .task-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.4;
+    padding: 8px 0;
+    word-break: break-word;
+    cursor: pointer;
+  }
+
+  li.done .task-text {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-muted);
+  }
+
+  .delete {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .delete:hover { background: var(--danger-soft); color: var(--danger); }
+  .delete svg { width: 18px; height: 18px; }
+
+  .composer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+  }
+
+  .composer form {
+    max-width: 480px;
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .composer input {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .composer input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .composer input::placeholder { color: var(--text-muted); }
+
+  .composer button {
+    flex-shrink: 0;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 12px;
+    width: 48px;
+    font-size: 1.4rem;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .composer button:focus-visible,
+  .check:focus-visible,
+  .delete:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .composer button:disabled { opacity: 0.5; cursor: default; }
+
+  .clear-done {
+    align-self: center;
+    margin-top: 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    padding: 8px;
+  }
+</style>
+
+<div class="app">
+  <header>
+    <h1>Do zrobienia</h1>
+    <span class="counter" id="counter">0/0</span>
+  </header>
+  <main>
+    <div class="empty" id="empty">
+      <span class="glyph">Pusto</span>
+      Dodaj pierwsze zadanie poniżej.
+    </div>
+    <ul id="list"></ul>
+    <button class="clear-done" id="clearDone" hidden>Usuń ukończone</button>
+  </main>
+  <div class="composer">
+    <form id="form">
+      <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
+      <button type="submit" aria-label="Dodaj zadanie">+</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "todo-app-tasks";
+
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveTasks(tasks) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch (e) {}
+  }
+
+  let tasks = loadTasks();
+
+  const listEl = document.getElementById("list");
+  const emptyEl = document.getElementById("empty");
+  const counterEl = document.getElementById("counter");
+  const formEl = document.getElementById("form");
+  const inputEl = document.getElementById("input");
+  const clearDoneEl = document.getElementById("clearDone");
+
+  const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+
+  function render() {
+    listEl.innerHTML = "";
+    const doneCount = tasks.filter(t => t.done).length;
+    counterEl.textContent = doneCount + "/" + tasks.length;
+    emptyEl.hidden = tasks.length > 0;
+    clearDoneEl.hidden = doneCount === 0;
+
+    for (const task of tasks) {
+      const li = document.createElement("li");
+      li.className = task.done ? "done" : "";
+      li.dataset.id = task.id;
+
+      const check = document.createElement("button");
+      check.className = "check";
+      check.setAttribute("aria-label", task.done ? "Oznacz jako niezrobione" : "Oznacz jako zrobione");
+      check.innerHTML = checkIcon;
+      check.addEventListener("click", () => toggleTask(task.id));
+
+      const text = document.createElement("span");
+      text.className = "task-text";
+      text.textContent = task.text;
+      text.addEventListener("click", () => toggleTask(task.id));
+
+      const del = document.createElement("button");
+      del.className = "delete";
+      del.setAttribute("aria-label", "Usuń zadanie");
+      del.innerHTML = trashIcon;
+      del.addEventListener("click", () => deleteTask(task.id));
+
+      li.append(check, text, del);
+      listEl.appendChild(li);
+    }
+  }
+
+  function toggleTask(id) {
+    tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    saveTasks(tasks);
+    render();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks(tasks);
+    render();
+  }
+
+  formEl.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = inputEl.value.trim();
+    if (!text) return;
+    tasks.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2), text, done: false });
+    saveTasks(tasks);
+    inputEl.value = "";
+    render();
+  });
+
+  clearDoneEl.addEventListener("click", () => {
+    tasks = tasks.filter(t => !t.done);
+    saveTasks(tasks);
+    render();
+  });
+
+  render();
+</script>
