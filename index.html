@@ -767,7 +767,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc,
-    onSnapshot, query, orderBy, where, arrayUnion, arrayRemove, increment
+    onSnapshot, query, orderBy, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -997,12 +997,15 @@
   }
 
   async function deleteCustomList(list) {
-    if (!confirm('Usunąć listę "' + list.name + '"? Zadania z niej wrócą do zwykłych kategorii ważności.')) return;
+    if (!confirm('Usunąć listę "' + list.name + '"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.')) return;
     const affected = tasks.filter(t => t.customListId === list.id && t.ownerEmail === myEmail);
     for (const t of affected) {
       try { await updateDoc(doc(db, "tasks", t.id), { customListId: null }); } catch (e) {}
     }
     if (selectedCustomListId === list.id) selectedCustomListId = null;
+    try {
+      await updateDoc(doc(db, "stats", myEmail), { ["lists." + list.id]: deleteField() });
+    } catch (e) {}
     try { await deleteDoc(doc(db, "custom_lists", list.id)); } catch (e) {
       showStatus("Nie udało się usunąć listy.");
     }
