@@ -175,6 +175,7 @@
 
   .tabs {
     display: flex;
+    justify-content: flex-end;
     gap: 6px;
     overflow-x: auto;
     padding-bottom: 2px;
@@ -203,6 +204,36 @@
     border-color: var(--accent);
     color: var(--accent-text);
   }
+
+  .stats-strip {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .stats-strip::-webkit-scrollbar { display: none; }
+
+  .stat-pill {
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.74rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .stat-pill .n { color: var(--text); font-weight: 600; }
+  .stat-pill .h { color: var(--gold); }
 
   .whoami {
     display: flex;
@@ -574,6 +605,7 @@
       <span class="counter" id="counter">0/0</span>
     </div>
     <div class="tabs" id="tabs"></div>
+    <div class="stats-strip" id="statsStrip"></div>
     <div class="whoami">
       Zalogowano jako <strong id="whoamiName">—</strong>
       <button type="button" id="signOutBtn">Wyloguj</button>
@@ -624,8 +656,8 @@
     getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
-    onSnapshot, query, orderBy, where, arrayUnion, arrayRemove
+    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc,
+    onSnapshot, query, orderBy, where, arrayUnion, arrayRemove, increment
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -649,7 +681,9 @@
   let unsubTasks = null;
   let unsubRoster = null;
   let unsubCustomLists = null;
+  let unsubStats = null;
   let customLists = [];          // my own private custom lists [{id, name}]
+  let myStats = {};              // lifetime completion stats, keyed by quadrant/list
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -682,6 +716,7 @@
   const newListOverlay = document.getElementById("newListOverlay");
   const newListForm = document.getElementById("newListForm");
   const newListInput = document.getElementById("newListInput");
+  const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -729,6 +764,60 @@
   function nameFor(email) {
     const person = roster.find(p => p.email === email);
     return person ? person.name : email;
+  }
+
+  function quadrantKey(task) {
+    if (task.important && !task.urgent) return "q2";
+    if (task.important && task.urgent) return "q1";
+    if (!task.important && task.urgent) return "q3";
+    return "q4";
+  }
+
+  const QUADRANT_ICON = { q2: "🎯", q1: "🔥", q3: "⏱", q4: "💤" };
+
+  async function bumpStats(task, delta) {
+    if (!myEmail) return;
+    const ref = doc(db, "stats", myEmail);
+    const habitDelta = task.isHabit ? delta : 0;
+    try {
+      if (task.customListId) {
+        const listName = (customLists.find(l => l.id === task.customListId) || {}).name || "";
+        await setDoc(ref, {
+          lists: { [task.customListId]: { total: increment(delta), habit: increment(habitDelta), name: listName } }
+        }, { merge: true });
+      } else {
+        const key = quadrantKey(task);
+        await setDoc(ref, {
+          [key]: { total: increment(delta), habit: increment(habitDelta) }
+        }, { merge: true });
+      }
+    } catch (e) {}
+  }
+
+  function renderStats() {
+    statsStripEl.innerHTML = "";
+    for (const key of ["q2", "q1", "q3", "q4"]) {
+      const s = myStats[key] || {};
+      const total = s.total || 0;
+      if (total === 0) continue;
+      const pill = document.createElement("span");
+      pill.className = "stat-pill";
+      pill.innerHTML = QUADRANT_ICON[key] + ' <span class="n">' + total + "</span>" +
+        (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
+      statsStripEl.appendChild(pill);
+    }
+    const lists = myStats.lists || {};
+    for (const listId of Object.keys(lists)) {
+      const s = lists[listId] || {};
+      const total = s.total || 0;
+      if (total === 0) continue;
+      const pill = document.createElement("span");
+      pill.className = "stat-pill";
+      const label = (s.name || "").slice(0, 3);
+      pill.innerHTML = "📁" + label + ' <span class="n">' + total + "</span>" +
+        (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
+      statsStripEl.appendChild(pill);
+    }
   }
 
   function updateComposerPlaceholder() {
@@ -875,6 +964,7 @@
   async function toggleTask(task, wasDone) {
     try {
       await updateDoc(doc(db, "tasks", task.id), { done: !wasDone });
+      bumpStats(task, wasDone ? -1 : 1);
       if (!wasDone && task.important && task.urgent) {
         const stillOpenQ2 = tasks.some(t => t.ownerEmail === myEmail && t.important && !t.urgent && !isDoneNow(t));
         if (stillOpenQ2) showNudge("Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯");
@@ -890,6 +980,7 @@
       await updateDoc(ref, {
         completedDates: wasDoneToday ? arrayRemove(todayStr()) : arrayUnion(todayStr())
       });
+      bumpStats(task, wasDoneToday ? -1 : 1);
       if (!wasDoneToday && task.important && task.urgent) {
         const stillOpenQ2 = tasks.some(t => t.ownerEmail === myEmail && t.important && !t.urgent && !isDoneNow(t));
         if (stillOpenQ2) showNudge("Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯");
@@ -982,6 +1073,7 @@
     if (unsubTasks) { unsubTasks(); unsubTasks = null; }
     if (unsubRoster) { unsubRoster(); unsubRoster = null; }
     if (unsubCustomLists) { unsubCustomLists(); unsubCustomLists = null; }
+    if (unsubStats) { unsubStats(); unsubStats = null; }
   }
 
   function showGate(which) {
@@ -1033,6 +1125,11 @@
       customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderCustomChips();
       renderList();
+    });
+
+    unsubStats = onSnapshot(doc(db, "stats", myEmail), (snap) => {
+      myStats = snap.exists() ? snap.data() : {};
+      renderStats();
     });
 
     const q = query(collection(db, "tasks"), orderBy("createdAt"));
