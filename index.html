@@ -173,8 +173,41 @@
     white-space: nowrap;
   }
 
+  .identity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .greeting {
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .greeting strong { color: var(--text); font-weight: 600; }
+
+  .greeting button {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 0.78rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    padding: 2px;
+  }
+
   .tabs {
     display: flex;
+    flex: 1;
+    min-width: 0;
     justify-content: flex-end;
     gap: 6px;
     overflow-x: auto;
@@ -234,26 +267,6 @@
 
   .stat-pill .n { color: var(--text); font-weight: 600; }
   .stat-pill .h { color: var(--gold); }
-
-  .whoami {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.82rem;
-    color: var(--text-muted);
-  }
-
-  .whoami button {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-family: inherit;
-    font-size: 0.82rem;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    cursor: pointer;
-    padding: 4px;
-  }
 
   .status-note {
     font-size: 0.78rem;
@@ -440,8 +453,19 @@
 
   .composer-inner { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
 
-  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-  .chip-row.custom-chips { gap: 6px; }
+  .chip-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .chip-row::-webkit-scrollbar { display: none; }
+
+  .custom-chips { display: flex; flex-wrap: nowrap; gap: 6px; flex-shrink: 0; }
 
   .chip.newlist {
     background: none;
@@ -449,6 +473,7 @@
   }
 
   .chip {
+    flex-shrink: 0;
     background: var(--surface-2);
     border: 1px solid var(--border);
     color: var(--text-muted);
@@ -457,6 +482,7 @@
     font-size: 0.8rem;
     font-family: inherit;
     cursor: pointer;
+    white-space: nowrap;
   }
 
   .chip.on.important { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
@@ -485,14 +511,68 @@
     box-shadow: var(--shadow);
   }
 
+  .overlay-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
   .overlay-card h2 {
     font-family: "Fraunces", Georgia, serif;
     font-weight: 600;
     font-size: 1.3rem;
-    margin: 0 0 6px;
+    margin: 0;
+  }
+
+  .overlay-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
   }
 
   .overlay-card p { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 16px; line-height: 1.4; }
+
+  .existing-lists {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .existing-lists li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 8px 8px 12px;
+    font-size: 0.92rem;
+  }
+
+  .existing-lists .del-list {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+  }
+
+  .existing-lists .del-list:hover { background: var(--danger-soft); color: var(--danger); }
+  .existing-lists .del-list svg { width: 16px; height: 16px; }
 
   .overlay-card form { display: flex; flex-direction: column; gap: 12px; }
 
@@ -557,7 +637,7 @@
   .composer-inner button:focus-visible,
   .check:focus-visible,
   .delete:focus-visible,
-  .whoami button:focus-visible,
+  .greeting button:focus-visible,
   .chip:focus-visible,
   .tab:focus-visible {
     outline: 2px solid var(--accent);
@@ -604,12 +684,13 @@
       <h1>Do zrobienia</h1>
       <span class="counter" id="counter">0/0</span>
     </div>
-    <div class="tabs" id="tabs"></div>
-    <div class="stats-strip" id="statsStrip"></div>
-    <div class="whoami">
-      Zalogowano jako <strong id="whoamiName">—</strong>
-      <button type="button" id="signOutBtn">Wyloguj</button>
+    <div class="identity-row">
+      <div class="greeting">
+        Cześć <strong id="whoamiName">—</strong>! <button type="button" id="signOutBtn">Wyloguj</button>
+      </div>
+      <div class="tabs" id="tabs"></div>
     </div>
+    <div class="stats-strip" id="statsStrip"></div>
     <div class="status-note" id="statusNote"></div>
   </header>
   <main>
@@ -623,8 +704,8 @@
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
       <div class="chip-row" id="chipRow">
-        <div class="chip-row custom-chips" id="customChips"></div>
-        <button type="button" class="chip newlist" id="chipNewList" hidden>+ Lista</button>
+        <button type="button" class="chip newlist" id="chipNewList" hidden>Listy</button>
+        <div class="custom-chips" id="customChips"></div>
         <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
         <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
         <button type="button" class="chip important" id="chipImportant">Ważne</button>
@@ -639,10 +720,14 @@
 
 <div class="overlay" id="newListOverlay" hidden>
   <div class="overlay-card">
-    <h2>Nowa lista</h2>
-    <p>Własna kategoria zadań, widoczna tylko dla Ciebie — druga osoba jej nie zobaczy.</p>
+    <div class="overlay-head">
+      <h2>Twoje listy</h2>
+      <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Zamknij">✕</button>
+    </div>
+    <p>Prywatne kategorie zadań — widoczne tylko dla Ciebie.</p>
+    <ul class="existing-lists" id="existingLists"></ul>
     <form id="newListForm">
-      <input id="newListInput" type="text" placeholder="Nazwa listy" autocomplete="off" maxlength="40" required>
+      <input id="newListInput" type="text" placeholder="Nazwa nowej listy" autocomplete="off" maxlength="40">
       <button type="submit">Dodaj</button>
     </form>
   </div>
@@ -716,6 +801,8 @@
   const newListOverlay = document.getElementById("newListOverlay");
   const newListForm = document.getElementById("newListForm");
   const newListInput = document.getElementById("newListInput");
+  const existingListsEl = document.getElementById("existingLists");
+  const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
@@ -841,6 +928,35 @@
         renderCustomChips();
       });
       customChipsEl.appendChild(btn);
+    }
+  }
+
+  function renderExistingLists() {
+    existingListsEl.innerHTML = "";
+    for (const list of customLists) {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = list.name;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "del-list";
+      del.setAttribute("aria-label", "Usuń listę " + list.name);
+      del.innerHTML = trashIcon;
+      del.addEventListener("click", () => deleteCustomList(list));
+      li.append(name, del);
+      existingListsEl.appendChild(li);
+    }
+  }
+
+  async function deleteCustomList(list) {
+    if (!confirm('Usunąć listę "' + list.name + '"? Zadania z niej wrócą do zwykłych kategorii ważności.')) return;
+    const affected = tasks.filter(t => t.customListId === list.id && t.ownerEmail === myEmail);
+    for (const t of affected) {
+      try { await updateDoc(doc(db, "tasks", t.id), { customListId: null }); } catch (e) {}
+    }
+    if (selectedCustomListId === list.id) selectedCustomListId = null;
+    try { await deleteDoc(doc(db, "custom_lists", list.id)); } catch (e) {
+      showStatus("Nie udało się usunąć listy.");
     }
   }
 
@@ -1034,17 +1150,28 @@
   setChip(chipUrgent, "urgent");
   setChip(chipHabit, "habit");
 
-  chipNewList.addEventListener("click", () => {
+  function openListOverlay() {
     newListInput.value = "";
+    renderExistingLists();
     newListOverlay.hidden = false;
     newListInput.focus();
+  }
+
+  function closeListOverlay() {
+    newListOverlay.hidden = true;
+  }
+
+  chipNewList.addEventListener("click", openListOverlay);
+  closeListOverlayBtn.addEventListener("click", closeListOverlay);
+  newListOverlay.addEventListener("click", (e) => {
+    if (e.target === newListOverlay) closeListOverlay();
   });
 
   newListForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = newListInput.value.trim();
     if (!name || !myEmail) return;
-    newListOverlay.hidden = true;
+    newListInput.value = "";
     try {
       await addDoc(collection(db, "custom_lists"), {
         name,
@@ -1125,6 +1252,7 @@
       customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderCustomChips();
       renderList();
+      if (!newListOverlay.hidden) renderExistingLists();
     });
 
     unsubStats = onSnapshot(doc(db, "stats", myEmail), (snap) => {
