@@ -29,7 +29,7 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #0E1B18;
       --surface: #142925;
       --surface-2: #1B332E;
@@ -47,6 +47,25 @@
       --gold-soft: #3A2E13;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
     }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0E1B18;
+    --surface: #142925;
+    --surface-2: #1B332E;
+    --text: #E7EFEC;
+    --text-muted: #93A9A3;
+    --border: #244039;
+    --accent: #55B0A7;
+    --accent-text: #08211D;
+    --accent-soft: #1D3A34;
+    --danger: #E08867;
+    --danger-soft: #3A241D;
+    --warn: #D9BE72;
+    --warn-soft: #362D18;
+    --gold: #E0BE6E;
+    --gold-soft: #3A2E13;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   }
 
   * { box-sizing: border-box; }
@@ -658,6 +677,27 @@
 
   .reset-stats-btn:hover { color: var(--danger); border-color: var(--danger); }
 
+  .theme-row { display: flex; gap: 6px; margin-bottom: 4px; }
+
+  .theme-btn {
+    flex: 1;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 10px;
+    padding: 9px 6px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .theme-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
   .overlay-card input {
     width: 100%;
     background: var(--surface-2);
@@ -819,6 +859,13 @@
       <button type="submit" class="primary-btn">Zapisz nazwy</button>
     </form>
     <div class="overlay-divider"></div>
+    <p>Wygląd aplikacji.</p>
+    <div class="theme-row" id="themeRow">
+      <button type="button" class="theme-btn" data-theme-choice="system">Systemowy</button>
+      <button type="button" class="theme-btn" data-theme-choice="light">Jasny</button>
+      <button type="button" class="theme-btn" data-theme-choice="dark">Ciemny</button>
+    </div>
+    <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
   </div>
 </div>
@@ -857,8 +904,10 @@
   let unsubRoster = null;
   let unsubCustomLists = null;
   let unsubStats = null;
+  let unsubUiState = null;
   let customLists = [];          // my own private custom lists [{id, name}]
   let viewedStats = {};          // lifetime completion stats of whichever tab is active
+  let collapsedSections = {};    // my own section-collapse preferences, synced across devices
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -894,6 +943,7 @@
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
+  const themeButtons = document.querySelectorAll(".theme-btn");
   const listsForLabelEl = document.getElementById("listsForLabel");
   const renameForm = document.getElementById("renameForm");
   const renameFieldsEl = document.getElementById("renameFields");
@@ -941,6 +991,31 @@
     modalErrorEl.textContent = "Błąd (" + err.code + "): " + err.message;
     modalErrorEl.hidden = false;
   }
+
+  const THEME_STORAGE_KEY = "todo-app-theme";
+
+  function applyTheme(choice) {
+    if (choice === "system") {
+      delete document.documentElement.dataset.theme;
+    } else {
+      document.documentElement.dataset.theme = choice;
+    }
+    try { localStorage.setItem(THEME_STORAGE_KEY, choice); } catch (e) {}
+    for (const btn of themeButtons) {
+      btn.classList.toggle("active", btn.dataset.themeChoice === choice);
+    }
+  }
+
+  function initTheme() {
+    let choice = "system";
+    try { choice = localStorage.getItem(THEME_STORAGE_KEY) || "system"; } catch (e) {}
+    applyTheme(choice);
+  }
+
+  for (const btn of themeButtons) {
+    btn.addEventListener("click", () => applyTheme(btn.dataset.themeChoice));
+  }
+  initTheme();
 
   function showNudge(message) {
     nudgeEl.textContent = message;
@@ -1212,20 +1287,27 @@
     return li;
   }
 
-  const COLLAPSE_STORAGE_KEY = "todo-app-collapsed-sections";
-
-  function getCollapsedMap() {
-    try { return JSON.parse(localStorage.getItem(COLLAPSE_STORAGE_KEY) || "{}"); } catch (e) { return {}; }
-  }
-
   function isSectionCollapsed(key) {
-    return !!getCollapsedMap()[key];
+    return !!collapsedSections[key];
   }
 
-  function toggleSectionCollapsed(key) {
-    const map = getCollapsedMap();
-    if (map[key]) delete map[key]; else map[key] = true;
-    try { localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+  function subscribeUiState(email) {
+    if (unsubUiState) unsubUiState();
+    unsubUiState = onSnapshot(doc(db, "ui_state", email), (snap) => {
+      collapsedSections = (snap.exists() && snap.data().collapsedSections) || {};
+      renderList();
+    });
+  }
+
+  async function toggleSectionCollapsed(key) {
+    const newValue = !collapsedSections[key];
+    collapsedSections = { ...collapsedSections, [key]: newValue };
+    renderList();
+    try {
+      await setDoc(doc(db, "ui_state", myEmail), { collapsedSections: { [key]: newValue } }, { merge: true });
+    } catch (e) {
+      showStatus("Nie udało się zapisać stanu sekcji.");
+    }
   }
 
   function renderGroup(title, list, isMine, muted, featured, collapseKey) {
@@ -1263,10 +1345,7 @@
     chevron.textContent = "▾";
     titleEl.appendChild(chevron);
 
-    titleEl.addEventListener("click", () => {
-      toggleSectionCollapsed(storageKey);
-      renderList();
-    });
+    titleEl.addEventListener("click", () => toggleSectionCollapsed(storageKey));
 
     group.appendChild(titleEl);
     if (!collapsed) {
@@ -1443,6 +1522,7 @@
     if (unsubRoster) { unsubRoster(); unsubRoster = null; }
     if (unsubCustomLists) { unsubCustomLists(); unsubCustomLists = null; }
     if (unsubStats) { unsubStats(); unsubStats = null; }
+    if (unsubUiState) { unsubUiState(); unsubUiState = null; }
   }
 
   function showGate(which) {
@@ -1493,6 +1573,7 @@
 
     subscribeCustomLists(myEmail);
     subscribeStats(myEmail);
+    subscribeUiState(myEmail);
 
     const q = query(collection(db, "tasks"), orderBy("createdAt"));
     unsubTasks = onSnapshot(q, (snap) => {
