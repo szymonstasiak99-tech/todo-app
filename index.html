@@ -206,9 +206,9 @@
 
   .tabs {
     display: flex;
+    direction: rtl;
     flex: 1;
     min-width: 0;
-    justify-content: flex-end;
     gap: 6px;
     overflow-x: auto;
     padding-bottom: 2px;
@@ -219,6 +219,7 @@
   .tabs::-webkit-scrollbar { display: none; }
 
   .tab {
+    direction: ltr;
     flex-shrink: 0;
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -240,7 +241,7 @@
 
   .stats-strip {
     display: flex;
-    justify-content: flex-end;
+    direction: rtl;
     gap: 5px;
     overflow-x: auto;
     -ms-overflow-style: none;
@@ -250,6 +251,7 @@
   .stats-strip::-webkit-scrollbar { display: none; }
 
   .stat-pill {
+    direction: ltr;
     flex-shrink: 0;
     display: flex;
     align-items: baseline;
@@ -267,6 +269,12 @@
 
   .stat-pill .n { color: var(--text); font-weight: 600; }
   .stat-pill .h { color: var(--gold); }
+
+  .reset-stats {
+    background: none;
+    border-style: dashed;
+    color: var(--text-muted);
+  }
 
   .status-note {
     font-size: 0.78rem;
@@ -455,9 +463,9 @@
 
   .chip-row {
     display: flex;
+    direction: rtl;
     flex-wrap: nowrap;
     gap: 6px;
-    justify-content: flex-end;
     overflow-x: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -473,6 +481,7 @@
   }
 
   .chip {
+    direction: ltr;
     flex-shrink: 0;
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -686,7 +695,7 @@
     </div>
     <div class="identity-row">
       <div class="greeting">
-        Cześć <strong id="whoamiName">—</strong>! <button type="button" id="signOutBtn">Wyloguj</button>
+        Cześć <strong id="whoamiName">—</strong> <button type="button" id="signOutBtn">Wyloguj</button>
       </div>
       <div class="tabs" id="tabs"></div>
     </div>
@@ -704,11 +713,11 @@
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
       <div class="chip-row" id="chipRow">
-        <button type="button" class="chip newlist" id="chipNewList" hidden>Listy</button>
-        <div class="custom-chips" id="customChips"></div>
-        <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
-        <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
         <button type="button" class="chip important" id="chipImportant">Ważne</button>
+        <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
+        <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
+        <div class="custom-chips" id="customChips"></div>
+        <button type="button" class="chip newlist" id="chipNewList" hidden>Listy</button>
       </div>
       <form id="form">
         <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
@@ -768,7 +777,7 @@
   let unsubCustomLists = null;
   let unsubStats = null;
   let customLists = [];          // my own private custom lists [{id, name}]
-  let myStats = {};              // lifetime completion stats, keyed by quadrant/list
+  let viewedStats = {};          // lifetime completion stats of whichever tab is active
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -884,7 +893,7 @@
   function renderStats() {
     statsStripEl.innerHTML = "";
     for (const key of ["q2", "q1", "q3", "q4"]) {
-      const s = myStats[key] || {};
+      const s = viewedStats[key] || {};
       const total = s.total || 0;
       if (total === 0) continue;
       const pill = document.createElement("span");
@@ -893,7 +902,7 @@
         (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
       statsStripEl.appendChild(pill);
     }
-    const lists = myStats.lists || {};
+    const lists = viewedStats.lists || {};
     for (const listId of Object.keys(lists)) {
       const s = lists[listId] || {};
       const total = s.total || 0;
@@ -904,6 +913,31 @@
       pill.innerHTML = "📁" + label + ' <span class="n">' + total + "</span>" +
         (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
       statsStripEl.appendChild(pill);
+    }
+    if (activeTab === myEmail) {
+      const resetBtn = document.createElement("button");
+      resetBtn.type = "button";
+      resetBtn.className = "stat-pill reset-stats";
+      resetBtn.textContent = "↺ reset";
+      resetBtn.addEventListener("click", resetStats);
+      statsStripEl.appendChild(resetBtn);
+    }
+  }
+
+  function subscribeStats(email) {
+    if (unsubStats) unsubStats();
+    unsubStats = onSnapshot(doc(db, "stats", email), (snap) => {
+      viewedStats = snap.exists() ? snap.data() : {};
+      renderStats();
+    });
+  }
+
+  async function resetStats() {
+    if (!confirm("Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.")) return;
+    try {
+      await setDoc(doc(db, "stats", myEmail), {});
+    } catch (e) {
+      showStatus("Nie udało się zresetować statystyk.");
     }
   }
 
@@ -968,7 +1002,7 @@
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
       btn.textContent = email === myEmail ? "Moje" : nameFor(email);
-      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); });
+      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); subscribeStats(email); });
       tabsEl.appendChild(btn);
     }
   }
@@ -1249,16 +1283,14 @@
 
     const customListsQuery = query(collection(db, "custom_lists"), where("creatorEmail", "==", myEmail));
     unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
-      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       renderCustomChips();
       renderList();
       if (!newListOverlay.hidden) renderExistingLists();
     });
 
-    unsubStats = onSnapshot(doc(db, "stats", myEmail), (snap) => {
-      myStats = snap.exists() ? snap.data() : {};
-      renderStats();
-    });
+    subscribeStats(myEmail);
 
     const q = query(collection(db, "tasks"), orderBy("createdAt"));
     unsubTasks = onSnapshot(q, (snap) => {
