@@ -251,12 +251,6 @@
   .stat-pill .n { color: var(--text); font-weight: 600; }
   .stat-pill .h { color: var(--gold); }
 
-  .reset-stats {
-    background: none;
-    border-style: dashed;
-    color: var(--text-muted);
-  }
-
   .status-note {
     font-size: 0.78rem;
     color: var(--warn);
@@ -566,6 +560,26 @@
 
   .overlay-card form { display: flex; flex-direction: column; gap: 12px; }
 
+  .overlay-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 18px 0 14px;
+  }
+
+  .reset-stats-btn {
+    width: 100%;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .reset-stats-btn:hover { color: var(--danger); border-color: var(--danger); }
+
   .overlay-card input {
     width: 100%;
     background: var(--surface-2);
@@ -717,6 +731,8 @@
       <input id="newListInput" type="text" placeholder="Nazwa nowej listy" autocomplete="off" maxlength="40">
       <button type="submit">Dodaj</button>
     </form>
+    <div class="overlay-divider"></div>
+    <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
   </div>
 </div>
 
@@ -789,6 +805,7 @@
   const newListInput = document.getElementById("newListInput");
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
+  const resetStatsBtnEl = document.getElementById("resetStatsBtn");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
@@ -891,14 +908,6 @@
         (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
       statsStripEl.appendChild(pill);
     }
-    if (activeTab === myEmail) {
-      const resetBtn = document.createElement("button");
-      resetBtn.type = "button";
-      resetBtn.className = "stat-pill reset-stats";
-      resetBtn.textContent = "↺ reset";
-      resetBtn.addEventListener("click", resetStats);
-      statsStripEl.appendChild(resetBtn);
-    }
   }
 
   function subscribeStats(email) {
@@ -913,6 +922,7 @@
     if (!confirm("Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.")) return;
     try {
       await setDoc(doc(db, "stats", myEmail), {});
+      closeListOverlay();
     } catch (e) {
       showStatus("Nie udało się zresetować statystyk.");
     }
@@ -1172,6 +1182,7 @@
 
   chipNewList.addEventListener("click", openListOverlay);
   closeListOverlayBtn.addEventListener("click", closeListOverlay);
+  resetStatsBtnEl.addEventListener("click", resetStats);
   newListOverlay.addEventListener("click", (e) => {
     if (e.target === newListOverlay) closeListOverlay();
   });
