@@ -409,7 +409,13 @@
 
   .composer-inner { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
 
-  .chip-row { display: flex; gap: 6px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .chip-row.custom-chips { gap: 6px; }
+
+  .chip.newlist {
+    background: none;
+    border-style: dashed;
+  }
 
   .chip {
     background: var(--surface-2);
@@ -425,6 +431,65 @@
   .chip.on.important { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
   .chip.on.urgent { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
   .chip.on.habit { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
+  .chip.on.list { background: var(--surface-2); border-color: var(--text); color: var(--text); }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(14, 27, 24, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+
+  .overlay-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: var(--shadow);
+  }
+
+  .overlay-card h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    margin: 0 0 6px;
+  }
+
+  .overlay-card p { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 16px; line-height: 1.4; }
+
+  .overlay-card form { display: flex; flex-direction: column; gap: 12px; }
+
+  .overlay-card input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .overlay-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .overlay-card button {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
 
   .composer-inner form { display: flex; gap: 8px; }
 
@@ -525,16 +590,29 @@
   </main>
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
-      <div class="chip-row">
-        <button type="button" class="chip important" id="chipImportant">Ważne</button>
-        <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
+      <div class="chip-row" id="chipRow">
+        <div class="chip-row custom-chips" id="customChips"></div>
+        <button type="button" class="chip newlist" id="chipNewList" hidden>+ Lista</button>
         <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
+        <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
+        <button type="button" class="chip important" id="chipImportant">Ważne</button>
       </div>
       <form id="form">
         <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
         <button type="submit" aria-label="Dodaj zadanie">+</button>
       </form>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="newListOverlay" hidden>
+  <div class="overlay-card">
+    <h2>Nowa lista</h2>
+    <p>Własna kategoria zadań, widoczna tylko dla Ciebie — druga osoba jej nie zobaczy.</p>
+    <form id="newListForm">
+      <input id="newListInput" type="text" placeholder="Nazwa listy" autocomplete="off" maxlength="40" required>
+      <button type="submit">Dodaj</button>
+    </form>
   </div>
 </div>
 
@@ -547,7 +625,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
-    onSnapshot, query, orderBy, arrayUnion, arrayRemove
+    onSnapshot, query, orderBy, where, arrayUnion, arrayRemove
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -570,10 +648,13 @@
   let activeTab = null;          // email of tab being viewed
   let unsubTasks = null;
   let unsubRoster = null;
+  let unsubCustomLists = null;
+  let customLists = [];          // my own private custom lists [{id, name}]
 
   let composerImportant = false;
   let composerUrgent = false;
   let composerHabit = false;
+  let selectedCustomListId = null;
 
   const signedOutGate = document.getElementById("signedOutGate");
   const notAllowedGate = document.getElementById("notAllowedGate");
@@ -596,6 +677,11 @@
   const chipImportant = document.getElementById("chipImportant");
   const chipUrgent = document.getElementById("chipUrgent");
   const chipHabit = document.getElementById("chipHabit");
+  const chipNewList = document.getElementById("chipNewList");
+  const customChipsEl = document.getElementById("customChips");
+  const newListOverlay = document.getElementById("newListOverlay");
+  const newListForm = document.getElementById("newListForm");
+  const newListInput = document.getElementById("newListInput");
   const nudgeEl = document.getElementById("nudge");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -647,6 +733,26 @@
 
   function updateComposerPlaceholder() {
     inputEl.placeholder = activeTab === myEmail ? "Nowe zadanie…" : "Nowe zadanie dla: " + nameFor(activeTab) + "…";
+    const isMine = activeTab === myEmail;
+    chipNewList.hidden = !isMine;
+    customChipsEl.hidden = !isMine;
+    if (!isMine) selectedCustomListId = null;
+    renderCustomChips();
+  }
+
+  function renderCustomChips() {
+    customChipsEl.innerHTML = "";
+    for (const list of customLists) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip list" + (selectedCustomListId === list.id ? " on list" : "");
+      btn.textContent = list.name;
+      btn.addEventListener("click", () => {
+        selectedCustomListId = selectedCustomListId === list.id ? null : list.id;
+        renderCustomChips();
+      });
+      customChipsEl.appendChild(btn);
+    }
   }
 
   function renderTabs() {
@@ -741,14 +847,26 @@
     counterEl.textContent = doneCount + "/" + tabTasks.length;
     emptyEl.hidden = tabTasks.length > 0;
 
-    const q2 = tabTasks.filter(t => t.important && !t.urgent);
-    const q1 = tabTasks.filter(t => t.important && t.urgent);
-    const rest = tabTasks.filter(t => !t.important);
+    const untagged = tabTasks.filter(t => !t.customListId);
+    const q2 = untagged.filter(t => t.important && !t.urgent);
+    const q1 = untagged.filter(t => t.important && t.urgent);
+    const rest = untagged.filter(t => !t.important);
 
     const g2 = renderGroup("🎯 Najważniejsze (niepilne, ważne)", q2, isMine, false, true);
     const g1 = renderGroup("Pilne i ważne", q1, isMine, false, false);
+    if (g2) groupsEl.appendChild(g2);
+    if (g1) groupsEl.appendChild(g1);
+
+    if (isMine) {
+      for (const list of customLists) {
+        const listTasks = tabTasks.filter(t => t.customListId === list.id);
+        const g = renderGroup(list.name, listTasks, isMine, false, false);
+        if (g) groupsEl.appendChild(g);
+      }
+    }
+
     const g3 = renderGroup("Pozostałe", rest, isMine, true, false);
-    for (const g of [g2, g1, g3]) if (g) groupsEl.appendChild(g);
+    if (g3) groupsEl.appendChild(g3);
 
     const deletableDone = tabTasks.filter(t => !t.isHabit && t.done && t.createdByEmail === myEmail).length;
     clearDoneEl.hidden = deletableDone === 0;
@@ -798,6 +916,7 @@
         urgent: composerUrgent,
         isHabit: composerHabit,
         completedDates: [],
+        customListId: activeTab === myEmail ? selectedCustomListId : null,
         ownerEmail: activeTab,
         createdByEmail: myEmail,
         createdAt: Date.now()
@@ -824,6 +943,28 @@
   setChip(chipUrgent, "urgent");
   setChip(chipHabit, "habit");
 
+  chipNewList.addEventListener("click", () => {
+    newListInput.value = "";
+    newListOverlay.hidden = false;
+    newListInput.focus();
+  });
+
+  newListForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = newListInput.value.trim();
+    if (!name || !myEmail) return;
+    newListOverlay.hidden = true;
+    try {
+      await addDoc(collection(db, "custom_lists"), {
+        name,
+        creatorEmail: myEmail,
+        createdAt: Date.now()
+      });
+    } catch (e) {
+      showStatus("Nie udało się utworzyć listy.");
+    }
+  });
+
   signInBtn.addEventListener("click", async () => {
     authErrorEl.hidden = true;
     try {
@@ -840,6 +981,7 @@
   function teardownSubscriptions() {
     if (unsubTasks) { unsubTasks(); unsubTasks = null; }
     if (unsubRoster) { unsubRoster(); unsubRoster = null; }
+    if (unsubCustomLists) { unsubCustomLists(); unsubCustomLists = null; }
   }
 
   function showGate(which) {
@@ -883,6 +1025,13 @@
     unsubRoster = onSnapshot(collection(db, "allowed_users"), (snap) => {
       roster = snap.docs.map(d => ({ email: d.id, name: d.data().name || d.id }));
       renderTabs();
+      renderList();
+    });
+
+    const customListsQuery = query(collection(db, "custom_lists"), where("creatorEmail", "==", myEmail));
+    unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
+      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderCustomChips();
       renderList();
     });
 
