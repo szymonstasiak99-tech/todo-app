@@ -746,7 +746,7 @@
         <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
         <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
         <div class="custom-chips" id="customChips"></div>
-        <button type="button" class="chip newlist" id="chipNewList" hidden>Edytuj</button>
+        <button type="button" class="chip newlist" id="chipNewList">Edytuj</button>
       </div>
       <form id="form">
         <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
@@ -762,10 +762,10 @@
       <h2>Listy i zakładki</h2>
       <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Zamknij">✕</button>
     </div>
-    <p>Prywatne kategorie zadań — widoczne tylko dla Ciebie.</p>
+    <p id="listsForLabel">Kategorie zadań.</p>
     <ul class="existing-lists" id="existingLists"></ul>
     <form id="newListForm">
-      <input id="newListInput" type="text" placeholder="Nazwa nowej listy" autocomplete="off" maxlength="40">
+      <input id="newListInput" type="text" placeholder="Nazwa nowej kategorii" autocomplete="off" maxlength="40">
       <button type="submit" class="primary-btn">Dodaj</button>
     </form>
     <div class="overlay-divider"></div>
@@ -849,6 +849,7 @@
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
+  const listsForLabelEl = document.getElementById("listsForLabel");
   const renameForm = document.getElementById("renameForm");
   const renameFieldsEl = document.getElementById("renameFields");
   const statsStripEl = document.getElementById("statsStrip");
@@ -968,6 +969,18 @@
     });
   }
 
+  function subscribeCustomLists(email) {
+    if (unsubCustomLists) unsubCustomLists();
+    const customListsQuery = query(collection(db, "custom_lists"), where("ownerEmail", "==", email));
+    unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
+      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      renderCustomChips();
+      renderList();
+      if (!newListOverlay.hidden) renderExistingLists();
+    });
+  }
+
   async function resetStats() {
     if (!confirm("Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.")) return;
     try {
@@ -980,10 +993,7 @@
 
   function updateComposerPlaceholder() {
     inputEl.placeholder = activeTab === myEmail ? "Nowe zadanie…" : "Nowe zadanie dla: " + nameFor(activeTab) + "…";
-    const isMine = activeTab === myEmail;
-    chipNewList.hidden = !isMine;
-    customChipsEl.hidden = !isMine;
-    if (!isMine) selectedCustomListId = null;
+    selectedCustomListId = null;
     renderCustomChips();
   }
 
@@ -1004,17 +1014,24 @@
 
   function renderExistingLists() {
     existingListsEl.innerHTML = "";
+    const isMine = activeTab === myEmail;
+    listsForLabelEl.textContent = isMine
+      ? "Twoje kategorie zadań."
+      : "Kategorie dla: " + nameFor(activeTab) + " — możesz dodawać, ale nie usuwać.";
     for (const list of customLists) {
       const li = document.createElement("li");
       const name = document.createElement("span");
       name.textContent = list.name;
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "del-list";
-      del.setAttribute("aria-label", "Usuń listę " + list.name);
-      del.innerHTML = trashIcon;
-      del.addEventListener("click", () => deleteCustomList(list));
-      li.append(name, del);
+      li.append(name);
+      if (isMine) {
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "del-list";
+        del.setAttribute("aria-label", "Usuń listę " + list.name);
+        del.innerHTML = trashIcon;
+        del.addEventListener("click", () => deleteCustomList(list));
+        li.append(del);
+      }
       existingListsEl.appendChild(li);
     }
   }
@@ -1074,7 +1091,7 @@
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
       btn.textContent = nameFor(email);
-      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); subscribeStats(email); });
+      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); subscribeStats(email); subscribeCustomLists(email); });
       tabsEl.appendChild(btn);
     }
   }
@@ -1286,7 +1303,8 @@
     try {
       await addDoc(collection(db, "custom_lists"), {
         name,
-        creatorEmail: myEmail,
+        ownerEmail: activeTab,
+        createdByEmail: myEmail,
         createdAt: Date.now()
       });
     } catch (e) {
@@ -1360,15 +1378,7 @@
       if (!newListOverlay.hidden) renderRenameFields();
     });
 
-    const customListsQuery = query(collection(db, "custom_lists"), where("creatorEmail", "==", myEmail));
-    unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
-      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      renderCustomChips();
-      renderList();
-      if (!newListOverlay.hidden) renderExistingLists();
-    });
-
+    subscribeCustomLists(myEmail);
     subscribeStats(myEmail);
 
     const q = query(collection(db, "tasks"), orderBy("createdAt"));
