@@ -767,6 +767,7 @@
     <form id="newListForm">
       <input id="newListInput" type="text" placeholder="Nazwa nowej kategorii" autocomplete="off" maxlength="40">
       <button type="submit" class="primary-btn">Dodaj</button>
+      <p class="error-text" id="newListError" hidden></p>
     </form>
     <div class="overlay-divider"></div>
     <p>Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.</p>
@@ -846,6 +847,7 @@
   const newListOverlay = document.getElementById("newListOverlay");
   const newListForm = document.getElementById("newListForm");
   const newListInput = document.getElementById("newListInput");
+  const newListErrorEl = document.getElementById("newListError");
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
@@ -902,6 +904,13 @@
     return person ? person.name : email;
   }
 
+  // Single source of truth: is the currently viewed tab my own?
+  // Every permission check (edit/delete/check-off) should read this,
+  // not compare activeTab/myEmail directly — see memory note on this bug class.
+  function isMyTab() {
+    return activeTab === myEmail;
+  }
+
   function quadrantKey(task) {
     if (task.important && !task.urgent) return "q2";
     if (task.important && task.urgent) return "q1";
@@ -952,7 +961,7 @@
     addStatPill("🍃", (q3.total || 0) + (q4.total || 0), (q3.habit || 0) + (q4.habit || 0));
 
     const lists = viewedStats.lists || {};
-    const isMine = activeTab === myEmail;
+    const isMine = isMyTab();
     const listIds = isMine ? customLists.map(l => l.id) : Object.keys(lists);
     for (const listId of listIds) {
       const s = lists[listId] || {};
@@ -992,7 +1001,7 @@
   }
 
   function updateComposerPlaceholder() {
-    inputEl.placeholder = activeTab === myEmail ? "Nowe zadanie…" : "Nowe zadanie dla: " + nameFor(activeTab) + "…";
+    inputEl.placeholder = isMyTab() ? "Nowe zadanie…" : "Nowe zadanie dla: " + nameFor(activeTab) + "…";
     selectedCustomListId = null;
     renderCustomChips();
   }
@@ -1014,7 +1023,7 @@
 
   function renderExistingLists() {
     existingListsEl.innerHTML = "";
-    const isMine = activeTab === myEmail;
+    const isMine = isMyTab();
     listsForLabelEl.textContent = isMine
       ? "Twoje kategorie zadań."
       : "Kategorie dla: " + nameFor(activeTab) + " — możesz dodawać, ale nie usuwać.";
@@ -1167,7 +1176,7 @@
   function renderList() {
     groupsEl.innerHTML = "";
     if (!activeTab) return;
-    const isMine = activeTab === myEmail;
+    const isMine = isMyTab();
     clearDoneEl.hidden = true;
 
     const tabTasks = tasks.filter(t => t.ownerEmail === activeTab);
@@ -1297,7 +1306,7 @@
     e.preventDefault();
     const name = newListInput.value.trim();
     if (!name || !myEmail) return;
-    newListInput.value = "";
+    newListErrorEl.hidden = true;
     try {
       await addDoc(collection(db, "custom_lists"), {
         name,
@@ -1305,8 +1314,10 @@
         createdByEmail: myEmail,
         createdAt: Date.now()
       });
+      newListInput.value = "";
     } catch (e) {
-      showStatus("Nie udało się utworzyć listy.");
+      newListErrorEl.textContent = "Błąd (" + e.code + "): " + e.message;
+      newListErrorEl.hidden = false;
     }
   });
 
