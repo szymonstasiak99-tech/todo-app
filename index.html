@@ -747,7 +747,6 @@
         <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
         <div class="custom-chips" id="customChips"></div>
         <button type="button" class="chip newlist" id="chipNewList" hidden>Listy</button>
-        <button type="button" class="chip newlist" id="chipRenameNames">✎ Nazwy</button>
       </div>
       <form id="form">
         <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
@@ -760,7 +759,7 @@
 <div class="overlay" id="newListOverlay" hidden>
   <div class="overlay-card">
     <div class="overlay-head">
-      <h2>Twoje listy</h2>
+      <h2>Listy i zakładki</h2>
       <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Zamknij">✕</button>
     </div>
     <p>Prywatne kategorie zadań — widoczne tylko dla Ciebie.</p>
@@ -770,21 +769,13 @@
       <button type="submit" class="primary-btn">Dodaj</button>
     </form>
     <div class="overlay-divider"></div>
-    <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
-  </div>
-</div>
-
-<div class="overlay" id="renameOverlay" hidden>
-  <div class="overlay-card">
-    <div class="overlay-head">
-      <h2>Nazwy zakładek</h2>
-      <button type="button" class="overlay-close" id="closeRenameOverlay" aria-label="Zamknij">✕</button>
-    </div>
-    <p>Dowolne nicki dla Waszych zakładek — każde z Was może zmienić oba.</p>
+    <p>Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.</p>
     <form id="renameForm">
       <div class="rename-fields" id="renameFields"></div>
-      <button type="submit" class="primary-btn">Zapisz</button>
+      <button type="submit" class="primary-btn">Zapisz nazwy</button>
     </form>
+    <div class="overlay-divider"></div>
+    <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
   </div>
 </div>
 
@@ -858,11 +849,8 @@
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
-  const chipRenameNames = document.getElementById("chipRenameNames");
-  const renameOverlay = document.getElementById("renameOverlay");
   const renameForm = document.getElementById("renameForm");
   const renameFieldsEl = document.getElementById("renameFields");
-  const closeRenameOverlayBtn = document.getElementById("closeRenameOverlay");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
@@ -1269,6 +1257,7 @@
   function openListOverlay() {
     newListInput.value = "";
     renderExistingLists();
+    renderRenameFields();
     newListOverlay.hidden = false;
     newListInput.focus();
   }
@@ -1284,25 +1273,9 @@
     if (e.target === newListOverlay) closeListOverlay();
   });
 
-  function openRenameOverlay() {
-    renderRenameFields();
-    renameOverlay.hidden = false;
-  }
-
-  function closeRenameOverlay() {
-    renameOverlay.hidden = true;
-  }
-
-  chipRenameNames.addEventListener("click", openRenameOverlay);
-  closeRenameOverlayBtn.addEventListener("click", closeRenameOverlay);
-  renameOverlay.addEventListener("click", (e) => {
-    if (e.target === renameOverlay) closeRenameOverlay();
-  });
-
   renameForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     await saveRenamedTabs();
-    closeRenameOverlay();
   });
 
   newListForm.addEventListener("submit", async (e) => {
@@ -1384,7 +1357,7 @@
       whoamiNameEl.textContent = nameFor(myEmail);
       renderTabs();
       renderList();
-      if (!renameOverlay.hidden) renderRenameFields();
+      if (!newListOverlay.hidden) renderRenameFields();
     });
 
     const customListsQuery = query(collection(db, "custom_lists"), where("creatorEmail", "==", myEmail));
