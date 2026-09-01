@@ -332,6 +332,45 @@
     padding: 0 4px;
   }
 
+  .group-title.collapsible {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
+    margin: -4px;
+    border-radius: 8px;
+  }
+
+  .group-title.collapsible:hover { background: var(--surface-2); }
+
+  .group-title.collapsible span:first-child { flex: 1; min-width: 0; }
+
+  .group-badge {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 0.75rem;
+  }
+
+  .chevron {
+    display: inline-block;
+    transition: transform 0.15s;
+    font-size: 0.8rem;
+  }
+
+  .chevron.collapsed { transform: rotate(-90deg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chevron { transition: none; }
+  }
+
   .group-title.featured {
     color: var(--accent);
     font-size: 0.82rem;
@@ -1173,16 +1212,68 @@
     return li;
   }
 
-  function renderGroup(title, list, isMine, muted, featured) {
+  const COLLAPSE_STORAGE_KEY = "todo-app-collapsed-sections";
+
+  function getCollapsedMap() {
+    try { return JSON.parse(localStorage.getItem(COLLAPSE_STORAGE_KEY) || "{}"); } catch (e) { return {}; }
+  }
+
+  function isSectionCollapsed(key) {
+    return !!getCollapsedMap()[key];
+  }
+
+  function toggleSectionCollapsed(key) {
+    const map = getCollapsedMap();
+    if (map[key]) delete map[key]; else map[key] = true;
+    try { localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+  }
+
+  function renderGroup(title, list, isMine, muted, featured, collapseKey) {
     if (list.length === 0) return null;
     const group = document.createElement("div");
     group.className = "group" + (muted ? " muted" : "");
     const titleEl = document.createElement("div");
     titleEl.className = "group-title" + (featured ? " featured" : "");
-    titleEl.textContent = title;
-    const ul = document.createElement("ul");
-    for (const task of list) ul.appendChild(makeItem(task, isMine));
-    group.append(titleEl, ul);
+
+    if (!collapseKey) {
+      titleEl.textContent = title;
+      const ul = document.createElement("ul");
+      for (const task of list) ul.appendChild(makeItem(task, isMine));
+      group.append(titleEl, ul);
+      return group;
+    }
+
+    const storageKey = activeTab + "::" + collapseKey;
+    const collapsed = isSectionCollapsed(storageKey);
+    titleEl.classList.add("collapsible");
+
+    const label = document.createElement("span");
+    label.textContent = title;
+    titleEl.appendChild(label);
+
+    if (collapsed) {
+      const badge = document.createElement("span");
+      badge.className = "group-badge";
+      badge.textContent = list.filter(t => !isDoneNow(t)).length;
+      titleEl.appendChild(badge);
+    }
+
+    const chevron = document.createElement("span");
+    chevron.className = "chevron" + (collapsed ? " collapsed" : "");
+    chevron.textContent = "▾";
+    titleEl.appendChild(chevron);
+
+    titleEl.addEventListener("click", () => {
+      toggleSectionCollapsed(storageKey);
+      renderList();
+    });
+
+    group.appendChild(titleEl);
+    if (!collapsed) {
+      const ul = document.createElement("ul");
+      for (const task of list) ul.appendChild(makeItem(task, isMine));
+      group.appendChild(ul);
+    }
     return group;
   }
 
@@ -1207,11 +1298,11 @@
 
     for (const list of customLists) {
       const listTasks = tabTasks.filter(t => t.customListId === list.id);
-      const g = renderGroup(list.name, listTasks, isMine, false, false);
+      const g = renderGroup(list.name, listTasks, isMine, false, false, list.id);
       if (g) groupsEl.appendChild(g);
     }
 
-    const g3 = renderGroup("Pozostałe", rest, isMine, true, false);
+    const g3 = renderGroup("Pozostałe", rest, isMine, true, false, "rest");
     if (g3) groupsEl.appendChild(g3);
 
     const deletableDone = isMine ? tabTasks.filter(t => !t.isHabit && t.done).length : 0;
