@@ -1183,12 +1183,10 @@
     if (g2) groupsEl.appendChild(g2);
     if (g1) groupsEl.appendChild(g1);
 
-    if (isMine) {
-      for (const list of customLists) {
-        const listTasks = tabTasks.filter(t => t.customListId === list.id);
-        const g = renderGroup(list.name, listTasks, isMine, false, false);
-        if (g) groupsEl.appendChild(g);
-      }
+    for (const list of customLists) {
+      const listTasks = tabTasks.filter(t => t.customListId === list.id);
+      const g = renderGroup(list.name, listTasks, isMine, false, false);
+      if (g) groupsEl.appendChild(g);
     }
 
     const g3 = renderGroup("Pozostałe", rest, isMine, true, false);
@@ -1244,7 +1242,7 @@
         urgent: composerUrgent,
         isHabit: composerHabit,
         completedDates: [],
-        customListId: activeTab === myEmail ? selectedCustomListId : null,
+        customListId: selectedCustomListId,
         ownerEmail: activeTab,
         createdByEmail: myEmail,
         createdAt: Date.now()
