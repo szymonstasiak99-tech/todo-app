@@ -1,9 +1,15 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Do zrobienia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
   :root {
+    color-scheme: light dark;
     --bg: #F1F4F2;
     --surface: #FFFFFF;
     --surface-2: #E7ECE9;
@@ -15,11 +21,13 @@
     --accent-soft: #DCEAE7;
     --danger: #B5503A;
     --danger-soft: #F3DED7;
+    --warn: #9A7B2F;
+    --warn-soft: #F1E9D3;
     --shadow: 0 1px 2px rgba(23, 36, 32, 0.06), 0 8px 24px -12px rgba(23, 36, 32, 0.18);
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
+    :root {
       --bg: #0E1B18;
       --surface: #142925;
       --surface-2: #1B332E;
@@ -31,28 +39,16 @@
       --accent-soft: #1D3A34;
       --danger: #E08867;
       --danger-soft: #3A241D;
+      --warn: #D9BE72;
+      --warn-soft: #362D18;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
     }
-  }
-
-  :root[data-theme="dark"] {
-    --bg: #0E1B18;
-    --surface: #142925;
-    --surface-2: #1B332E;
-    --text: #E7EFEC;
-    --text-muted: #93A9A3;
-    --border: #244039;
-    --accent: #55B0A7;
-    --accent-text: #08211D;
-    --accent-soft: #1D3A34;
-    --danger: #E08867;
-    --danger-soft: #3A241D;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   }
 
   * { box-sizing: border-box; }
 
   body {
+    margin: 0;
     background: var(--bg);
     color: var(--text);
     font-family: "IBM Plex Sans", system-ui, sans-serif;
@@ -75,12 +71,18 @@
     top: 0;
     z-index: 10;
     background: var(--bg);
-    padding: 28px 20px 16px;
+    padding: 24px 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
-    border-bottom: 1px solid var(--border);
   }
 
   h1 {
@@ -104,12 +106,45 @@
     white-space: nowrap;
   }
 
+  .whoami {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .whoami strong { color: var(--text); font-weight: 600; }
+
+  .whoami button {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .status-note {
+    font-size: 0.78rem;
+    color: var(--warn);
+    background: var(--warn-soft);
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: none;
+  }
+
+  .status-note.show { display: block; }
+
   main {
     flex: 1;
-    padding: 12px 20px 140px;
+    padding: 16px 20px 140px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 22px;
   }
 
   .empty {
@@ -127,14 +162,18 @@
     margin-bottom: 8px;
   }
 
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  .group { display: flex; flex-direction: column; gap: 8px; }
+
+  .group-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 0 4px;
   }
+
+  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 
   li {
     background: var(--surface);
@@ -174,11 +213,7 @@
 
   .check svg { width: 18px; height: 18px; }
 
-  li.done .check {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text);
-  }
+  li.done .check { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 
   .task-text {
     flex: 1;
@@ -226,12 +261,7 @@
     justify-content: center;
   }
 
-  .composer form {
-    max-width: 480px;
-    width: 100%;
-    display: flex;
-    gap: 8px;
-  }
+  .composer form { max-width: 480px; width: 100%; display: flex; gap: 8px; }
 
   .composer input {
     flex: 1;
@@ -245,11 +275,7 @@
     font-family: inherit;
   }
 
-  .composer input:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-  }
-
+  .composer input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .composer input::placeholder { color: var(--text-muted); }
 
   .composer button {
@@ -269,7 +295,8 @@
 
   .composer button:focus-visible,
   .check:focus-visible,
-  .delete:focus-visible {
+  .delete:focus-visible,
+  .whoami button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
@@ -289,19 +316,84 @@
     cursor: pointer;
     padding: 8px;
   }
-</style>
 
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(14, 27, 24, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+
+  .overlay-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: var(--shadow);
+  }
+
+  .overlay-card h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    margin: 0 0 6px;
+  }
+
+  .overlay-card p { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 16px; line-height: 1.4; }
+
+  .overlay-card input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: inherit;
+    margin-bottom: 12px;
+  }
+
+  .overlay-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .overlay-card button {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
 <div class="app">
   <header>
-    <h1>Do zrobienia</h1>
-    <span class="counter" id="counter">0/0</span>
+    <div class="header-row">
+      <h1>Do zrobienia</h1>
+      <span class="counter" id="counter">0/0</span>
+    </div>
+    <div class="whoami">
+      Jesteś zalogowany jako <strong id="whoamiName">—</strong>
+      <button type="button" id="changeName">zmień</button>
+    </div>
+    <div class="status-note" id="statusNote"></div>
   </header>
   <main>
     <div class="empty" id="empty">
       <span class="glyph">Pusto</span>
       Dodaj pierwsze zadanie poniżej.
     </div>
-    <ul id="list"></ul>
+    <div id="groups"></div>
     <button class="clear-done" id="clearDone" hidden>Usuń ukończone</button>
   </main>
   <div class="composer">
@@ -312,97 +404,211 @@
   </div>
 </div>
 
-<script>
-  const STORAGE_KEY = "todo-app-tasks";
+<div class="overlay" id="nameOverlay" hidden>
+  <div class="overlay-card">
+    <h2>Jak masz na imię?</h2>
+    <p>Ta lista jest wspólna. Podaj swoje imię, żeby Twoje zadania dało się odróżnić od zadań drugiej osoby.</p>
+    <form id="nameForm">
+      <input id="nameInput" type="text" placeholder="Twoje imię" autocomplete="off" maxlength="40" required>
+      <button type="submit">Zacznij</button>
+    </form>
+  </div>
+</div>
 
-  function loadTasks() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+    onSnapshot, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2A2CWELZhKxzWOgDhLo00MXL5XXc57Lg",
+    authDomain: "to-do-list-6a109.firebaseapp.com",
+    projectId: "to-do-list-6a109",
+    storageBucket: "to-do-list-6a109.firebasestorage.app",
+    messagingSenderId: "562220006928",
+    appId: "1:562220006928:web:7c63d991fe0e3d22111495"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const NAME_KEY = "todo-app-my-name";
+
+  function getMyName() {
+    try { return localStorage.getItem(NAME_KEY) || ""; } catch (e) { return ""; }
+  }
+  function setMyName(name) {
+    try { localStorage.setItem(NAME_KEY, name); } catch (e) {}
   }
 
-  function saveTasks(tasks) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch (e) {}
-  }
+  let tasks = [];
+  let myName = getMyName();
 
-  let tasks = loadTasks();
-
-  const listEl = document.getElementById("list");
+  const groupsEl = document.getElementById("groups");
   const emptyEl = document.getElementById("empty");
   const counterEl = document.getElementById("counter");
   const formEl = document.getElementById("form");
   const inputEl = document.getElementById("input");
   const clearDoneEl = document.getElementById("clearDone");
+  const whoamiNameEl = document.getElementById("whoamiName");
+  const changeNameEl = document.getElementById("changeName");
+  const statusNoteEl = document.getElementById("statusNote");
+  const nameOverlayEl = document.getElementById("nameOverlay");
+  const nameFormEl = document.getElementById("nameForm");
+  const nameInputEl = document.getElementById("nameInput");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
 
+  function showStatus(message) {
+    if (!message) {
+      statusNoteEl.classList.remove("show");
+      return;
+    }
+    statusNoteEl.textContent = message;
+    statusNoteEl.classList.add("show");
+  }
+
+  function makeItem(task) {
+    const li = document.createElement("li");
+    li.className = task.done ? "done" : "";
+
+    const check = document.createElement("button");
+    check.className = "check";
+    check.type = "button";
+    check.setAttribute("aria-label", task.done ? "Oznacz jako niezrobione" : "Oznacz jako zrobione");
+    check.innerHTML = checkIcon;
+    check.addEventListener("click", () => toggleTask(task.id, task.done));
+
+    const text = document.createElement("span");
+    text.className = "task-text";
+    text.textContent = task.text;
+    text.addEventListener("click", () => toggleTask(task.id, task.done));
+
+    const del = document.createElement("button");
+    del.className = "delete";
+    del.type = "button";
+    del.setAttribute("aria-label", "Usuń zadanie");
+    del.innerHTML = trashIcon;
+    del.addEventListener("click", () => deleteTask(task.id));
+
+    li.append(check, text, del);
+    return li;
+  }
+
   function render() {
-    listEl.innerHTML = "";
+    groupsEl.innerHTML = "";
     const doneCount = tasks.filter(t => t.done).length;
     counterEl.textContent = doneCount + "/" + tasks.length;
     emptyEl.hidden = tasks.length > 0;
     clearDoneEl.hidden = doneCount === 0;
+    whoamiNameEl.textContent = myName || "—";
 
-    for (const task of tasks) {
-      const li = document.createElement("li");
-      li.className = task.done ? "done" : "";
-      li.dataset.id = task.id;
+    const owners = [];
+    if (myName) owners.push(myName);
+    for (const t of tasks) {
+      if (t.owner && !owners.includes(t.owner)) owners.push(t.owner);
+    }
 
-      const check = document.createElement("button");
-      check.className = "check";
-      check.setAttribute("aria-label", task.done ? "Oznacz jako niezrobione" : "Oznacz jako zrobione");
-      check.innerHTML = checkIcon;
-      check.addEventListener("click", () => toggleTask(task.id));
-
-      const text = document.createElement("span");
-      text.className = "task-text";
-      text.textContent = task.text;
-      text.addEventListener("click", () => toggleTask(task.id));
-
-      const del = document.createElement("button");
-      del.className = "delete";
-      del.setAttribute("aria-label", "Usuń zadanie");
-      del.innerHTML = trashIcon;
-      del.addEventListener("click", () => deleteTask(task.id));
-
-      li.append(check, text, del);
-      listEl.appendChild(li);
+    for (const owner of owners) {
+      const ownTasks = tasks.filter(t => t.owner === owner);
+      if (ownTasks.length === 0) continue;
+      const group = document.createElement("div");
+      group.className = "group";
+      const title = document.createElement("div");
+      title.className = "group-title";
+      title.textContent = owner === myName ? "Twoje" : owner;
+      const ul = document.createElement("ul");
+      for (const task of ownTasks) ul.appendChild(makeItem(task));
+      group.append(title, ul);
+      groupsEl.appendChild(group);
     }
   }
 
-  function toggleTask(id) {
-    tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
-    saveTasks(tasks);
-    render();
+  async function toggleTask(id, done) {
+    try {
+      await updateDoc(doc(db, "tasks", id), { done: !done });
+    } catch (e) {
+      showStatus("Nie udało się zapisać zmiany — sprawdź połączenie z internetem.");
+    }
   }
 
-  function deleteTask(id) {
-    tasks = tasks.filter(t => t.id !== id);
-    saveTasks(tasks);
-    render();
+  async function deleteTask(id) {
+    try {
+      await deleteDoc(doc(db, "tasks", id));
+    } catch (e) {
+      showStatus("Nie udało się usunąć zadania — spróbuj ponownie.");
+    }
   }
 
-  formEl.addEventListener("submit", (e) => {
+  formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = inputEl.value.trim();
-    if (!text) return;
-    tasks.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2), text, done: false });
-    saveTasks(tasks);
+    if (!text || !myName) return;
     inputEl.value = "";
+    try {
+      await addDoc(collection(db, "tasks"), {
+        text,
+        done: false,
+        owner: myName,
+        createdAt: Date.now()
+      });
+    } catch (e) {
+      showStatus("Nie udało się dodać zadania — sprawdź połączenie z internetem.");
+    }
+  });
+
+  clearDoneEl.addEventListener("click", async () => {
+    const done = tasks.filter(t => t.done);
+    for (const t of done) {
+      try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {}
+    }
+  });
+
+  changeNameEl.addEventListener("click", () => {
+    nameInputEl.value = myName;
+    nameOverlayEl.hidden = false;
+    nameInputEl.focus();
+  });
+
+  nameFormEl.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = nameInputEl.value.trim();
+    if (!name) return;
+    myName = name;
+    setMyName(name);
+    nameOverlayEl.hidden = true;
     render();
   });
 
-  clearDoneEl.addEventListener("click", () => {
-    tasks = tasks.filter(t => !t.done);
-    saveTasks(tasks);
-    render();
-  });
+  if (!myName) {
+    nameOverlayEl.hidden = false;
+    nameInputEl.focus();
+  }
 
   render();
+  showStatus("Łączenie z bazą danych…");
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      showStatus("");
+      const q = query(collection(db, "tasks"), orderBy("createdAt"));
+      onSnapshot(q, (snap) => {
+        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+      }, (err) => {
+        showStatus("Błąd synchronizacji: " + err.message);
+      });
+    }
+  });
+
+  signInAnonymously(auth).catch((err) => {
+    showStatus("Nie udało się połączyć z bazą danych: " + err.message);
+  });
 </script>
+</body>
+</html>
