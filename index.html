@@ -645,6 +645,10 @@
     return person ? person.name : email;
   }
 
+  function updateComposerPlaceholder() {
+    inputEl.placeholder = activeTab === myEmail ? "Nowe zadanie…" : "Nowe zadanie dla: " + nameFor(activeTab) + "…";
+  }
+
   function renderTabs() {
     tabsEl.innerHTML = "";
     const emails = [myEmail, ...roster.map(p => p.email).filter(e => e !== myEmail)];
@@ -653,17 +657,18 @@
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
       btn.textContent = email === myEmail ? "Moje" : nameFor(email);
-      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); });
+      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); });
       tabsEl.appendChild(btn);
     }
   }
 
-  function makeItem(task, isMine) {
+  function makeItem(task, isOwnerTab) {
     const li = document.createElement("li");
     const done = isDoneNow(task);
+    const canDelete = task.createdByEmail === myEmail;
     li.className = (done ? "done " : "") + (task.isHabit ? "habit" : "");
 
-    if (isMine) {
+    if (isOwnerTab) {
       const check = document.createElement("button");
       check.className = "check";
       check.type = "button";
@@ -683,7 +688,7 @@
     const text = document.createElement("div");
     text.className = "task-text";
     text.textContent = task.text;
-    if (isMine) text.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
+    if (isOwnerTab) text.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
     body.appendChild(text);
 
     if (task.isHabit) {
@@ -699,7 +704,7 @@
 
     li.appendChild(body);
 
-    if (isMine) {
+    if (canDelete) {
       const del = document.createElement("button");
       del.className = "delete";
       del.type = "button";
@@ -729,7 +734,6 @@
     groupsEl.innerHTML = "";
     if (!activeTab) return;
     const isMine = activeTab === myEmail;
-    composerWrap.hidden = !isMine;
     clearDoneEl.hidden = true;
 
     const tabTasks = tasks.filter(t => t.ownerEmail === activeTab);
@@ -746,10 +750,8 @@
     const g3 = renderGroup("Pozostałe", rest, isMine, true, false);
     for (const g of [g2, g1, g3]) if (g) groupsEl.appendChild(g);
 
-    if (isMine) {
-      const doneNonHabit = tabTasks.filter(t => !t.isHabit && t.done).length;
-      clearDoneEl.hidden = doneNonHabit === 0;
-    }
+    const deletableDone = tabTasks.filter(t => !t.isHabit && t.done && t.createdByEmail === myEmail).length;
+    clearDoneEl.hidden = deletableDone === 0;
   }
 
   async function toggleTask(task, wasDone) {
@@ -786,7 +788,7 @@
   formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = inputEl.value.trim();
-    if (!text || !myEmail) return;
+    if (!text || !myEmail || !activeTab) return;
     inputEl.value = "";
     try {
       await addDoc(collection(db, "tasks"), {
@@ -796,7 +798,8 @@
         urgent: composerUrgent,
         isHabit: composerHabit,
         completedDates: [],
-        ownerEmail: myEmail,
+        ownerEmail: activeTab,
+        createdByEmail: myEmail,
         createdAt: Date.now()
       });
     } catch (e) {
@@ -805,7 +808,7 @@
   });
 
   clearDoneEl.addEventListener("click", async () => {
-    const done = tasks.filter(t => t.ownerEmail === myEmail && !t.isHabit && t.done);
+    const done = tasks.filter(t => t.ownerEmail === activeTab && !t.isHabit && t.done && t.createdByEmail === myEmail);
     for (const t of done) { try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {} }
   });
 
@@ -874,6 +877,7 @@
 
     activeTab = myEmail;
     whoamiNameEl.textContent = allowedSnap.data().name || myEmail;
+    updateComposerPlaceholder();
     showGate("app");
 
     unsubRoster = onSnapshot(collection(db, "allowed_users"), (snap) => {
