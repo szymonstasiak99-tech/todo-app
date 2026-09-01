@@ -68,6 +68,25 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   }
 
+  :root[data-theme="dim"] {
+    --bg: #2C3D38;
+    --surface: #37493F;
+    --surface-2: #33453D;
+    --text: #EAEFEA;
+    --text-muted: #ABBCB4;
+    --border: #4A5D54;
+    --accent: #74C6BB;
+    --accent-text: #10241E;
+    --accent-soft: #33544C;
+    --danger: #E4977A;
+    --danger-soft: #4E362B;
+    --warn: #E1C685;
+    --warn-soft: #4B3E24;
+    --gold: #E7C77B;
+    --gold-soft: #4A3C21;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  }
+
   * { box-sizing: border-box; }
 
   [hidden] { display: none !important; }
@@ -677,10 +696,10 @@
 
   .reset-stats-btn:hover { color: var(--danger); border-color: var(--danger); }
 
-  .theme-row { display: flex; gap: 6px; margin-bottom: 4px; }
+  .theme-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 
   .theme-btn {
-    flex: 1;
+    flex: 1 1 calc(50% - 3px);
     background: var(--surface-2);
     border: 1px solid var(--border);
     color: var(--text-muted);
@@ -863,6 +882,7 @@
     <div class="theme-row" id="themeRow">
       <button type="button" class="theme-btn" data-theme-choice="system">Systemowy</button>
       <button type="button" class="theme-btn" data-theme-choice="light">Jasny</button>
+      <button type="button" class="theme-btn" data-theme-choice="dim">Przyjemny</button>
       <button type="button" class="theme-btn" data-theme-choice="dark">Ciemny</button>
     </div>
     <div class="overlay-divider"></div>
