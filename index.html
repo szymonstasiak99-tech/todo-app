@@ -114,6 +114,16 @@
     cursor: pointer;
   }
 
+  .error-text {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    margin: 14px 0 0;
+    text-align: left;
+  }
+
   .gate-card .signout {
     background: none;
     color: var(--text-muted);
@@ -480,6 +490,7 @@
     <h1>Do zrobienia</h1>
     <p>Wspólna lista zadań. Zaloguj się swoim kontem Google, żeby zobaczyć swoje zadania i zadania osób, którym udostępniono dostęp.</p>
     <button type="button" id="signInBtn">Zaloguj się przez Google</button>
+    <p class="error-text" id="authError" hidden></p>
   </div>
 </div>
 
@@ -532,7 +543,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut
+    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
@@ -569,6 +580,7 @@
   const deniedEmailEl = document.getElementById("deniedEmail");
   const appRoot = document.getElementById("appRoot");
   const signInBtn = document.getElementById("signInBtn");
+  const authErrorEl = document.getElementById("authError");
   const signOutFromDenied = document.getElementById("signOutFromDenied");
   const signOutBtn = document.getElementById("signOutBtn");
   const whoamiNameEl = document.getElementById("whoamiName");
@@ -810,7 +822,13 @@
   setChip(chipHabit, "habit");
 
   signInBtn.addEventListener("click", () => {
+    authErrorEl.hidden = true;
     signInWithRedirect(auth, new GoogleAuthProvider());
+  });
+
+  getRedirectResult(auth).catch((err) => {
+    authErrorEl.textContent = "Błąd logowania (" + err.code + "): " + err.message;
+    authErrorEl.hidden = false;
   });
   signOutFromDenied.addEventListener("click", () => signOut(auth));
   signOutBtn.addEventListener("click", () => signOut(auth));
