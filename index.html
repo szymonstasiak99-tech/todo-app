@@ -885,7 +885,7 @@
     return "q4";
   }
 
-  const QUADRANT_ICON = { q2: "🎯", q1: "🔥", q3: "⏱", q4: "💤" };
+  const QUADRANT_ICON = { q2: "🎯", q1: "🔥" };
 
   async function bumpStats(task, delta) {
     if (!myEmail) return;
@@ -906,29 +906,34 @@
     } catch (e) {}
   }
 
+  function addStatPill(icon, total, habit) {
+    if (!total) return;
+    const pill = document.createElement("span");
+    pill.className = "stat-pill";
+    pill.innerHTML = icon + ' <span class="n">' + total + "</span>" +
+      (habit > 0 ? ' <span class="h">🔁' + habit + "</span>" : "");
+    statsStripEl.appendChild(pill);
+  }
+
   function renderStats() {
     statsStripEl.innerHTML = "";
-    for (const key of ["q2", "q1", "q3", "q4"]) {
-      const s = viewedStats[key] || {};
-      const total = s.total || 0;
-      if (total === 0) continue;
-      const pill = document.createElement("span");
-      pill.className = "stat-pill";
-      pill.innerHTML = QUADRANT_ICON[key] + ' <span class="n">' + total + "</span>" +
-        (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
-      statsStripEl.appendChild(pill);
-    }
+
+    const q2 = viewedStats.q2 || {};
+    const q1 = viewedStats.q1 || {};
+    const q3 = viewedStats.q3 || {};
+    const q4 = viewedStats.q4 || {};
+
+    addStatPill(QUADRANT_ICON.q2, q2.total || 0, q2.habit || 0);
+    addStatPill(QUADRANT_ICON.q1, q1.total || 0, q1.habit || 0);
+    addStatPill("•", (q3.total || 0) + (q4.total || 0), (q3.habit || 0) + (q4.habit || 0));
+
     const lists = viewedStats.lists || {};
-    for (const listId of Object.keys(lists)) {
+    const isMine = activeTab === myEmail;
+    const listIds = isMine ? customLists.map(l => l.id) : Object.keys(lists);
+    for (const listId of listIds) {
       const s = lists[listId] || {};
-      const total = s.total || 0;
-      if (total === 0) continue;
-      const pill = document.createElement("span");
-      pill.className = "stat-pill";
       const label = (s.name || "").slice(0, 3);
-      pill.innerHTML = "📁" + label + ' <span class="n">' + total + "</span>" +
-        (s.habit > 0 ? ' <span class="h">🔁' + s.habit + "</span>" : "");
-      statsStripEl.appendChild(pill);
+      addStatPill("📁" + label, s.total || 0, s.habit || 0);
     }
   }
 
