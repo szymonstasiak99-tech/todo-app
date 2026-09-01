@@ -23,6 +23,8 @@
     --danger-soft: #F3DED7;
     --warn: #9A7B2F;
     --warn-soft: #F1E9D3;
+    --gold: #A6791F;
+    --gold-soft: #F2E6C9;
     --shadow: 0 1px 2px rgba(23, 36, 32, 0.06), 0 8px 24px -12px rgba(23, 36, 32, 0.18);
   }
 
@@ -41,6 +43,8 @@
       --danger-soft: #3A241D;
       --warn: #D9BE72;
       --warn-soft: #362D18;
+      --gold: #E0BE6E;
+      --gold-soft: #3A2E13;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
     }
   }
@@ -68,12 +72,63 @@
     flex-direction: column;
   }
 
+  /* Auth gate screens */
+  .gate {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .gate-card {
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .gate-card h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.8rem;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+
+  .gate-card p {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0 0 22px;
+  }
+
+  .gate-card button {
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 12px;
+    padding: 13px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .gate-card .signout {
+    background: none;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 400;
+    margin-top: 14px;
+  }
+
   header {
     position: sticky;
     top: 0;
     z-index: 10;
     background: var(--bg);
-    padding: 24px 20px 14px;
+    padding: 24px 20px 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -108,22 +163,51 @@
     white-space: nowrap;
   }
 
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
   .whoami {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
   }
-
-  .whoami strong { color: var(--text); font-weight: 600; }
 
   .whoami button {
     background: none;
     border: none;
     color: var(--accent);
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     text-decoration: underline;
     text-underline-offset: 2px;
     cursor: pointer;
@@ -141,9 +225,26 @@
 
   .status-note.show { display: block; }
 
+  .nudge {
+    position: fixed;
+    left: 50%;
+    bottom: 96px;
+    transform: translateX(-50%);
+    max-width: 420px;
+    width: calc(100% - 40px);
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    box-shadow: var(--shadow);
+    z-index: 50;
+    animation: rise 0.2s ease-out;
+  }
+
   main {
     flex: 1;
-    padding: 16px 20px 140px;
+    padding: 16px 20px 150px;
     display: flex;
     flex-direction: column;
     gap: 22px;
@@ -166,6 +267,8 @@
 
   .group { display: flex; flex-direction: column; gap: 8px; }
 
+  .group.muted { opacity: 0.72; }
+
   .group-title {
     font-size: 0.78rem;
     font-weight: 600;
@@ -173,6 +276,11 @@
     letter-spacing: 0.06em;
     color: var(--text-muted);
     padding: 0 4px;
+  }
+
+  .group-title.featured {
+    color: var(--accent);
+    font-size: 0.82rem;
   }
 
   ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -195,7 +303,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    li { animation: none; }
+    li, .nudge { animation: none; }
   }
 
   .check {
@@ -216,13 +324,13 @@
   .check svg { width: 18px; height: 18px; }
 
   li.done .check { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  li.done.habit .check { background: var(--gold); border-color: var(--gold); }
+
+  .task-body { flex: 1; min-width: 0; padding: 8px 0; }
 
   .task-text {
-    flex: 1;
-    min-width: 0;
     font-size: 1rem;
     line-height: 1.4;
-    padding: 8px 0;
     word-break: break-word;
     cursor: pointer;
   }
@@ -231,6 +339,21 @@
     color: var(--text-muted);
     text-decoration: line-through;
     text-decoration-color: var(--text-muted);
+  }
+
+  .task-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 3px;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--gold);
+    background: var(--gold-soft);
+    border-radius: 6px;
+    padding: 1px 6px;
   }
 
   .delete {
@@ -251,21 +374,51 @@
   .delete:hover { background: var(--danger-soft); color: var(--danger); }
   .delete svg { width: 18px; height: 18px; }
 
-  .composer {
+  .readonly-dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    margin: 0 13px;
+  }
+
+  li.done .readonly-dot { background: var(--accent); }
+
+  .composer-wrap {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     background: var(--bg);
     border-top: 1px solid var(--border);
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    padding: 10px 20px calc(12px + env(safe-area-inset-bottom));
     display: flex;
     justify-content: center;
   }
 
-  .composer form { max-width: 480px; width: 100%; display: flex; gap: 8px; }
+  .composer-inner { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
 
-  .composer input {
+  .chip-row { display: flex; gap: 6px; }
+
+  .chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .chip.on.important { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .chip.on.urgent { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+  .chip.on.habit { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
+
+  .composer-inner form { display: flex; gap: 8px; }
+
+  .composer-inner input {
     flex: 1;
     min-width: 0;
     background: var(--surface);
@@ -277,10 +430,10 @@
     font-family: inherit;
   }
 
-  .composer input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .composer input::placeholder { color: var(--text-muted); }
+  .composer-inner input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .composer-inner input::placeholder { color: var(--text-muted); }
 
-  .composer button {
+  .composer-inner button[type="submit"] {
     flex-shrink: 0;
     background: var(--accent);
     color: var(--accent-text);
@@ -295,15 +448,15 @@
     justify-content: center;
   }
 
-  .composer button:focus-visible,
+  .composer-inner button:focus-visible,
   .check:focus-visible,
   .delete:focus-visible,
-  .whoami button:focus-visible {
+  .whoami button:focus-visible,
+  .chip:focus-visible,
+  .tab:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-
-  .composer button:disabled { opacity: 0.5; cursor: default; }
 
   .clear-done {
     align-self: center;
@@ -318,75 +471,36 @@
     cursor: pointer;
     padding: 8px;
   }
-
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(14, 27, 24, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 100;
-  }
-
-  .overlay-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    max-width: 340px;
-    width: 100%;
-    box-shadow: var(--shadow);
-  }
-
-  .overlay-card h2 {
-    font-family: "Fraunces", Georgia, serif;
-    font-weight: 600;
-    font-size: 1.3rem;
-    margin: 0 0 6px;
-  }
-
-  .overlay-card p { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 16px; line-height: 1.4; }
-
-  .overlay-card input {
-    width: 100%;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 1rem;
-    font-family: inherit;
-    margin-bottom: 12px;
-  }
-
-  .overlay-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-  .overlay-card button {
-    width: 100%;
-    background: var(--accent);
-    color: var(--accent-text);
-    border: none;
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 1rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-  }
 </style>
 </head>
 <body>
-<div class="app">
+
+<div class="gate" id="signedOutGate" hidden>
+  <div class="gate-card">
+    <h1>Do zrobienia</h1>
+    <p>Wspólna lista zadań. Zaloguj się swoim kontem Google, żeby zobaczyć swoje zadania i zadania osób, którym udostępniono dostęp.</p>
+    <button type="button" id="signInBtn">Zaloguj się przez Google</button>
+  </div>
+</div>
+
+<div class="gate" id="notAllowedGate" hidden>
+  <div class="gate-card">
+    <h1>Brak dostępu</h1>
+    <p>To konto (<span id="deniedEmail"></span>) nie ma dostępu do tej listy. Poproś osobę, która ją prowadzi, o dodanie Cię.</p>
+    <button type="button" class="signout" id="signOutFromDenied">Wyloguj</button>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
   <header>
     <div class="header-row">
       <h1>Do zrobienia</h1>
       <span class="counter" id="counter">0/0</span>
     </div>
+    <div class="tabs" id="tabs"></div>
     <div class="whoami">
-      Jesteś zalogowany jako <strong id="whoamiName">—</strong>
-      <button type="button" id="changeName">zmień</button>
+      Zalogowano jako <strong id="whoamiName">—</strong>
+      <button type="button" id="signOutBtn">Wyloguj</button>
     </div>
     <div class="status-note" id="statusNote"></div>
   </header>
@@ -398,31 +512,31 @@
     <div id="groups"></div>
     <button class="clear-done" id="clearDone" hidden>Usuń ukończone</button>
   </main>
-  <div class="composer">
-    <form id="form">
-      <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
-      <button type="submit" aria-label="Dodaj zadanie">+</button>
-    </form>
+  <div class="composer-wrap" id="composerWrap">
+    <div class="composer-inner">
+      <div class="chip-row">
+        <button type="button" class="chip important" id="chipImportant">Ważne</button>
+        <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
+        <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
+      </div>
+      <form id="form">
+        <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
+        <button type="submit" aria-label="Dodaj zadanie">+</button>
+      </form>
+    </div>
   </div>
 </div>
 
-<div class="overlay" id="nameOverlay" hidden>
-  <div class="overlay-card">
-    <h2>Jak masz na imię?</h2>
-    <p>Ta lista jest wspólna. Podaj swoje imię, żeby Twoje zadania dało się odróżnić od zadań drugiej osoby.</p>
-    <form id="nameForm">
-      <input id="nameInput" type="text" placeholder="Twoje imię" autocomplete="off" maxlength="40" required>
-      <button type="submit">Zacznij</button>
-    </form>
-  </div>
-</div>
+<div class="nudge" id="nudge" hidden></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-    onSnapshot, query, orderBy
+    getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
+    onSnapshot, query, orderBy, arrayUnion, arrayRemove
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -438,178 +552,323 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  const NAME_KEY = "todo-app-my-name";
+  let currentUser = null;
+  let myEmail = null;
+  let roster = [];              // [{email, name}]
+  let tasks = [];                // all tasks across everyone
+  let activeTab = null;          // email of tab being viewed
+  let unsubTasks = null;
+  let unsubRoster = null;
 
-  function getMyName() {
-    try { return localStorage.getItem(NAME_KEY) || ""; } catch (e) { return ""; }
-  }
-  function setMyName(name) {
-    try { localStorage.setItem(NAME_KEY, name); } catch (e) {}
-  }
+  let composerImportant = false;
+  let composerUrgent = false;
+  let composerHabit = false;
 
-  let tasks = [];
-  let myName = getMyName();
-
+  const signedOutGate = document.getElementById("signedOutGate");
+  const notAllowedGate = document.getElementById("notAllowedGate");
+  const deniedEmailEl = document.getElementById("deniedEmail");
+  const appRoot = document.getElementById("appRoot");
+  const signInBtn = document.getElementById("signInBtn");
+  const signOutFromDenied = document.getElementById("signOutFromDenied");
+  const signOutBtn = document.getElementById("signOutBtn");
+  const whoamiNameEl = document.getElementById("whoamiName");
+  const tabsEl = document.getElementById("tabs");
   const groupsEl = document.getElementById("groups");
   const emptyEl = document.getElementById("empty");
   const counterEl = document.getElementById("counter");
   const formEl = document.getElementById("form");
   const inputEl = document.getElementById("input");
   const clearDoneEl = document.getElementById("clearDone");
-  const whoamiNameEl = document.getElementById("whoamiName");
-  const changeNameEl = document.getElementById("changeName");
   const statusNoteEl = document.getElementById("statusNote");
-  const nameOverlayEl = document.getElementById("nameOverlay");
-  const nameFormEl = document.getElementById("nameForm");
-  const nameInputEl = document.getElementById("nameInput");
+  const composerWrap = document.getElementById("composerWrap");
+  const chipImportant = document.getElementById("chipImportant");
+  const chipUrgent = document.getElementById("chipUrgent");
+  const chipHabit = document.getElementById("chipHabit");
+  const nudgeEl = document.getElementById("nudge");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
 
-  function showStatus(message) {
-    if (!message) {
-      statusNoteEl.classList.remove("show");
-      return;
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function isDoneNow(task) {
+    if (task.isHabit) return (task.completedDates || []).includes(todayStr());
+    return !!task.done;
+  }
+
+  function computeStreak(dates) {
+    const set = new Set(dates || []);
+    const cursor = new Date();
+    if (!set.has(todayStrFor(cursor))) cursor.setDate(cursor.getDate() - 1);
+    let streak = 0;
+    while (set.has(todayStrFor(cursor))) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
     }
+    return streak;
+  }
+
+  function todayStrFor(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function showStatus(message) {
+    if (!message) { statusNoteEl.classList.remove("show"); return; }
     statusNoteEl.textContent = message;
     statusNoteEl.classList.add("show");
   }
 
-  function makeItem(task) {
+  function showNudge(message) {
+    nudgeEl.textContent = message;
+    nudgeEl.hidden = false;
+    clearTimeout(showNudge._t);
+    showNudge._t = setTimeout(() => { nudgeEl.hidden = true; }, 4500);
+  }
+
+  function nameFor(email) {
+    const person = roster.find(p => p.email === email);
+    return person ? person.name : email;
+  }
+
+  function renderTabs() {
+    tabsEl.innerHTML = "";
+    const emails = [myEmail, ...roster.map(p => p.email).filter(e => e !== myEmail)];
+    for (const email of emails) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tab" + (email === activeTab ? " active" : "");
+      btn.textContent = email === myEmail ? "Moje" : nameFor(email);
+      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); });
+      tabsEl.appendChild(btn);
+    }
+  }
+
+  function makeItem(task, isMine) {
     const li = document.createElement("li");
-    li.className = task.done ? "done" : "";
+    const done = isDoneNow(task);
+    li.className = (done ? "done " : "") + (task.isHabit ? "habit" : "");
 
-    const check = document.createElement("button");
-    check.className = "check";
-    check.type = "button";
-    check.setAttribute("aria-label", task.done ? "Oznacz jako niezrobione" : "Oznacz jako zrobione");
-    check.innerHTML = checkIcon;
-    check.addEventListener("click", () => toggleTask(task.id, task.done));
+    if (isMine) {
+      const check = document.createElement("button");
+      check.className = "check";
+      check.type = "button";
+      check.setAttribute("aria-label", done ? "Cofnij" : "Oznacz jako zrobione");
+      check.innerHTML = checkIcon;
+      check.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
+      li.appendChild(check);
+    } else {
+      const dot = document.createElement("span");
+      dot.className = "readonly-dot";
+      li.appendChild(dot);
+    }
 
-    const text = document.createElement("span");
+    const body = document.createElement("div");
+    body.className = "task-body";
+
+    const text = document.createElement("div");
     text.className = "task-text";
     text.textContent = task.text;
-    text.addEventListener("click", () => toggleTask(task.id, task.done));
+    if (isMine) text.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
+    body.appendChild(text);
 
-    const del = document.createElement("button");
-    del.className = "delete";
-    del.type = "button";
-    del.setAttribute("aria-label", "Usuń zadanie");
-    del.innerHTML = trashIcon;
-    del.addEventListener("click", () => deleteTask(task.id));
+    if (task.isHabit) {
+      const tags = document.createElement("div");
+      tags.className = "task-tags";
+      const streak = computeStreak(task.completedDates);
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = streak > 0 ? "🔁 🔥 " + streak + " dni" : "🔁 nawyk";
+      tags.appendChild(tag);
+      body.appendChild(tags);
+    }
 
-    li.append(check, text, del);
+    li.appendChild(body);
+
+    if (isMine) {
+      const del = document.createElement("button");
+      del.className = "delete";
+      del.type = "button";
+      del.setAttribute("aria-label", "Usuń zadanie");
+      del.innerHTML = trashIcon;
+      del.addEventListener("click", () => deleteTask(task.id));
+      li.appendChild(del);
+    }
+
     return li;
   }
 
-  function render() {
+  function renderGroup(title, list, isMine, muted, featured) {
+    if (list.length === 0) return null;
+    const group = document.createElement("div");
+    group.className = "group" + (muted ? " muted" : "");
+    const titleEl = document.createElement("div");
+    titleEl.className = "group-title" + (featured ? " featured" : "");
+    titleEl.textContent = title;
+    const ul = document.createElement("ul");
+    for (const task of list) ul.appendChild(makeItem(task, isMine));
+    group.append(titleEl, ul);
+    return group;
+  }
+
+  function renderList() {
     groupsEl.innerHTML = "";
-    const doneCount = tasks.filter(t => t.done).length;
-    counterEl.textContent = doneCount + "/" + tasks.length;
-    emptyEl.hidden = tasks.length > 0;
-    clearDoneEl.hidden = doneCount === 0;
-    whoamiNameEl.textContent = myName || "—";
+    if (!activeTab) return;
+    const isMine = activeTab === myEmail;
+    composerWrap.hidden = !isMine;
+    clearDoneEl.hidden = true;
 
-    const owners = [];
-    if (myName) owners.push(myName);
-    for (const t of tasks) {
-      if (t.owner && !owners.includes(t.owner)) owners.push(t.owner);
-    }
+    const tabTasks = tasks.filter(t => t.ownerEmail === activeTab);
+    const doneCount = tabTasks.filter(isDoneNow).length;
+    counterEl.textContent = doneCount + "/" + tabTasks.length;
+    emptyEl.hidden = tabTasks.length > 0;
 
-    for (const owner of owners) {
-      const ownTasks = tasks.filter(t => t.owner === owner);
-      if (ownTasks.length === 0) continue;
-      const group = document.createElement("div");
-      group.className = "group";
-      const title = document.createElement("div");
-      title.className = "group-title";
-      title.textContent = owner === myName ? "Twoje" : owner;
-      const ul = document.createElement("ul");
-      for (const task of ownTasks) ul.appendChild(makeItem(task));
-      group.append(title, ul);
-      groupsEl.appendChild(group);
+    const q2 = tabTasks.filter(t => t.important && !t.urgent);
+    const q1 = tabTasks.filter(t => t.important && t.urgent);
+    const rest = tabTasks.filter(t => !t.important);
+
+    const g2 = renderGroup("🎯 Najważniejsze (niepilne, ważne)", q2, isMine, false, true);
+    const g1 = renderGroup("Pilne i ważne", q1, isMine, false, false);
+    const g3 = renderGroup("Pozostałe", rest, isMine, true, false);
+    for (const g of [g2, g1, g3]) if (g) groupsEl.appendChild(g);
+
+    if (isMine) {
+      const doneNonHabit = tabTasks.filter(t => !t.isHabit && t.done).length;
+      clearDoneEl.hidden = doneNonHabit === 0;
     }
   }
 
-  async function toggleTask(id, done) {
+  async function toggleTask(task, wasDone) {
     try {
-      await updateDoc(doc(db, "tasks", id), { done: !done });
+      await updateDoc(doc(db, "tasks", task.id), { done: !wasDone });
+      if (!wasDone && task.important && task.urgent) {
+        const stillOpenQ2 = tasks.some(t => t.ownerEmail === myEmail && t.important && !t.urgent && !isDoneNow(t));
+        if (stillOpenQ2) showNudge("Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯");
+      }
     } catch (e) {
-      showStatus("Nie udało się zapisać zmiany — sprawdź połączenie z internetem.");
+      showStatus("Nie udało się zapisać zmiany.");
+    }
+  }
+
+  async function toggleHabitToday(task, wasDoneToday) {
+    try {
+      const ref = doc(db, "tasks", task.id);
+      await updateDoc(ref, {
+        completedDates: wasDoneToday ? arrayRemove(todayStr()) : arrayUnion(todayStr())
+      });
+      if (!wasDoneToday && task.important && task.urgent) {
+        const stillOpenQ2 = tasks.some(t => t.ownerEmail === myEmail && t.important && !t.urgent && !isDoneNow(t));
+        if (stillOpenQ2) showNudge("Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯");
+      }
+    } catch (e) {
+      showStatus("Nie udało się zapisać zmiany.");
     }
   }
 
   async function deleteTask(id) {
-    try {
-      await deleteDoc(doc(db, "tasks", id));
-    } catch (e) {
-      showStatus("Nie udało się usunąć zadania — spróbuj ponownie.");
-    }
+    try { await deleteDoc(doc(db, "tasks", id)); } catch (e) { showStatus("Nie udało się usunąć zadania."); }
   }
 
   formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = inputEl.value.trim();
-    if (!text || !myName) return;
+    if (!text || !myEmail) return;
     inputEl.value = "";
     try {
       await addDoc(collection(db, "tasks"), {
         text,
         done: false,
-        owner: myName,
+        important: composerImportant,
+        urgent: composerUrgent,
+        isHabit: composerHabit,
+        completedDates: [],
+        ownerEmail: myEmail,
         createdAt: Date.now()
       });
     } catch (e) {
-      showStatus("Nie udało się dodać zadania — sprawdź połączenie z internetem.");
+      showStatus("Nie udało się dodać zadania.");
     }
   });
 
   clearDoneEl.addEventListener("click", async () => {
-    const done = tasks.filter(t => t.done);
-    for (const t of done) {
-      try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {}
-    }
+    const done = tasks.filter(t => t.ownerEmail === myEmail && !t.isHabit && t.done);
+    for (const t of done) { try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {} }
   });
 
-  changeNameEl.addEventListener("click", () => {
-    nameInputEl.value = myName;
-    nameOverlayEl.hidden = false;
-    nameInputEl.focus();
-  });
+  function setChip(chipEl, key) {
+    chipEl.addEventListener("click", () => {
+      if (key === "important") composerImportant = !composerImportant;
+      if (key === "urgent") composerUrgent = !composerUrgent;
+      if (key === "habit") composerHabit = !composerHabit;
+      chipEl.classList.toggle("on");
+    });
+  }
+  setChip(chipImportant, "important");
+  setChip(chipUrgent, "urgent");
+  setChip(chipHabit, "habit");
 
-  nameFormEl.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const name = nameInputEl.value.trim();
-    if (!name) return;
-    myName = name;
-    setMyName(name);
-    nameOverlayEl.hidden = true;
-    render();
+  signInBtn.addEventListener("click", () => {
+    signInWithRedirect(auth, new GoogleAuthProvider());
   });
+  signOutFromDenied.addEventListener("click", () => signOut(auth));
+  signOutBtn.addEventListener("click", () => signOut(auth));
 
-  if (!myName) {
-    nameOverlayEl.hidden = false;
-    nameInputEl.focus();
+  function teardownSubscriptions() {
+    if (unsubTasks) { unsubTasks(); unsubTasks = null; }
+    if (unsubRoster) { unsubRoster(); unsubRoster = null; }
   }
 
-  render();
-  showStatus("Łączenie z bazą danych…");
+  function showGate(which) {
+    signedOutGate.hidden = which !== "signedOut";
+    notAllowedGate.hidden = which !== "notAllowed";
+    appRoot.hidden = which !== "app";
+  }
 
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      showStatus("");
-      const q = query(collection(db, "tasks"), orderBy("createdAt"));
-      onSnapshot(q, (snap) => {
-        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        render();
-      }, (err) => {
-        showStatus("Błąd synchronizacji: " + err.message);
-      });
+  onAuthStateChanged(auth, async (user) => {
+    teardownSubscriptions();
+    currentUser = user;
+
+    if (!user) {
+      myEmail = null;
+      showGate("signedOut");
+      return;
     }
-  });
 
-  signInAnonymously(auth).catch((err) => {
-    showStatus("Nie udało się połączyć z bazą danych: " + err.message);
+    myEmail = user.email;
+    const allowedRef = doc(db, "allowed_users", myEmail);
+    let allowedSnap;
+    try {
+      allowedSnap = await getDoc(allowedRef);
+    } catch (e) {
+      showStatus("Błąd sprawdzania dostępu: " + e.message);
+      return;
+    }
+
+    if (!allowedSnap.exists()) {
+      deniedEmailEl.textContent = myEmail;
+      showGate("notAllowed");
+      return;
+    }
+
+    activeTab = myEmail;
+    whoamiNameEl.textContent = allowedSnap.data().name || myEmail;
+    showGate("app");
+
+    unsubRoster = onSnapshot(collection(db, "allowed_users"), (snap) => {
+      roster = snap.docs.map(d => ({ email: d.id, name: d.data().name || d.id }));
+      renderTabs();
+      renderList();
+    });
+
+    const q = query(collection(db, "tasks"), orderBy("createdAt"));
+    unsubTasks = onSnapshot(q, (snap) => {
+      tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderList();
+    }, (err) => {
+      showStatus("Błąd synchronizacji: " + err.message);
+    });
   });
 </script>
 </body>
