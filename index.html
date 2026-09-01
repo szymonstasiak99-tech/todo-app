@@ -298,6 +298,12 @@
     gap: 22px;
   }
 
+  #groups {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
   .empty {
     margin-top: 20vh;
     text-align: center;
@@ -1106,7 +1112,7 @@
     const q1 = untagged.filter(t => t.important && t.urgent);
     const rest = untagged.filter(t => !t.important);
 
-    const g2 = renderGroup("🎯 Najważniejsze (niepilne, ważne)", q2, isMine, false, true);
+    const g2 = renderGroup("🎯 Najważniejsze (ważne, niepilne)", q2, isMine, false, true);
     const g1 = renderGroup("Ważne i pilne", q1, isMine, false, false);
     if (g2) groupsEl.appendChild(g2);
     if (g1) groupsEl.appendChild(g1);
