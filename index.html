@@ -543,7 +543,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
+    getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
@@ -821,14 +821,15 @@
   setChip(chipUrgent, "urgent");
   setChip(chipHabit, "habit");
 
-  signInBtn.addEventListener("click", () => {
+  signInBtn.addEventListener("click", async () => {
     authErrorEl.hidden = true;
-    signInWithRedirect(auth, new GoogleAuthProvider());
-  });
-
-  getRedirectResult(auth).catch((err) => {
-    authErrorEl.textContent = "Błąd logowania (" + err.code + "): " + err.message;
-    authErrorEl.hidden = false;
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err) {
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") return;
+      authErrorEl.textContent = "Błąd logowania (" + err.code + "): " + err.message;
+      authErrorEl.hidden = false;
+    }
   });
   signOutFromDenied.addEventListener("click", () => signOut(auth));
   signOutBtn.addEventListener("click", () => signOut(auth));
