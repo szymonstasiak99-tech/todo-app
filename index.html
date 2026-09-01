@@ -586,6 +586,15 @@
 
   .overlay-card form { display: flex; flex-direction: column; gap: 12px; }
 
+  .rename-fields { display: flex; flex-direction: column; gap: 12px; }
+
+  .rename-field label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+
   .overlay-divider {
     height: 1px;
     background: var(--border);
@@ -738,6 +747,7 @@
         <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
         <div class="custom-chips" id="customChips"></div>
         <button type="button" class="chip newlist" id="chipNewList" hidden>Listy</button>
+        <button type="button" class="chip newlist" id="chipRenameNames">✎ Nazwy</button>
       </div>
       <form id="form">
         <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
@@ -761,6 +771,20 @@
     </form>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
+  </div>
+</div>
+
+<div class="overlay" id="renameOverlay" hidden>
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2>Nazwy zakładek</h2>
+      <button type="button" class="overlay-close" id="closeRenameOverlay" aria-label="Zamknij">✕</button>
+    </div>
+    <p>Dowolne nicki dla Waszych zakładek — każde z Was może zmienić oba.</p>
+    <form id="renameForm">
+      <div class="rename-fields" id="renameFields"></div>
+      <button type="submit" class="primary-btn">Zapisz</button>
+    </form>
   </div>
 </div>
 
@@ -834,6 +858,11 @@
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
+  const chipRenameNames = document.getElementById("chipRenameNames");
+  const renameOverlay = document.getElementById("renameOverlay");
+  const renameForm = document.getElementById("renameForm");
+  const renameFieldsEl = document.getElementById("renameFields");
+  const closeRenameOverlayBtn = document.getElementById("closeRenameOverlay");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
@@ -1017,6 +1046,38 @@
     }
   }
 
+  function renderRenameFields() {
+    renameFieldsEl.innerHTML = "";
+    for (const person of roster) {
+      const wrap = document.createElement("div");
+      wrap.className = "rename-field";
+      const label = document.createElement("label");
+      label.textContent = person.email === myEmail ? "Twoja zakładka" : "Zakładka: " + person.email;
+      label.setAttribute("for", "rename-" + person.email);
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = "rename-" + person.email;
+      input.dataset.email = person.email;
+      input.maxLength = 40;
+      input.value = person.name || "";
+      wrap.append(label, input);
+      renameFieldsEl.appendChild(wrap);
+    }
+  }
+
+  async function saveRenamedTabs() {
+    const inputs = renameFieldsEl.querySelectorAll("input[data-email]");
+    for (const input of inputs) {
+      const email = input.dataset.email;
+      const newName = input.value.trim();
+      const person = roster.find(p => p.email === email);
+      if (!newName || !person || newName === person.name) continue;
+      try { await updateDoc(doc(db, "allowed_users", email), { name: newName }); } catch (e) {
+        showStatus("Nie udało się zapisać nazwy dla " + email + ".");
+      }
+    }
+  }
+
   function renderTabs() {
     tabsEl.innerHTML = "";
     const emails = [...roster.map(p => p.email).filter(e => e !== myEmail), myEmail];
@@ -1024,7 +1085,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
-      btn.textContent = email === myEmail ? "Moje" : nameFor(email);
+      btn.textContent = nameFor(email);
       btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); subscribeStats(email); });
       tabsEl.appendChild(btn);
     }
@@ -1223,6 +1284,27 @@
     if (e.target === newListOverlay) closeListOverlay();
   });
 
+  function openRenameOverlay() {
+    renderRenameFields();
+    renameOverlay.hidden = false;
+  }
+
+  function closeRenameOverlay() {
+    renameOverlay.hidden = true;
+  }
+
+  chipRenameNames.addEventListener("click", openRenameOverlay);
+  closeRenameOverlayBtn.addEventListener("click", closeRenameOverlay);
+  renameOverlay.addEventListener("click", (e) => {
+    if (e.target === renameOverlay) closeRenameOverlay();
+  });
+
+  renameForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await saveRenamedTabs();
+    closeRenameOverlay();
+  });
+
   newListForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = newListInput.value.trim();
@@ -1299,8 +1381,10 @@
 
     unsubRoster = onSnapshot(collection(db, "allowed_users"), (snap) => {
       roster = snap.docs.map(d => ({ email: d.id, name: d.data().name || d.id }));
+      whoamiNameEl.textContent = nameFor(myEmail);
       renderTabs();
       renderList();
+      if (!renameOverlay.hidden) renderRenameFields();
     });
 
     const customListsQuery = query(collection(db, "custom_lists"), where("creatorEmail", "==", myEmail));
