@@ -762,12 +762,12 @@
       <h2>Listy i zakładki</h2>
       <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Zamknij">✕</button>
     </div>
+    <p class="error-text" id="modalError" hidden></p>
     <p id="listsForLabel">Kategorie zadań.</p>
     <ul class="existing-lists" id="existingLists"></ul>
     <form id="newListForm">
       <input id="newListInput" type="text" placeholder="Nazwa nowej kategorii" autocomplete="off" maxlength="40">
       <button type="submit" class="primary-btn">Dodaj</button>
-      <p class="error-text" id="newListError" hidden></p>
     </form>
     <div class="overlay-divider"></div>
     <p>Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.</p>
@@ -847,7 +847,7 @@
   const newListOverlay = document.getElementById("newListOverlay");
   const newListForm = document.getElementById("newListForm");
   const newListInput = document.getElementById("newListInput");
-  const newListErrorEl = document.getElementById("newListError");
+  const modalErrorEl = document.getElementById("modalError");
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
@@ -890,6 +890,13 @@
     if (!message) { statusNoteEl.classList.remove("show"); return; }
     statusNoteEl.textContent = message;
     statusNoteEl.classList.add("show");
+  }
+
+  // Errors from actions inside the "Edytuj" modal show here (the header's
+  // showStatus is hidden behind the modal overlay, so it's invisible there).
+  function showModalError(err) {
+    modalErrorEl.textContent = "Błąd (" + err.code + "): " + err.message;
+    modalErrorEl.hidden = false;
   }
 
   function showNudge(message) {
@@ -936,7 +943,9 @@
           [key]: { total: increment(delta), habit: increment(habitDelta) }
         }, { merge: true });
       }
-    } catch (e) {}
+    } catch (e) {
+      showStatus("Nie udało się zapisać postępu (" + e.code + "): " + e.message);
+    }
   }
 
   function addStatPill(icon, total, habit) {
@@ -996,7 +1005,7 @@
       await setDoc(doc(db, "stats", myEmail), {});
       closeListOverlay();
     } catch (e) {
-      showStatus("Nie udało się zresetować statystyk.");
+      showModalError(e);
     }
   }
 
@@ -1056,7 +1065,7 @@
       await updateDoc(doc(db, "stats", myEmail), { ["lists." + list.id]: deleteField() });
     } catch (e) {}
     try { await deleteDoc(doc(db, "custom_lists", list.id)); } catch (e) {
-      showStatus("Nie udało się usunąć listy.");
+      showModalError(e);
     }
   }
 
@@ -1087,7 +1096,7 @@
       const person = roster.find(p => p.email === email);
       if (!newName || !person || newName === person.name) continue;
       try { await updateDoc(doc(db, "allowed_users", email), { name: newName }); } catch (e) {
-        showStatus("Nie udało się zapisać nazwy dla " + email + ".");
+        showModalError(e);
       }
     }
   }
@@ -1280,6 +1289,7 @@
 
   function openListOverlay() {
     newListInput.value = "";
+    modalErrorEl.hidden = true;
     renderExistingLists();
     renderRenameFields();
     newListOverlay.hidden = false;
@@ -1306,7 +1316,7 @@
     e.preventDefault();
     const name = newListInput.value.trim();
     if (!name || !myEmail) return;
-    newListErrorEl.hidden = true;
+    modalErrorEl.hidden = true;
     try {
       await addDoc(collection(db, "custom_lists"), {
         name,
@@ -1316,8 +1326,7 @@
       });
       newListInput.value = "";
     } catch (e) {
-      newListErrorEl.textContent = "Błąd (" + e.code + "): " + e.message;
-      newListErrorEl.hidden = false;
+      showModalError(e);
     }
   });
 
