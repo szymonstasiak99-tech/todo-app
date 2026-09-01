@@ -830,9 +830,10 @@
     teardownSubscriptions();
     currentUser = user;
 
-    if (!user) {
+    if (!user || !user.email) {
       myEmail = null;
       showGate("signedOut");
+      if (user) { try { await signOut(auth); } catch (e) {} }
       return;
     }
 
