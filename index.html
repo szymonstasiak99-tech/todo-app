@@ -1112,6 +1112,11 @@
 
   function populateIconSelect(selectEl, selected) {
     selectEl.innerHTML = "";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "—";
+    if (!selected) noneOpt.selected = true;
+    selectEl.appendChild(noneOpt);
     for (const icon of CATEGORY_ICONS) {
       const opt = document.createElement("option");
       opt.value = icon;
@@ -1129,7 +1134,7 @@
       if (task.customListId) {
         const list = customLists.find(l => l.id === task.customListId) || {};
         await setDoc(ref, {
-          lists: { [task.customListId]: { total: increment(delta), habit: increment(habitDelta), name: list.name || "", icon: list.icon || "📁" } }
+          lists: { [task.customListId]: { total: increment(delta), habit: increment(habitDelta), name: list.name || "", icon: list.icon || "" } }
         }, { merge: true });
       } else {
         const key = quadrantKey(task);
@@ -1169,7 +1174,7 @@
     for (const listId of listIds) {
       const s = lists[listId] || {};
       const label = (s.name || "").slice(0, 3);
-      addStatPill((s.icon || "📁") + label, s.total || 0, s.habit || 0);
+      addStatPill((s.icon ? s.icon + " " : "") + label, s.total || 0, s.habit || 0);
     }
   }
 
@@ -1215,7 +1220,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip list" + (selectedCustomListId === list.id ? " on list" : "");
-      btn.textContent = (list.icon || "📁") + " " + list.name;
+      btn.textContent = (list.icon ? list.icon + " " : "") + list.name;
       btn.addEventListener("click", () => {
         selectedCustomListId = selectedCustomListId === list.id ? null : list.id;
         renderCustomChips();
@@ -1239,7 +1244,7 @@
         li.className = "editing";
         const iconSelect = document.createElement("select");
         iconSelect.setAttribute("aria-label", "Ikonka kategorii");
-        populateIconSelect(iconSelect, list.icon || "📁");
+        populateIconSelect(iconSelect, list.icon || "");
         const nameInput = document.createElement("input");
         nameInput.type = "text";
         nameInput.value = list.name;
@@ -1259,7 +1264,7 @@
         li.append(iconSelect, nameInput, save, cancel);
       } else {
         const icon = document.createElement("span");
-        icon.textContent = list.icon || "📁";
+        icon.textContent = list.icon || "";
         const name = document.createElement("span");
         name.className = "list-name";
         name.textContent = list.name;
@@ -1588,7 +1593,7 @@
 
   function openListOverlay() {
     newListInput.value = "";
-    populateIconSelect(newListIconEl, "📁");
+    populateIconSelect(newListIconEl, "");
     modalErrorEl.hidden = true;
     editingListId = null;
     renderExistingLists();
@@ -1621,13 +1626,13 @@
     try {
       await addDoc(collection(db, "custom_lists"), {
         name,
-        icon: newListIconEl.value || "📁",
+        icon: newListIconEl.value,
         ownerEmail: activeTab,
         createdByEmail: myEmail,
         createdAt: Date.now()
       });
       newListInput.value = "";
-      populateIconSelect(newListIconEl, "📁");
+      populateIconSelect(newListIconEl, "");
     } catch (e) {
       showModalError(e);
     }
