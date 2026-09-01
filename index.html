@@ -154,15 +154,16 @@
     text-wrap: balance;
   }
 
-  .identity-row {
+  .title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
   }
 
+  .title-row h1 { flex-shrink: 0; }
+
   .greeting {
-    flex-shrink: 0;
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -512,13 +513,18 @@
 
   .overlay-close {
     flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: var(--text-muted);
     font-size: 1.1rem;
     line-height: 1;
     cursor: pointer;
-    padding: 4px;
+    padding: 0;
   }
 
   .overlay-card p { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 16px; line-height: 1.4; }
@@ -546,13 +552,17 @@
 
   .existing-lists .del-list {
     flex-shrink: 0;
+    width: 30px;
+    height: 30px;
     background: none;
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    padding: 6px;
+    padding: 0;
     border-radius: 8px;
     display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .existing-lists .del-list:hover { background: var(--danger-soft); color: var(--danger); }
@@ -593,7 +603,7 @@
 
   .overlay-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-  .overlay-card button {
+  .overlay-card .primary-btn {
     width: 100%;
     background: var(--accent);
     color: var(--accent-text);
@@ -684,12 +694,12 @@
 
 <div class="app" id="appRoot" hidden>
   <header>
-    <h1>Do zrobienia</h1>
-    <div class="identity-row">
-      <div class="greeting">
-        Cześć <strong id="whoamiName">—</strong> <button type="button" id="signOutBtn">Wyloguj</button>
-      </div>
+    <div class="title-row">
+      <h1>Do zrobienia</h1>
       <div class="tabs" id="tabs"></div>
+    </div>
+    <div class="greeting">
+      Cześć <strong id="whoamiName">—</strong> <button type="button" id="signOutBtn">Wyloguj</button>
     </div>
     <div class="stats-strip" id="statsStrip"></div>
     <div class="status-note" id="statusNote"></div>
@@ -729,7 +739,7 @@
     <ul class="existing-lists" id="existingLists"></ul>
     <form id="newListForm">
       <input id="newListInput" type="text" placeholder="Nazwa nowej listy" autocomplete="off" maxlength="40">
-      <button type="submit">Dodaj</button>
+      <button type="submit" class="primary-btn">Dodaj</button>
     </form>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
