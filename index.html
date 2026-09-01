@@ -973,7 +973,7 @@
 
   function renderTabs() {
     tabsEl.innerHTML = "";
-    const emails = [myEmail, ...roster.map(p => p.email).filter(e => e !== myEmail)];
+    const emails = [...roster.map(p => p.email).filter(e => e !== myEmail), myEmail];
     for (const email of emails) {
       const btn = document.createElement("button");
       btn.type = "button";
