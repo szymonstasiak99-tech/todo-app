@@ -22,8 +22,8 @@ service cloud.firestore {
     match /custom_lists/{listId} {
       allow read: if isAllowed();
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
+      allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon"]);
       allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
-      allow update: if false;
     }
 
     match /stats/{email} {
