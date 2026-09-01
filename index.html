@@ -163,7 +163,15 @@
 
   .title-row h1 { flex-shrink: 0; }
 
+  .stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
   .greeting {
+    flex-shrink: 0;
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -224,6 +232,8 @@
   .stats-strip {
     display: flex;
     direction: rtl;
+    flex: 1;
+    min-width: 0;
     gap: 5px;
     overflow-x: auto;
     -ms-overflow-style: none;
@@ -698,10 +708,12 @@
       <h1>Do zrobienia</h1>
       <div class="tabs" id="tabs"></div>
     </div>
-    <div class="greeting">
-      Cześć <strong id="whoamiName">—</strong> <button type="button" id="signOutBtn">Wyloguj</button>
+    <div class="stats-row">
+      <div class="greeting">
+        Cześć <strong id="whoamiName">—</strong>! <button type="button" id="signOutBtn">Wyloguj</button>
+      </div>
+      <div class="stats-strip" id="statsStrip"></div>
     </div>
-    <div class="stats-strip" id="statsStrip"></div>
     <div class="status-note" id="statusNote"></div>
   </header>
   <main>
@@ -1007,7 +1019,7 @@
   function makeItem(task, isOwnerTab) {
     const li = document.createElement("li");
     const done = isDoneNow(task);
-    const canDelete = task.createdByEmail === myEmail;
+    const canDelete = isOwnerTab;
     li.className = (done ? "done " : "") + (task.isHabit ? "habit" : "");
 
     if (isOwnerTab) {
@@ -1102,7 +1114,7 @@
     const g3 = renderGroup("Pozostałe", rest, isMine, true, false);
     if (g3) groupsEl.appendChild(g3);
 
-    const deletableDone = tabTasks.filter(t => !t.isHabit && t.done && t.createdByEmail === myEmail).length;
+    const deletableDone = isMine ? tabTasks.filter(t => !t.isHabit && t.done).length : 0;
     clearDoneEl.hidden = deletableDone === 0;
   }
 
@@ -1163,7 +1175,7 @@
   });
 
   clearDoneEl.addEventListener("click", async () => {
-    const done = tasks.filter(t => t.ownerEmail === activeTab && !t.isHabit && t.done && t.createdByEmail === myEmail);
+    const done = tasks.filter(t => t.ownerEmail === myEmail && !t.isHabit && t.done);
     for (const t of done) { try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {} }
   });
 
