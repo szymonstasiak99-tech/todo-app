@@ -1541,6 +1541,7 @@
   }
 
   async function deleteTask(id) {
+    if (!confirm("Na pewno chcesz usunąć to zadanie?")) return;
     try { await deleteDoc(doc(db, "tasks", id)); } catch (e) { showStatus("Nie udało się usunąć zadania."); }
   }
 
@@ -1569,6 +1570,7 @@
 
   clearDoneEl.addEventListener("click", async () => {
     const done = tasks.filter(t => t.ownerEmail === myEmail && !t.isHabit && t.done);
+    if (!confirm("Usunąć " + done.length + " ukończonych zadań?")) return;
     for (const t of done) { try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {} }
   });
 
