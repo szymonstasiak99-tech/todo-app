@@ -145,13 +145,6 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .header-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
   h1 {
     font-family: "Fraunces", Georgia, serif;
     font-weight: 600;
@@ -159,18 +152,6 @@
     letter-spacing: -0.01em;
     margin: 0;
     text-wrap: balance;
-  }
-
-  .counter {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-variant-numeric: tabular-nums;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 4px 12px;
-    white-space: nowrap;
   }
 
   .identity-row {
@@ -689,10 +670,7 @@
 
 <div class="app" id="appRoot" hidden>
   <header>
-    <div class="header-row">
-      <h1>Do zrobienia</h1>
-      <span class="counter" id="counter">0/0</span>
-    </div>
+    <h1>Do zrobienia</h1>
     <div class="identity-row">
       <div class="greeting">
         Cześć <strong id="whoamiName">—</strong> <button type="button" id="signOutBtn">Wyloguj</button>
@@ -796,7 +774,6 @@
   const tabsEl = document.getElementById("tabs");
   const groupsEl = document.getElementById("groups");
   const emptyEl = document.getElementById("empty");
-  const counterEl = document.getElementById("counter");
   const formEl = document.getElementById("form");
   const inputEl = document.getElementById("input");
   const clearDoneEl = document.getElementById("clearDone");
@@ -1082,8 +1059,6 @@
     clearDoneEl.hidden = true;
 
     const tabTasks = tasks.filter(t => t.ownerEmail === activeTab);
-    const doneCount = tabTasks.filter(isDoneNow).length;
-    counterEl.textContent = doneCount + "/" + tabTasks.length;
     emptyEl.hidden = tabTasks.length > 0;
 
     const untagged = tabTasks.filter(t => !t.customListId);
