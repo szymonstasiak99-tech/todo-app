@@ -636,6 +636,8 @@
   .chip.on.urgent { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
   .chip.on.habit { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
   .chip.on.list { background: var(--surface-2); border-color: var(--text); color: var(--text); }
+  .chip.on.hidden { background: var(--surface-2); border-color: var(--text); color: var(--text); }
+  .chip:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 
   .overlay {
     position: fixed;
@@ -1001,6 +1003,7 @@
     <div class="composer-inner">
       <div class="chip-row" id="chipRow">
         <button type="button" class="chip important" id="chipImportant">Important</button>
+        <button type="button" class="chip hidden" id="chipHidden" aria-label="Add as hidden">🙈</button>
         <button type="button" class="chip urgent" id="chipUrgent">Urgent</button>
         <button type="button" class="chip habit" id="chipHabit">🔁 Habit</button>
         <div class="custom-chips" id="customChips"></div>
@@ -1140,6 +1143,7 @@
   let composerImportant = false;
   let composerUrgent = false;
   let composerHabit = false;
+  let composerHidden = false;
   let selectedCustomListId = null;
 
   const signedOutGate = document.getElementById("signedOutGate");
@@ -1173,6 +1177,7 @@
   const statusNoteEl = document.getElementById("statusNote");
   const composerWrap = document.getElementById("composerWrap");
   const chipImportant = document.getElementById("chipImportant");
+  const chipHidden = document.getElementById("chipHidden");
   const chipUrgent = document.getElementById("chipUrgent");
   const chipHabit = document.getElementById("chipHabit");
   const chipNewList = document.getElementById("chipNewList");
@@ -1233,6 +1238,7 @@
       chipImportant: "Important",
       chipUrgent: "Urgent",
       chipHabit: "🔁 Habit",
+      chipHidden: "Add as hidden",
       chipEdit: "Edit",
       addTask: "Add task",
       modalTitle: "Lists & tabs",
@@ -1334,6 +1340,7 @@
       chipImportant: "Ważne",
       chipUrgent: "Pilne",
       chipHabit: "🔁 Nawyk",
+      chipHidden: "Dodaj jako ukryte",
       chipEdit: "Edytuj",
       addTask: "Dodaj zadanie",
       modalTitle: "Listy i zakładki",
@@ -1538,6 +1545,7 @@
     emptyTextEl.textContent = t("emptyText");
     clearDoneEl.textContent = t("clearDone");
     chipImportant.textContent = t("chipImportant");
+    chipHidden.setAttribute("aria-label", t("chipHidden"));
     chipUrgent.textContent = t("chipUrgent");
     chipHabit.textContent = t("chipHabit");
     chipNewList.textContent = t("chipEdit");
@@ -1945,6 +1953,21 @@
     renderCustomChips();
   }
 
+  function selectedListAllowsHide() {
+    if (!selectedCustomListId) return true;
+    const list = customLists.find(l => l.id === selectedCustomListId);
+    return !list || !list.sharedType || SHARED_LIST_TYPES[list.sharedType].allowHide;
+  }
+
+  function updateHiddenChipAvailability() {
+    const allowed = selectedListAllowsHide();
+    chipHidden.disabled = !allowed;
+    if (!allowed && composerHidden) {
+      composerHidden = false;
+      chipHidden.classList.remove("on");
+    }
+  }
+
   function renderCustomChips() {
     customChipsEl.innerHTML = "";
     for (const list of customLists) {
@@ -1958,6 +1981,7 @@
       });
       customChipsEl.appendChild(btn);
     }
+    updateHiddenChipAvailability();
   }
 
   let editingListId = null;
@@ -2609,11 +2633,13 @@
     const selectedList = customLists.find(l => l.id === selectedCustomListId);
     const isSharedTask = !!(selectedList && selectedList.sharedType);
     const bucketKey = !composerImportant ? "other" : (composerUrgent ? "importantUrgent" : "mostImportant");
-    const defaultHidden = isSharedTask
+    const defaultHidden = !selectedListAllowsHide()
       ? false
-      : selectedCustomListId
-        ? !!(selectedList && selectedList.hidden)
-        : !!(activeHiddenSections && activeHiddenSections[bucketKey]);
+      : composerHidden
+        ? true
+        : selectedCustomListId
+          ? !!(selectedList && selectedList.hidden)
+          : !!(activeHiddenSections && activeHiddenSections[bucketKey]);
     const taskData = {
       text,
       done: false,
@@ -2647,12 +2673,14 @@
       if (key === "important") composerImportant = !composerImportant;
       if (key === "urgent") composerUrgent = !composerUrgent;
       if (key === "habit") composerHabit = !composerHabit;
+      if (key === "hidden") composerHidden = !composerHidden;
       chipEl.classList.toggle("on");
     });
   }
   setChip(chipImportant, "important");
   setChip(chipUrgent, "urgent");
   setChip(chipHabit, "habit");
+  setChip(chipHidden, "hidden");
 
   function openListOverlay() {
     newListInput.value = "";
