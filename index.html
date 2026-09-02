@@ -394,6 +394,18 @@
     border-radius: 8px;
   }
 
+  .info-btn {
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.95em;
+    padding: 0 2px;
+    line-height: 1;
+  }
+
+  .info-btn:hover { color: var(--accent); }
+
   .group-title.collapsible:hover { background: var(--surface-2); }
 
   .group-title.collapsible span:first-child { flex: 1; min-width: 0; }
@@ -704,6 +716,51 @@
   }
 
   .existing-lists .list-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .existing-lists li.members-panel {
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--surface);
+    gap: 6px;
+  }
+
+  .member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.88rem;
+  }
+
+  .member-row select {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+
+  .existing-lists li.add-shared-li {
+    background: none;
+    border: 1px dashed var(--border);
+    padding: 0;
+  }
+
+  .add-shared-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    padding: 10px;
+    cursor: pointer;
+  }
 
   .existing-lists li.editing { padding: 6px; }
   .existing-lists li.editing select { width: 48px; padding: 8px 2px; font-size: 1rem; }
@@ -1059,15 +1116,26 @@
   let unsubStats = null;
   let unsubUiState = null;
   let unsubActiveUiState = null;
-  let customLists = [];          // my own private custom lists [{id, name}]
+  let unsubSharedLists = null;
+  let unsubSharedTasks = null;
+  let rawCustomLists = [];       // lists owned by whichever tab is currently active
+  let sharedLists = [];          // shared lists (fridge/shopping) I'm a member of, regardless of tab
+  let sharedTasks = [];          // tasks inside those shared lists, visible on every tab
+  let customLists = [];          // rawCustomLists + sharedLists, merged and sorted
   let viewedStats = {};          // lifetime completion stats of whichever tab is active
   let collapsedSections = {};    // my own section-collapse preferences, synced across devices
   let activeHiddenSections = {}; // hidden built-in sections, as set by whoever owns the active tab
   let activeSectionOrder = {};   // custom position of the 3 built-in sections, as set by whoever owns the active tab
   let openTaskMenuId = null;     // id of the task whose "more actions" menu is expanded, if any
+  let editingMembersId = null;   // id of the shared list whose member list is expanded for editing, if any
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   const CUSTOM_TITLE_MAX_LEN = 24;
   const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, other: Number.MAX_SAFE_INTEGER };
+  const SHARED_LIST_TYPES = {
+    fridge: { icon: "🧊", nameKey: "fridgeDefaultName", order: -1, allowHide: false },
+    shopping: { icon: "🛒", nameKey: "shoppingDefaultName", order: -0.5, allowHide: true }
+  };
+  const sharedSeedAttempted = { fridge: false, shopping: false };
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -1198,6 +1266,17 @@
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
       deleteListConfirm: 'Delete list "{name}"? Its tasks will move back to the regular priority sections, and its stats will disappear.',
+      deleteSharedListConfirm: 'Delete "{name}"? It\'s shared, so this removes it — and its items — for everyone with access.',
+      fridgeDefaultName: "Fridge {n}",
+      shoppingDefaultName: "Shopping list {n}",
+      sharedInfoLabel: "What is this?",
+      fridgeInfo: "This is your virtual fridge door! 🧊 Stick notes here so nothing gets forgotten — no risk of someone eating the last egg before you see the note 🥚",
+      shoppingInfo: "A shopping list everyone here can add to, tick off, and tidy up — including the surprise-gift item you'd rather hide from a certain someone 🎁",
+      manageMembers: "Manage who's in {name}",
+      removeMember: "Remove {name}",
+      addMember: "Add a member",
+      addAnotherFridge: "+ Add another fridge",
+      addAnotherShopping: "+ Add another shopping list",
       listsForLabelMine: "Your task categories.",
       listsForLabelOther: "Categories for: {name} — you can add, but not delete.",
       footerAbout: "About",
@@ -1286,6 +1365,17 @@
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
       deleteListConfirm: 'Usunąć listę "{name}"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.',
+      deleteSharedListConfirm: 'Usunąć "{name}"? To lista współdzielona, więc usuniesz ją razem z zawartością wszystkim, którzy mieli do niej dostęp.',
+      fridgeDefaultName: "Lodówka {n}",
+      shoppingDefaultName: "Lista zakupów {n}",
+      sharedInfoLabel: "Co to jest?",
+      fridgeInfo: "To Wasza wirtualna lodówka! 🧊 Wklejacie tu karteczki, żeby o niczym nie zapomnieć — bez ryzyka, że ktoś zje ostatnie jajko, zanim zdążycie to zobaczyć 🥚",
+      shoppingInfo: "Lista zakupów, na którą każdy tu może coś dodać, odhaczyć i posprzątać — nawet ten element z niespodzianką, który wolisz ukryć przed pewną osobą 🎁",
+      manageMembers: "Zarządzaj osobami w {name}",
+      removeMember: "Usuń {name}",
+      addMember: "Dodaj osobę",
+      addAnotherFridge: "+ Dodaj kolejną lodówkę",
+      addAnotherShopping: "+ Dodaj kolejną listę zakupów",
       listsForLabelMine: "Twoje kategorie zadań.",
       listsForLabelOther: "Kategorie dla: {name} — możesz dodawać, ale nie usuwać.",
       footerAbout: "O aplikacji",
@@ -1646,7 +1736,8 @@
   }
 
   function recombineTasks() {
-    tasks = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
+    const base = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
+    tasks = base.concat(sharedTasks);
   }
 
   function subscribeMyTasks(email) {
@@ -1730,6 +1821,12 @@
     if (openTaskMenuId && !e.target.closest(".task-menu-wrap")) closeTaskMenu();
   });
 
+  function recombineLists() {
+    const sharedIds = new Set(sharedLists.map(l => l.id));
+    customLists = rawCustomLists.filter(l => !sharedIds.has(l.id)).concat(sharedLists);
+    customLists.sort(byOrder);
+  }
+
   function subscribeCustomLists(email) {
     if (unsubCustomLists) unsubCustomLists();
     const isMine = email === myEmail;
@@ -1737,15 +1834,94 @@
     if (!isMine) constraints.push(where("hidden", "==", false));
     const customListsQuery = query(collection(db, "custom_lists"), ...constraints);
     unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
-      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted).sort(byOrder);
+      rawCustomLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted);
       if (isMine) {
-        backfillHidden("custom_lists", customLists);
-        backfillOrder("custom_lists", customLists);
+        backfillHidden("custom_lists", rawCustomLists);
+        backfillOrder("custom_lists", rawCustomLists);
       }
+      recombineLists();
       renderCustomChips();
       renderList();
       if (!newListOverlay.hidden) renderExistingLists();
     });
+  }
+
+  async function createSharedList(type, soloAnchor) {
+    const cfg = SHARED_LIST_TYPES[type];
+    const members = soloAnchor ? [myEmail] : Array.from(new Set([myEmail, ...roster.map(p => p.email)]));
+    const existingCount = customLists.filter(l => l.sharedType === type).length;
+    try {
+      await addDoc(collection(db, "custom_lists"), {
+        name: t(cfg.nameKey, { n: existingCount + 1 }),
+        icon: cfg.icon,
+        hidden: false,
+        deleted: false,
+        order: existingCount === 0 ? cfg.order : Date.now(),
+        sharedType: type,
+        anchors: members.slice(),
+        members: members.slice(),
+        ownerEmail: "shared",
+        createdByEmail: myEmail,
+        createdAt: Date.now()
+      });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  async function maybeSeedSharedLists() {
+    if (!myEmail || roster.length === 0) return;
+    for (const type of Object.keys(SHARED_LIST_TYPES)) {
+      if (sharedSeedAttempted[type]) continue;
+      if (sharedLists.some(l => l.sharedType === type)) { sharedSeedAttempted[type] = true; continue; }
+      sharedSeedAttempted[type] = true;
+      await createSharedList(type, false);
+    }
+  }
+
+  function subscribeSharedLists() {
+    if (unsubSharedLists) unsubSharedLists();
+    const q = query(collection(db, "custom_lists"), where("members", "array-contains", myEmail));
+    unsubSharedLists = onSnapshot(q, (snap) => {
+      sharedLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted);
+      maybeSeedSharedLists();
+      recombineLists();
+      renderCustomChips();
+      renderList();
+      if (!newListOverlay.hidden) renderExistingLists();
+    }, (err) => {
+      showStatus(t("errSync", { msg: err.message }));
+    });
+  }
+
+  function subscribeSharedTasks() {
+    if (unsubSharedTasks) unsubSharedTasks();
+    const q = query(collection(db, "tasks"), where("members", "array-contains", myEmail));
+    unsubSharedTasks = onSnapshot(q, (snap) => {
+      sharedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
+      recombineTasks();
+      renderList();
+    }, (err) => {
+      showStatus(t("errSync", { msg: err.message }));
+    });
+  }
+
+  async function addSharedMember(list, email) {
+    if (!email || list.members.includes(email)) return;
+    try {
+      await updateDoc(doc(db, "custom_lists", list.id), { members: [...list.members, email] });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  async function removeSharedMember(list, email) {
+    if (list.anchors.includes(email)) return;
+    try {
+      await updateDoc(doc(db, "custom_lists", list.id), { members: list.members.filter(m => m !== email) });
+    } catch (e) {
+      showModalError(e);
+    }
   }
 
   async function resetStats() {
@@ -1867,6 +2043,19 @@
             li.appendChild(edit);
           }
 
+          if (section.canManageMembers) {
+            const members = document.createElement("button");
+            members.type = "button";
+            members.className = "del-list";
+            members.setAttribute("aria-label", t("manageMembers", { name: displayTitle }));
+            members.textContent = "👥";
+            members.addEventListener("click", () => {
+              editingMembersId = editingMembersId === section.key ? null : section.key;
+              renderExistingLists();
+            });
+            li.appendChild(members);
+          }
+
           if (section.canDelete) {
             const del = document.createElement("button");
             del.type = "button";
@@ -1879,7 +2068,66 @@
         }
       }
       existingListsEl.appendChild(li);
+
+      if (section.canManageMembers && editingMembersId === section.key) {
+        const panel = document.createElement("li");
+        panel.className = "members-panel";
+
+        for (const email of list.members) {
+          const row = document.createElement("div");
+          row.className = "member-row";
+          const memberName = document.createElement("span");
+          memberName.textContent = nameFor(email) + (list.anchors.includes(email) ? " ★" : "");
+          row.appendChild(memberName);
+          if (!list.anchors.includes(email)) {
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "del-list";
+            remove.setAttribute("aria-label", t("removeMember", { name: nameFor(email) }));
+            remove.textContent = "✕";
+            remove.addEventListener("click", () => removeSharedMember(list, email));
+            row.appendChild(remove);
+          }
+          panel.appendChild(row);
+        }
+
+        const addableEmails = roster.map(p => p.email).filter(e => !list.members.includes(e));
+        if (addableEmails.length > 0) {
+          const addRow = document.createElement("div");
+          addRow.className = "member-row";
+          const select = document.createElement("select");
+          select.setAttribute("aria-label", t("addMember"));
+          for (const email of addableEmails) {
+            const opt = document.createElement("option");
+            opt.value = email;
+            opt.textContent = nameFor(email);
+            select.appendChild(opt);
+          }
+          const add = document.createElement("button");
+          add.type = "button";
+          add.className = "del-list";
+          add.setAttribute("aria-label", t("addMember"));
+          add.textContent = "＋";
+          add.addEventListener("click", () => addSharedMember(list, select.value));
+          addRow.append(select, add);
+          panel.appendChild(addRow);
+        }
+
+        existingListsEl.appendChild(panel);
+      }
     });
+
+    for (const type of Object.keys(SHARED_LIST_TYPES)) {
+      const li = document.createElement("li");
+      li.className = "add-shared-li";
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "add-shared-btn";
+      addBtn.textContent = t("addAnother" + type.charAt(0).toUpperCase() + type.slice(1));
+      addBtn.addEventListener("click", () => createSharedList(type, true));
+      li.appendChild(addBtn);
+      existingListsEl.appendChild(li);
+    }
   }
 
   async function saveEditedList(list, icon, name) {
@@ -1894,10 +2142,17 @@
   }
 
   async function deleteCustomList(list) {
-    if (!confirm(t("deleteListConfirm", { name: list.name }))) return;
-    const affected = tasks.filter(t2 => t2.customListId === list.id && t2.ownerEmail === myEmail);
+    const confirmMsg = list.sharedType ? t("deleteSharedListConfirm", { name: list.name }) : t("deleteListConfirm", { name: list.name });
+    if (!confirm(confirmMsg)) return;
+    const affected = tasks.filter(t2 => t2.customListId === list.id && (t2.ownerEmail === myEmail || (t2.members && t2.members.includes(myEmail))));
     for (const t2 of affected) {
-      try { await updateDoc(doc(db, "tasks", t2.id), { customListId: null }); } catch (e) {}
+      try {
+        if (list.sharedType) {
+          await updateDoc(doc(db, "tasks", t2.id), { deleted: true, deletedAt: Date.now() });
+        } else {
+          await updateDoc(doc(db, "tasks", t2.id), { customListId: null });
+        }
+      } catch (e) {}
     }
     if (selectedCustomListId === list.id) selectedCustomListId = null;
     try {
@@ -2063,8 +2318,10 @@
         down.addEventListener("click", () => { closeTaskMenu(); moveTask(task, 1); });
         menu.appendChild(down);
 
-        const listHidden = task.customListId && !!(customLists.find(l => l.id === task.customListId) || {}).hidden;
-        if (!listHidden) {
+        const taskList = task.customListId ? customLists.find(l => l.id === task.customListId) : null;
+        const listHidden = !!(taskList && taskList.hidden);
+        const hideAllowed = !taskList || !taskList.sharedType || SHARED_LIST_TYPES[taskList.sharedType].allowHide;
+        if (!listHidden && hideAllowed) {
           const hide = document.createElement("button");
           hide.type = "button";
           hide.innerHTML = (task.hidden ? eyeOffIcon : eyeIcon) + "<span>" + (task.hidden ? t("unhideTask") : t("hideTask")) + "</span>";
@@ -2181,22 +2438,26 @@
       canDelete: false
     }));
 
-    const lists = customLists.map(list => ({
-      kind: "custom",
-      key: list.id,
-      list,
-      title: list.name,
-      tasks: tabTasks.filter(t2 => t2.customListId === list.id),
-      order: list.order ?? list.createdAt ?? 0,
-      featured: false,
-      muted: false,
-      collapseKey: list.id,
-      hidden: !!list.hidden,
-      canManage: isMine,
-      canHide: true,
-      canEditNameIcon: true,
-      canDelete: true
-    }));
+    const lists = customLists.map(list => {
+      const isShared = !!list.sharedType;
+      return {
+        kind: isShared ? "shared" : "custom",
+        key: list.id,
+        list,
+        title: list.name,
+        tasks: tabTasks.filter(t2 => t2.customListId === list.id),
+        order: list.order ?? list.createdAt ?? 0,
+        featured: false,
+        muted: false,
+        collapseKey: list.id,
+        hidden: !!list.hidden,
+        canManage: isShared ? true : isMine,
+        canHide: !isShared,
+        canEditNameIcon: true,
+        canDelete: true,
+        canManageMembers: isShared
+      };
+    });
 
     return builtins.concat(lists).sort((a, b) => a.order - b.order);
   }
@@ -2221,7 +2482,7 @@
     }
   }
 
-  function renderGroup(title, list, isMine, muted, featured, collapseKey) {
+  function renderGroup(title, list, isMine, muted, featured, collapseKey, infoType) {
     if (list.length === 0) return null;
     const group = document.createElement("div");
     group.className = "group" + (muted ? " muted" : "");
@@ -2231,6 +2492,16 @@
     const label = document.createElement("span");
     label.textContent = title;
     titleEl.appendChild(label);
+
+    if (infoType) {
+      const info = document.createElement("button");
+      info.type = "button";
+      info.className = "info-btn";
+      info.setAttribute("aria-label", t("sharedInfoLabel"));
+      info.textContent = "ⓘ";
+      info.addEventListener("click", (e) => { e.stopPropagation(); alert(t(infoType + "Info")); });
+      titleEl.appendChild(info);
+    }
 
     if (!collapseKey) {
       const ul = document.createElement("ul");
@@ -2272,14 +2543,14 @@
     const isMine = isMyTab();
     clearDoneEl.hidden = true;
 
-    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab);
+    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab || (t2.customListId && sharedLists.some(l => l.id === t2.customListId)));
     emptyEl.hidden = tabTasks.length > 0;
 
     const sections = getSections(tabTasks, isMine);
     for (const section of sections) {
       const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
       const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
-      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey);
+      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
       if (g) groupsEl.appendChild(g);
     }
 
@@ -2331,32 +2602,37 @@
     if (!text || !myEmail || !activeTab) return;
     inputEl.value = "";
     const selectedList = customLists.find(l => l.id === selectedCustomListId);
+    const isSharedTask = !!(selectedList && selectedList.sharedType);
     const bucketKey = !composerImportant ? "other" : (composerUrgent ? "importantUrgent" : "mostImportant");
-    const defaultHidden = selectedCustomListId
-      ? !!(selectedList && selectedList.hidden)
-      : !!(activeHiddenSections && activeHiddenSections[bucketKey]);
+    const defaultHidden = isSharedTask
+      ? false
+      : selectedCustomListId
+        ? !!(selectedList && selectedList.hidden)
+        : !!(activeHiddenSections && activeHiddenSections[bucketKey]);
+    const taskData = {
+      text,
+      done: false,
+      important: composerImportant,
+      urgent: composerUrgent,
+      isHabit: composerHabit,
+      completedDates: [],
+      customListId: selectedCustomListId,
+      hidden: defaultHidden,
+      order: Date.now(),
+      ownerEmail: isSharedTask ? "shared" : activeTab,
+      createdByEmail: myEmail,
+      createdAt: Date.now()
+    };
+    if (isSharedTask) taskData.members = selectedList.members;
     try {
-      await addDoc(collection(db, "tasks"), {
-        text,
-        done: false,
-        important: composerImportant,
-        urgent: composerUrgent,
-        isHabit: composerHabit,
-        completedDates: [],
-        customListId: selectedCustomListId,
-        hidden: defaultHidden,
-        order: Date.now(),
-        ownerEmail: activeTab,
-        createdByEmail: myEmail,
-        createdAt: Date.now()
-      });
+      await addDoc(collection(db, "tasks"), taskData);
     } catch (e) {
       showStatus(t("errAddTask"));
     }
   });
 
   clearDoneEl.addEventListener("click", async () => {
-    const done = tasks.filter(t2 => t2.ownerEmail === myEmail && !t2.isHabit && t2.done);
+    const done = tasks.filter(t2 => (t2.ownerEmail === myEmail || (t2.members && t2.members.includes(myEmail))) && !t2.isHabit && t2.done);
     if (!confirm(t("deleteDoneConfirm", { n: done.length }))) return;
     for (const t2 of done) { try { await updateDoc(doc(db, "tasks", t2.id), { deleted: true, deletedAt: Date.now() }); } catch (e) {} }
   });
@@ -2462,6 +2738,10 @@
     if (unsubStats) { unsubStats(); unsubStats = null; }
     if (unsubUiState) { unsubUiState(); unsubUiState = null; }
     if (unsubActiveUiState) { unsubActiveUiState(); unsubActiveUiState = null; }
+    if (unsubSharedLists) { unsubSharedLists(); unsubSharedLists = null; }
+    if (unsubSharedTasks) { unsubSharedTasks(); unsubSharedTasks = null; }
+    sharedSeedAttempted.fridge = false;
+    sharedSeedAttempted.shopping = false;
   }
 
   function showGate(which) {
@@ -2508,9 +2788,12 @@
       renderTabs();
       renderList();
       if (!newListOverlay.hidden) renderRenameFields();
+      maybeSeedSharedLists();
     });
 
     subscribeCustomLists(myEmail);
+    subscribeSharedLists();
+    subscribeSharedTasks();
     subscribeStats(myEmail);
     subscribeUiState(myEmail);
     subscribeActiveUiState(myEmail);

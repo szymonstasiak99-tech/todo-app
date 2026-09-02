@@ -13,17 +13,28 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      allow read: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true);
+      allow read: if isAllowed() && (
+        ("members" in resource.data)
+          ? request.auth.token.email in resource.data.members
+          : (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true)
+      );
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
-      allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
-      allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
+      allow update: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
+      allow delete: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
     }
 
     match /custom_lists/{listId} {
-      allow read: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true);
+      allow read: if isAllowed() && (
+        ("members" in resource.data)
+          ? request.auth.token.email in resource.data.members
+          : (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true)
+      );
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
-      allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden", "order", "deleted", "deletedAt"]);
-      allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
+      allow update: if isAllowed()
+        && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden", "order", "deleted", "deletedAt", "members"])
+        && (!("anchors" in resource.data) || request.resource.data.members.hasAll(resource.data.anchors));
+      allow delete: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
     }
 
     match /stats/{email} {
