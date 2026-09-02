@@ -2017,16 +2017,6 @@
     li.appendChild(body);
 
     if (canDelete) {
-      const top = document.createElement("button");
-      top.className = "delete";
-      top.type = "button";
-      top.setAttribute("aria-label", t("moveTaskTop"));
-      top.textContent = "🚀";
-      top.style.fontSize = "18px";
-      top.disabled = isFirst;
-      top.addEventListener("click", () => moveTaskToTop(task));
-      li.appendChild(top);
-
       const menuWrap = document.createElement("div");
       menuWrap.className = "task-menu-wrap";
 
@@ -2041,6 +2031,13 @@
       if (openTaskMenuId === task.id) {
         const menu = document.createElement("div");
         menu.className = "task-menu";
+
+        const top = document.createElement("button");
+        top.type = "button";
+        top.disabled = isFirst;
+        top.innerHTML = '<span class="glyph">🚀</span><span>' + t("moveTaskTop") + "</span>";
+        top.addEventListener("click", () => { closeTaskMenu(); moveTaskToTop(task); });
+        menu.appendChild(top);
 
         const down = document.createElement("button");
         down.type = "button";
