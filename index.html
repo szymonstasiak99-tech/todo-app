@@ -1169,6 +1169,7 @@
   };
 
   const LANG_STORAGE_KEY = "todo-app-lang";
+  const LANG_LABELS = { en: "English", pl: "Polski" };
   let currentLang = "en";
 
   function t(key, vars) {
@@ -1280,7 +1281,9 @@
       btn.textContent = t("theme_" + btn.dataset.themeChoice);
     }
     for (const btn of langButtons) {
-      btn.classList.toggle("active", btn.dataset.langChoice === currentLang);
+      const isActive = btn.dataset.langChoice === currentLang;
+      btn.classList.toggle("active", isActive);
+      btn.textContent = (isActive ? "✓ " : "") + LANG_LABELS[btn.dataset.langChoice];
     }
     if (myEmail) refreshComposerPlaceholder();
   }
