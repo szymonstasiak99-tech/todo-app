@@ -22,7 +22,7 @@ service cloud.firestore {
     match /custom_lists/{listId} {
       allow read: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true);
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
-      allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden", "order"]);
+      allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden", "order", "deleted", "deletedAt"]);
       allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
     }
 

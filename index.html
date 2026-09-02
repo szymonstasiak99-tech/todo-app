@@ -1028,7 +1028,7 @@
     getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc,
+    getFirestore, collection, addDoc, updateDoc, doc, getDoc, setDoc,
     onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -1657,7 +1657,7 @@
     if (unsubMyTasks) unsubMyTasks();
     const q = query(collection(db, "tasks"), where("ownerEmail", "==", email));
     unsubMyTasks = onSnapshot(q, (snap) => {
-      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
       backfillHidden("tasks", myTasks);
       backfillOrder("tasks", myTasks);
       recombineTasks();
@@ -1677,7 +1677,7 @@
     }
     const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), where("hidden", "==", false));
     unsubViewedTasks = onSnapshot(q, (snap) => {
-      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
       recombineTasks();
       renderList();
     }, (err) => {
@@ -1741,7 +1741,7 @@
     if (!isMine) constraints.push(where("hidden", "==", false));
     const customListsQuery = query(collection(db, "custom_lists"), ...constraints);
     unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
-      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted).sort(byOrder);
       if (isMine) {
         backfillHidden("custom_lists", customLists);
         backfillOrder("custom_lists", customLists);
@@ -1918,7 +1918,9 @@
     try {
       await updateDoc(doc(db, "stats", myEmail), { ["lists." + list.id]: deleteField() });
     } catch (e) {}
-    try { await deleteDoc(doc(db, "custom_lists", list.id)); } catch (e) {
+    try {
+      await updateDoc(doc(db, "custom_lists", list.id), { deleted: true, deletedAt: Date.now() });
+    } catch (e) {
       showModalError(e);
     }
   }
@@ -2277,7 +2279,11 @@
 
   async function deleteTask(id) {
     if (!confirm(t("deleteTaskConfirm"))) return;
-    try { await deleteDoc(doc(db, "tasks", id)); } catch (e) { showStatus(t("errDeleteTask")); }
+    try {
+      await updateDoc(doc(db, "tasks", id), { deleted: true, deletedAt: Date.now() });
+    } catch (e) {
+      showStatus(t("errDeleteTask"));
+    }
   }
 
   formEl.addEventListener("submit", async (e) => {
@@ -2313,7 +2319,7 @@
   clearDoneEl.addEventListener("click", async () => {
     const done = tasks.filter(t2 => t2.ownerEmail === myEmail && !t2.isHabit && t2.done);
     if (!confirm(t("deleteDoneConfirm", { n: done.length }))) return;
-    for (const t2 of done) { try { await deleteDoc(doc(db, "tasks", t2.id)); } catch (e) {} }
+    for (const t2 of done) { try { await updateDoc(doc(db, "tasks", t2.id), { deleted: true, deletedAt: Date.now() }); } catch (e) {} }
   });
 
   function setChip(chipEl, key) {
