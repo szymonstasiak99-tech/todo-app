@@ -544,12 +544,6 @@
 
   .chip-row::-webkit-scrollbar { display: none; }
 
-  :root[data-hand="left"] .tabs,
-  :root[data-hand="left"] .stats-strip,
-  :root[data-hand="left"] .chip-row {
-    direction: ltr;
-  }
-
   .custom-chips { display: flex; flex-wrap: nowrap; gap: 6px; flex-shrink: 0; }
 
   .chip.newlist {
@@ -936,12 +930,6 @@
       <button type="button" class="theme-btn" data-font-choice="large">Large</button>
     </div>
     <div class="overlay-divider"></div>
-    <p id="handDesc">Handedness.</p>
-    <div class="theme-row" id="handRow">
-      <button type="button" class="theme-btn" data-hand-choice="right">Right-handed</button>
-      <button type="button" class="theme-btn" data-hand-choice="left">Left-handed</button>
-    </div>
-    <div class="overlay-divider"></div>
     <p id="appearanceDesc">App appearance.</p>
     <div class="theme-row" id="themeRow">
       <button type="button" class="theme-btn" data-theme-choice="system">System</button>
@@ -963,7 +951,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc,
-    onSnapshot, query, orderBy, where, arrayUnion, arrayRemove, increment, deleteField
+    onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -1047,8 +1035,6 @@
   const langButtons = document.querySelectorAll("[data-lang-choice]");
   const fontSizeButtons = document.querySelectorAll("[data-font-choice]");
   const fontSizeDescEl = document.getElementById("fontSizeDesc");
-  const handButtons = document.querySelectorAll("[data-hand-choice]");
-  const handDescEl = document.getElementById("handDesc");
   const listsForLabelEl = document.getElementById("listsForLabel");
   const tabNamesDescEl = document.getElementById("tabNamesDesc");
   const languageDescEl = document.getElementById("languageDesc");
@@ -1105,9 +1091,6 @@
       font_small: "Small",
       font_default: "Default",
       font_large: "Large",
-      handDesc: "Handedness.",
-      hand_right: "Right-handed",
-      hand_left: "Left-handed",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
       deleteListConfirm: 'Delete list "{name}"? Its tasks will move back to the regular priority sections, and its stats will disappear.',
@@ -1185,9 +1168,6 @@
       font_small: "Mała",
       font_default: "Domyślna",
       font_large: "Duża",
-      handDesc: "Ręczność.",
-      hand_right: "Praworęczny",
-      hand_left: "Leworęczny",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
       deleteListConfirm: 'Usunąć listę "{name}"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.',
@@ -1323,26 +1303,6 @@
     btn.addEventListener("click", () => applyFontSize(btn.dataset.fontChoice));
   }
 
-  const HAND_STORAGE_KEY = "todo-app-hand";
-
-  function applyHand(choice) {
-    document.documentElement.dataset.hand = choice === "left" ? "left" : "right";
-    try { localStorage.setItem(HAND_STORAGE_KEY, choice); } catch (e) {}
-    for (const btn of handButtons) {
-      btn.classList.toggle("active", btn.dataset.handChoice === choice);
-    }
-  }
-
-  function initHand() {
-    let choice = "right";
-    try { choice = localStorage.getItem(HAND_STORAGE_KEY) || "right"; } catch (e) {}
-    applyHand(choice);
-  }
-
-  for (const btn of handButtons) {
-    btn.addEventListener("click", () => applyHand(btn.dataset.handChoice));
-  }
-
   function refreshComposerPlaceholder() {
     inputEl.placeholder = isMyTab() ? t("newTaskPlaceholder") : t("newTaskPlaceholderFor", { name: nameFor(activeTab) });
   }
@@ -1377,16 +1337,12 @@
     languageDescEl.textContent = t("languageDesc");
     appearanceDescEl.textContent = t("appearanceDesc");
     fontSizeDescEl.textContent = t("fontSizeDesc");
-    handDescEl.textContent = t("handDesc");
     resetStatsBtnEl.textContent = t("resetStats");
     for (const btn of themeButtons) {
       btn.textContent = t("theme_" + btn.dataset.themeChoice);
     }
     for (const btn of fontSizeButtons) {
       btn.textContent = t("font_" + btn.dataset.fontChoice);
-    }
-    for (const btn of handButtons) {
-      btn.textContent = t("hand_" + btn.dataset.handChoice);
     }
     for (const btn of langButtons) {
       const isActive = btn.dataset.langChoice === currentLang;
@@ -1419,7 +1375,6 @@
 
   initTheme();
   initFontSize();
-  initHand();
   initLang();
 
   function showNudge(message) {
@@ -1552,11 +1507,15 @@
     tasks = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
   }
 
+  function byCreatedAt(a, b) {
+    return (a.createdAt || 0) - (b.createdAt || 0);
+  }
+
   function subscribeMyTasks(email) {
     if (unsubMyTasks) unsubMyTasks();
-    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), orderBy("createdAt"));
+    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email));
     unsubMyTasks = onSnapshot(q, (snap) => {
-      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreatedAt);
       backfillHidden("tasks", myTasks);
       recombineTasks();
       renderList();
@@ -1573,9 +1532,9 @@
       renderList();
       return;
     }
-    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), where("hidden", "==", false), orderBy("createdAt"));
+    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), where("hidden", "==", false));
     unsubViewedTasks = onSnapshot(q, (snap) => {
-      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreatedAt);
       recombineTasks();
       renderList();
     }, (err) => {
