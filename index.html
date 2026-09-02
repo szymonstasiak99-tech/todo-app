@@ -915,6 +915,23 @@
     cursor: pointer;
   }
 
+  .consent-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  .secondary-btn {
+    width: 100%;
+    background: none;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .secondary-btn:hover { border-color: var(--text-muted); }
+
   .composer-inner form { display: flex; gap: 8px; }
 
   .composer-inner input {
@@ -1094,6 +1111,19 @@
       <a href="terms.html" target="_blank" rel="noopener" id="footerTerms">Terms of Service</a>
     </footer>
     <button type="button" class="reset-stats-btn" id="modalSignOutBtn">Sign out</button>
+    <div class="overlay-divider"></div>
+    <button type="button" class="reset-order-btn" id="manageConsentBtn">Manage analytics consent</button>
+  </div>
+</div>
+
+<div class="overlay" id="consentOverlay" hidden>
+  <div class="overlay-card">
+    <h2 id="consentTitle">Before we start 👋</h2>
+    <p id="consentBody">We use Google Analytics to see which features are actually useful, so we know what's worth improving — no ads, no selling your data, no tracking you across other sites. Sound okay?</p>
+    <div class="consent-actions">
+      <button type="button" class="primary-btn" id="consentAccept">Sure, I'm in</button>
+      <button type="button" class="secondary-btn" id="consentDecline">No thanks</button>
+    </div>
   </div>
 </div>
 
@@ -1121,9 +1151,9 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  let analytics = null; // only initialized once the person agrees, via the consent popup
 
   let currentUser = null;
   let myEmail = null;
@@ -1155,6 +1185,7 @@
   let editingMembersId = null;   // id of the shared list whose member list is expanded for editing, if any
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   const CUSTOM_TITLE_MAX_LEN = 24;
+  const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
   const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, other: Number.MAX_SAFE_INTEGER };
   const SHARED_LIST_TYPES = {
     fridge: { icon: "🗄️", nameKey: "fridgeDefaultName", nameKeyN: "fridgeDefaultNameN", order: -1, allowHide: false },
@@ -1215,6 +1246,12 @@
   const modalTitleEl = document.getElementById("modalTitle");
   const existingListsEl = document.getElementById("existingLists");
   const resetOrderBtnEl = document.getElementById("resetOrderBtn");
+  const manageConsentBtnEl = document.getElementById("manageConsentBtn");
+  const consentOverlay = document.getElementById("consentOverlay");
+  const consentTitleEl = document.getElementById("consentTitle");
+  const consentBodyEl = document.getElementById("consentBody");
+  const consentAcceptEl = document.getElementById("consentAccept");
+  const consentDeclineEl = document.getElementById("consentDecline");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
@@ -1313,6 +1350,11 @@
       addAnotherShopping: "+ Add another shopping list",
       listsForLabelMine: "Your task categories.",
       resetOrder: "Reset default order",
+      manageConsent: "Manage analytics consent",
+      consentTitle: "Before we start 👋",
+      consentBody: "We use Google Analytics to see which features are actually useful, so we know what's worth improving — no ads, no selling your data, no tracking you across other sites. Sound okay?",
+      consentAccept: "Sure, I'm in",
+      consentDecline: "No thanks",
       listsForLabelOther: "Categories for: {name} — you can add, but not delete.",
       footerAbout: "About",
       footerPrivacy: "Privacy Policy",
@@ -1418,6 +1460,11 @@
       addAnotherShopping: "+ Dodaj kolejną listę zakupów",
       listsForLabelMine: "Twoje kategorie zadań.",
       resetOrder: "Przywróć domyślną kolejność",
+      manageConsent: "Zarządzaj zgodą na analitykę",
+      consentTitle: "Zanim zaczniemy 👋",
+      consentBody: "Korzystamy z Google Analytics, żeby zobaczyć, które funkcje faktycznie się przydają i co warto poprawić — bez reklam, bez sprzedawania Twoich danych, bez namierzania Cię po innych stronach. Zgadzasz się?",
+      consentAccept: "Jasne, zgadzam się",
+      consentDecline: "Nie, dzięki",
       listsForLabelOther: "Kategorie dla: {name} — możesz dodawać, ale nie usuwać.",
       footerAbout: "O aplikacji",
       footerPrivacy: "Polityka prywatności",
@@ -1589,6 +1636,11 @@
     newListIconEl.setAttribute("aria-label", t("categoryIcon"));
     addListBtnEl.textContent = t("add");
     resetOrderBtnEl.textContent = t("resetOrder");
+    manageConsentBtnEl.textContent = t("manageConsent");
+    consentTitleEl.textContent = t("consentTitle");
+    consentBodyEl.textContent = t("consentBody");
+    consentAcceptEl.textContent = t("consentAccept");
+    consentDeclineEl.textContent = t("consentDecline");
     tabNamesDescEl.textContent = t("tabNamesDesc");
     saveNamesBtnEl.textContent = t("saveNames");
     languageDescEl.textContent = t("languageDesc");
@@ -2818,6 +2870,39 @@
   setChip(chipHabit, "habit");
   setChip(chipHidden, "hidden");
 
+  function maybeInitAnalytics() {
+    if (analytics) return;
+    try { analytics = getAnalytics(app); } catch (e) {}
+  }
+
+  function applyAnalyticsConsent(granted) {
+    try { localStorage.setItem(ANALYTICS_CONSENT_KEY, granted ? "granted" : "denied"); } catch (e) {}
+    if (granted) maybeInitAnalytics();
+  }
+
+  function openConsentOverlay() {
+    consentOverlay.hidden = false;
+  }
+
+  function closeConsentOverlay() {
+    consentOverlay.hidden = true;
+  }
+
+  function checkAnalyticsConsent() {
+    let stored = null;
+    try { stored = localStorage.getItem(ANALYTICS_CONSENT_KEY); } catch (e) {}
+    if (stored === "granted") { maybeInitAnalytics(); return; }
+    if (stored === "denied") return;
+    openConsentOverlay();
+  }
+
+  consentAcceptEl.addEventListener("click", () => { applyAnalyticsConsent(true); closeConsentOverlay(); });
+  consentDeclineEl.addEventListener("click", () => { applyAnalyticsConsent(false); closeConsentOverlay(); });
+  manageConsentBtnEl.addEventListener("click", () => { closeListOverlay(); openConsentOverlay(); });
+  consentOverlay.addEventListener("click", (e) => {
+    if (e.target === consentOverlay) closeConsentOverlay();
+  });
+
   function openListOverlay() {
     newListInput.value = "";
     populateIconSelect(newListIconEl, "");
@@ -2954,6 +3039,7 @@
     whoamiNameEl.textContent = allowedSnap.data().name || myEmail;
     updateComposerPlaceholder();
     showGate("app");
+    checkAnalyticsConsent();
 
     unsubRoster = onSnapshot(collection(db, "allowed_users"), (snap) => {
       roster = snap.docs.map(d => ({ email: d.id, name: d.data().name || d.id }));
