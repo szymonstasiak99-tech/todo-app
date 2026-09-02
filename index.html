@@ -766,6 +766,19 @@
     cursor: pointer;
   }
 
+  .reset-order-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.78rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    padding: 2px;
+    margin: 6px 0 10px;
+  }
+
   .existing-lists li.editing { padding: 6px; }
   .existing-lists li.editing select { width: 48px; padding: 8px 2px; font-size: 1rem; }
   .existing-lists li.editing input {
@@ -1028,6 +1041,7 @@
     <p class="error-text" id="modalError" hidden></p>
     <p id="listsForLabel">Your task categories.</p>
     <ul class="existing-lists" id="existingLists"></ul>
+    <button type="button" class="reset-order-btn" id="resetOrderBtn">Reset default order</button>
     <form id="newListForm">
       <div class="list-form-row">
         <select id="newListIcon" aria-label="Category icon"></select>
@@ -1195,6 +1209,7 @@
   const modalErrorEl = document.getElementById("modalError");
   const modalTitleEl = document.getElementById("modalTitle");
   const existingListsEl = document.getElementById("existingLists");
+  const resetOrderBtnEl = document.getElementById("resetOrderBtn");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
@@ -1292,6 +1307,7 @@
       addAnotherFridge: "+ Add another fridge",
       addAnotherShopping: "+ Add another shopping list",
       listsForLabelMine: "Your task categories.",
+      resetOrder: "Reset default order",
       listsForLabelOther: "Categories for: {name} — you can add, but not delete.",
       footerAbout: "About",
       footerPrivacy: "Privacy Policy",
@@ -1396,6 +1412,7 @@
       addAnotherFridge: "+ Dodaj kolejną lodówkę",
       addAnotherShopping: "+ Dodaj kolejną listę zakupów",
       listsForLabelMine: "Twoje kategorie zadań.",
+      resetOrder: "Przywróć domyślną kolejność",
       listsForLabelOther: "Kategorie dla: {name} — możesz dodawać, ale nie usuwać.",
       footerAbout: "O aplikacji",
       footerPrivacy: "Polityka prywatności",
@@ -1565,6 +1582,7 @@
     newListInput.placeholder = t("newCategoryPlaceholder");
     newListIconEl.setAttribute("aria-label", t("categoryIcon"));
     addListBtnEl.textContent = t("add");
+    resetOrderBtnEl.textContent = t("resetOrder");
     tabNamesDescEl.textContent = t("tabNamesDesc");
     saveNamesBtnEl.textContent = t("saveNames");
     languageDescEl.textContent = t("languageDesc");
@@ -2608,6 +2626,20 @@
     }
   }
 
+  async function resetBuiltinOrder() {
+    try {
+      await setDoc(doc(db, "ui_state", myEmail), {
+        sectionOrder: {
+          mostImportant: deleteField(),
+          importantUrgent: deleteField(),
+          other: deleteField()
+        }
+      }, { merge: true });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
   function renderGroup(title, list, isMine, muted, featured, collapseKey, infoType) {
     if (list.length === 0) return null;
     const group = document.createElement("div");
@@ -2800,6 +2832,7 @@
   chipNewList.addEventListener("click", openListOverlay);
   closeListOverlayBtn.addEventListener("click", closeListOverlay);
   resetStatsBtnEl.addEventListener("click", resetStats);
+  resetOrderBtnEl.addEventListener("click", resetBuiltinOrder);
   newListOverlay.addEventListener("click", (e) => {
     if (e.target === newListOverlay) closeListOverlay();
   });
