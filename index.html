@@ -11,6 +11,7 @@
 <style>
   :root {
     color-scheme: light dark;
+    --font-scale: 1;
     --bg: #F1F4F2;
     --surface: #FFFFFF;
     --surface-2: #E7ECE9;
@@ -363,7 +364,7 @@
   .group.muted { opacity: 0.72; }
 
   .group-title {
-    font-size: 0.78rem;
+    font-size: calc(0.78rem * var(--font-scale));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -412,7 +413,7 @@
 
   .group-title.featured {
     color: var(--accent);
-    font-size: 0.82rem;
+    font-size: calc(0.82rem * var(--font-scale));
   }
 
   ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -461,7 +462,7 @@
   .task-body { flex: 1; min-width: 0; padding: 8px 0; }
 
   .task-text {
-    font-size: 1rem;
+    font-size: calc(1rem * var(--font-scale));
     line-height: 1.4;
     word-break: break-word;
     cursor: pointer;
@@ -558,7 +559,7 @@
     color: var(--text-muted);
     border-radius: 999px;
     padding: 6px 12px;
-    font-size: 0.8rem;
+    font-size: calc(0.8rem * var(--font-scale));
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
@@ -922,6 +923,13 @@
       <button type="button" class="theme-btn" data-lang-choice="pl">Polski</button>
     </div>
     <div class="overlay-divider"></div>
+    <p id="fontSizeDesc">Font size.</p>
+    <div class="theme-row" id="fontSizeRow">
+      <button type="button" class="theme-btn" data-font-choice="small">Small</button>
+      <button type="button" class="theme-btn" data-font-choice="default">Default</button>
+      <button type="button" class="theme-btn" data-font-choice="large">Large</button>
+    </div>
+    <div class="overlay-divider"></div>
     <p id="appearanceDesc">App appearance.</p>
     <div class="theme-row" id="themeRow">
       <button type="button" class="theme-btn" data-theme-choice="system">System</button>
@@ -1020,8 +1028,10 @@
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
-  const themeButtons = document.querySelectorAll(".theme-btn");
+  const themeButtons = document.querySelectorAll("[data-theme-choice]");
   const langButtons = document.querySelectorAll("[data-lang-choice]");
+  const fontSizeButtons = document.querySelectorAll("[data-font-choice]");
+  const fontSizeDescEl = document.getElementById("fontSizeDesc");
   const listsForLabelEl = document.getElementById("listsForLabel");
   const tabNamesDescEl = document.getElementById("tabNamesDesc");
   const languageDescEl = document.getElementById("languageDesc");
@@ -1072,6 +1082,10 @@
       theme_light: "Light",
       theme_dim: "Warm",
       theme_dark: "Dark",
+      fontSizeDesc: "Font size.",
+      font_small: "Small",
+      font_default: "Default",
+      font_large: "Large",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
       deleteListConfirm: 'Delete list "{name}"? Its tasks will move back to the regular priority sections, and its stats will disappear.',
@@ -1137,6 +1151,10 @@
       theme_light: "Jasny",
       theme_dim: "Ciepły",
       theme_dark: "Ciemny",
+      fontSizeDesc: "Rozmiar czcionki.",
+      font_small: "Mała",
+      font_default: "Domyślna",
+      font_large: "Duża",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
       deleteListConfirm: 'Usunąć listę "{name}"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.',
@@ -1243,6 +1261,27 @@
     btn.addEventListener("click", () => applyTheme(btn.dataset.themeChoice));
   }
 
+  const FONT_STORAGE_KEY = "todo-app-font-size";
+  const FONT_SCALES = { small: "0.9", default: "1", large: "1.15" };
+
+  function applyFontSize(choice) {
+    document.documentElement.style.setProperty("--font-scale", FONT_SCALES[choice] || FONT_SCALES.default);
+    try { localStorage.setItem(FONT_STORAGE_KEY, choice); } catch (e) {}
+    for (const btn of fontSizeButtons) {
+      btn.classList.toggle("active", btn.dataset.fontChoice === choice);
+    }
+  }
+
+  function initFontSize() {
+    let choice = "default";
+    try { choice = localStorage.getItem(FONT_STORAGE_KEY) || "default"; } catch (e) {}
+    applyFontSize(choice);
+  }
+
+  for (const btn of fontSizeButtons) {
+    btn.addEventListener("click", () => applyFontSize(btn.dataset.fontChoice));
+  }
+
   function refreshComposerPlaceholder() {
     inputEl.placeholder = isMyTab() ? t("newTaskPlaceholder") : t("newTaskPlaceholderFor", { name: nameFor(activeTab) });
   }
@@ -1276,9 +1315,13 @@
     saveNamesBtnEl.textContent = t("saveNames");
     languageDescEl.textContent = t("languageDesc");
     appearanceDescEl.textContent = t("appearanceDesc");
+    fontSizeDescEl.textContent = t("fontSizeDesc");
     resetStatsBtnEl.textContent = t("resetStats");
     for (const btn of themeButtons) {
       btn.textContent = t("theme_" + btn.dataset.themeChoice);
+    }
+    for (const btn of fontSizeButtons) {
+      btn.textContent = t("font_" + btn.dataset.fontChoice);
     }
     for (const btn of langButtons) {
       const isActive = btn.dataset.langChoice === currentLang;
@@ -1310,6 +1353,7 @@
   }
 
   initTheme();
+  initFontSize();
   initLang();
 
   function showNudge(message) {
