@@ -1129,7 +1129,7 @@
   let customLists = [];          // rawCustomLists + sharedLists, merged and sorted
   let viewedStats = {};          // lifetime completion stats of whichever tab is active
   let collapsedSections = {};    // my own section-collapse preferences, synced across devices
-  let myHiddenSharedLists = {};  // shared lists I've personally hidden from my own view (doesn't affect other members)
+  let myHiddenCategories = {};   // any category (builtin section, own list, or shared list) I've personally hidden from my own view — never affects what anyone else sees
   let activeHiddenSections = {}; // hidden built-in sections, as set by whoever owns the active tab
   let activeSectionOrder = {};   // custom position of the 3 built-in sections, as set by whoever owns the active tab
   let openTaskMenuId = null;     // id of the task whose "more actions" menu is expanded, if any
@@ -1309,6 +1309,8 @@
       hiddenTag: "🙈 Hidden",
       hideList: "Hide list {name}",
       unhideList: "Unhide list {name}",
+      hideForMe: "Hide for me",
+      unhideForMe: "Show for me again",
       hiddenPrefix: "🙈 ",
       unhideTaskConfirm: "Unhide this task? Your partner will be able to see it.",
       unhideListConfirm: "Unhide this list and its tasks? Your partner will be able to see them.",
@@ -1411,6 +1413,8 @@
       hiddenTag: "🙈 Ukryte",
       hideList: "Ukryj listę {name}",
       unhideList: "Odkryj listę {name}",
+      hideForMe: "Ukryj u mnie",
+      unhideForMe: "Pokaż znowu u mnie",
       hiddenPrefix: "🙈 ",
       unhideTaskConfirm: "Odkryć to zadanie? Partner będzie mógł je zobaczyć.",
       unhideListConfirm: "Odkryć tę listę i jej zadania? Partner będzie mógł je zobaczyć.",
@@ -1705,19 +1709,14 @@
     const q3 = viewedStats.q3 || {};
     const q4 = viewedStats.q4 || {};
 
-    if (!(isMine && activeHiddenSections.mostImportant)) addStatPill(QUADRANT_ICON.q2, q2.total || 0, q2.habit || 0);
-    if (!(isMine && activeHiddenSections.importantUrgent)) addStatPill(QUADRANT_ICON.q1, q1.total || 0, q1.habit || 0);
-    if (!(isMine && activeHiddenSections.other)) addStatPill("🍃", (q3.total || 0) + (q4.total || 0), (q3.habit || 0) + (q4.habit || 0));
+    if (!(isMine && myHiddenCategories.mostImportant)) addStatPill(QUADRANT_ICON.q2, q2.total || 0, q2.habit || 0);
+    if (!(isMine && myHiddenCategories.importantUrgent)) addStatPill(QUADRANT_ICON.q1, q1.total || 0, q1.habit || 0);
+    if (!(isMine && myHiddenCategories.other)) addStatPill("🍃", (q3.total || 0) + (q4.total || 0), (q3.habit || 0) + (q4.habit || 0));
 
     const lists = viewedStats.lists || {};
     const listIds = isMine ? customLists.map(l => l.id) : Object.keys(lists);
     for (const listId of listIds) {
-      if (isMine) {
-        const list = customLists.find(l => l.id === listId);
-        const selfHiddenShared = list && list.sharedType && myHiddenSharedLists && myHiddenSharedLists[listId];
-        const hiddenNormal = list && !list.sharedType && list.hidden;
-        if (selfHiddenShared || hiddenNormal) continue;
-      }
+      if (isMine && myHiddenCategories && myHiddenCategories[listId]) continue;
       const s = lists[listId] || {};
       const label = (s.name || "").slice(0, 3);
       addStatPill((s.icon ? s.icon + " " : "") + label, s.total || 0, s.habit || 0);
@@ -2017,10 +2016,8 @@
 
   function renderCustomChips() {
     customChipsEl.innerHTML = "";
-    const isMine = isMyTab();
     for (const list of customLists) {
-      if (list.sharedType && myHiddenSharedLists && myHiddenSharedLists[list.id]) continue;
-      if (!list.sharedType && isMine && list.hidden) continue;
+      if (myHiddenCategories && myHiddenCategories[list.id]) continue;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip list" + (selectedCustomListId === list.id ? " on list" : "");
@@ -2073,7 +2070,7 @@
         cancel.addEventListener("click", () => { editingListId = null; renderExistingLists(); });
         li.append(iconSelect, nameInput, save, cancel);
       } else {
-        const effectiveHidden = section.kind === "shared" ? section.selfHidden : section.hidden;
+        const effectiveHidden = section.hidden || section.selfHidden;
         if (section.kind !== "builtin") {
           const icon = document.createElement("span");
           icon.textContent = list.icon || "";
@@ -2124,18 +2121,26 @@
             down.addEventListener("click", () => { closeListMenu(); moveSection(sections, index, 1); });
             menu.appendChild(down);
 
-            if (section.canHide) {
-              const hide = document.createElement("button");
-              hide.type = "button";
-              hide.innerHTML = (effectiveHidden ? eyeOffIcon : eyeIcon) + "<span>" + (effectiveHidden ? t("unhideList", { name: displayTitle }) : t("hideList", { name: displayTitle })) + "</span>";
-              hide.addEventListener("click", () => {
+            if (section.canHideOthers) {
+              const hideOthers = document.createElement("button");
+              hideOthers.type = "button";
+              hideOthers.innerHTML = (section.hidden ? eyeOffIcon : eyeIcon) + "<span>" + (section.hidden ? t("unhideList", { name: displayTitle }) : t("hideList", { name: displayTitle })) + "</span>";
+              hideOthers.addEventListener("click", () => {
                 closeListMenu();
                 if (section.kind === "builtin") toggleBuiltinSectionHidden(section.key);
-                else if (section.kind === "shared") toggleSharedListSelfHidden(list);
                 else toggleListHidden(list);
               });
-              menu.appendChild(hide);
+              menu.appendChild(hideOthers);
             }
+
+            const hideForMe = document.createElement("button");
+            hideForMe.type = "button";
+            hideForMe.innerHTML = (section.selfHidden ? eyeOffIcon : eyeIcon) + "<span>" + (section.selfHidden ? t("unhideForMe") : t("hideForMe")) + "</span>";
+            hideForMe.addEventListener("click", () => {
+              closeListMenu();
+              toggleSelfHidden(section.key);
+            });
+            menu.appendChild(hideForMe);
 
             if (section.canEditNameIcon) {
               const edit = document.createElement("button");
@@ -2467,7 +2472,7 @@
     if (unsubUiState) unsubUiState();
     unsubUiState = onSnapshot(doc(db, "ui_state", email), (snap) => {
       collapsedSections = (snap.exists() && snap.data().collapsedSections) || {};
-      myHiddenSharedLists = (snap.exists() && snap.data().hiddenSharedLists) || {};
+      myHiddenCategories = (snap.exists() && snap.data().hiddenCategories) || {};
       customTitle = (snap.exists() && snap.data().customTitle) || "";
       appTitleEl.textContent = customTitle || t("appTitle");
       if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
@@ -2481,10 +2486,10 @@
     });
   }
 
-  async function toggleSharedListSelfHidden(list) {
-    const newHidden = !(myHiddenSharedLists && myHiddenSharedLists[list.id]);
+  async function toggleSelfHidden(key) {
+    const newHidden = !(myHiddenCategories && myHiddenCategories[key]);
     try {
-      await setDoc(doc(db, "ui_state", myEmail), { hiddenSharedLists: { [list.id]: newHidden } }, { merge: true });
+      await setDoc(doc(db, "ui_state", myEmail), { hiddenCategories: { [key]: newHidden } }, { merge: true });
     } catch (e) {
       showModalError(e);
     }
@@ -2551,8 +2556,9 @@
       muted: b.muted,
       collapseKey: b.collapseKey,
       hidden: !!(activeHiddenSections && activeHiddenSections[b.key]),
+      selfHidden: !!(myHiddenCategories && myHiddenCategories[b.key]),
       canManage: isMine,
-      canHide: true,
+      canHideOthers: true,
       canEditNameIcon: false,
       canDelete: false
     }));
@@ -2570,9 +2576,9 @@
         muted: false,
         collapseKey: list.id,
         hidden: !!list.hidden,
-        selfHidden: isShared && !!(myHiddenSharedLists && myHiddenSharedLists[list.id]),
+        selfHidden: !!(myHiddenCategories && myHiddenCategories[list.id]),
         canManage: isShared ? true : isMine,
-        canHide: true,
+        canHideOthers: !isShared,
         canEditNameIcon: true,
         canDelete: true,
         canManageMembers: isShared
@@ -2669,9 +2675,9 @@
     const sections = getSections(tabTasks, isMine);
     for (const section of sections) {
       if (section.selfHidden) continue;
-      if (section.canManage && section.kind !== "shared" && section.hidden) continue;
       const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
-      const g = renderGroup(displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
+      const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
+      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
       if (g) groupsEl.appendChild(g);
     }
 
