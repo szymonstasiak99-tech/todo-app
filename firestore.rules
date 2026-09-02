@@ -13,14 +13,14 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      allow read: if isAllowed() && (resource.data.hidden != true || resource.data.ownerEmail == request.auth.token.email);
+      allow read: if isAllowed() && (resource.data.get("hidden", false) != true || resource.data.ownerEmail == request.auth.token.email);
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
       allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
       allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
     }
 
     match /custom_lists/{listId} {
-      allow read: if isAllowed() && (resource.data.hidden != true || resource.data.ownerEmail == request.auth.token.email);
+      allow read: if isAllowed() && (resource.data.get("hidden", false) != true || resource.data.ownerEmail == request.auth.token.email);
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
       allow update: if isAllowed() && resource.data.ownerEmail == request.auth.token.email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden"]);
       allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
