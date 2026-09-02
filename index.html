@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -838,30 +838,31 @@
 
 <div class="gate" id="signedOutGate" hidden>
   <div class="gate-card">
-    <h1>Let's do</h1>
-    <p>Wspólna lista zadań. Zaloguj się swoim kontem Google, żeby zobaczyć swoje zadania i zadania osób, którym udostępniono dostęp.</p>
-    <button type="button" id="signInBtn">Zaloguj się przez Google</button>
+    <h1 id="signInTitle">Let's do</h1>
+    <p id="signInDesc">Shared to-do list. Sign in with your Google account to see your tasks and tasks shared with you.</p>
+    <button type="button" id="signInBtn">Sign in with Google</button>
     <p class="error-text" id="authError" hidden></p>
   </div>
 </div>
 
 <div class="gate" id="notAllowedGate" hidden>
   <div class="gate-card">
-    <h1>Brak dostępu</h1>
-    <p>To konto (<span id="deniedEmail"></span>) nie ma dostępu do tej listy. Poproś osobę, która ją prowadzi, o dodanie Cię.</p>
-    <button type="button" class="signout" id="signOutFromDenied">Wyloguj</button>
+    <h1 id="notAllowedTitle">No access</h1>
+    <p id="notAllowedDesc"><span id="notAllowedBefore"></span><span id="deniedEmail"></span><span id="notAllowedAfter"></span></p>
+    <button type="button" class="signout" id="signOutFromDenied">Sign out</button>
   </div>
 </div>
 
 <div class="app" id="appRoot" hidden>
   <header>
     <div class="title-row">
-      <h1>Let's do</h1>
+      <h1 id="appTitle">Let's do</h1>
       <div class="tabs" id="tabs"></div>
     </div>
     <div class="stats-row">
       <div class="greeting">
-        Cześć <strong id="whoamiName">—</strong>! <button type="button" id="signOutBtn">Wyloguj</button>
+        <span id="greetingHello">Hey</span> <strong id="whoamiName">—</strong>!
+        <button type="button" id="signOutBtn">Sign out</button>
       </div>
       <div class="stats-strip" id="statsStrip"></div>
     </div>
@@ -869,24 +870,24 @@
   </header>
   <main>
     <div class="empty" id="empty">
-      <span class="glyph">Pusto</span>
-      Dodaj pierwsze zadanie poniżej.
+      <span class="glyph" id="emptyGlyph">Empty</span>
+      <span id="emptyText">Add your first task below.</span>
     </div>
     <div id="groups"></div>
-    <button class="clear-done" id="clearDone" hidden>Usuń ukończone</button>
+    <button class="clear-done" id="clearDone" hidden>Clear completed</button>
   </main>
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
       <div class="chip-row" id="chipRow">
-        <button type="button" class="chip important" id="chipImportant">Ważne</button>
-        <button type="button" class="chip urgent" id="chipUrgent">Pilne</button>
-        <button type="button" class="chip habit" id="chipHabit">🔁 Nawyk</button>
+        <button type="button" class="chip important" id="chipImportant">Important</button>
+        <button type="button" class="chip urgent" id="chipUrgent">Urgent</button>
+        <button type="button" class="chip habit" id="chipHabit">🔁 Habit</button>
         <div class="custom-chips" id="customChips"></div>
-        <button type="button" class="chip newlist" id="chipNewList">Edytuj</button>
+        <button type="button" class="chip newlist" id="chipNewList">Edit</button>
       </div>
       <form id="form">
-        <input id="input" type="text" placeholder="Nowe zadanie…" autocomplete="off" maxlength="200">
-        <button type="submit" aria-label="Dodaj zadanie">+</button>
+        <input id="input" type="text" autocomplete="off" maxlength="200">
+        <button type="submit" id="addTaskBtn" aria-label="Add task">+</button>
       </form>
     </div>
   </div>
@@ -895,35 +896,41 @@
 <div class="overlay" id="newListOverlay" hidden>
   <div class="overlay-card">
     <div class="overlay-head">
-      <h2>Listy i zakładki</h2>
-      <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Zamknij">✕</button>
+      <h2 id="modalTitle">Lists &amp; tabs</h2>
+      <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Close">✕</button>
     </div>
     <p class="error-text" id="modalError" hidden></p>
-    <p id="listsForLabel">Kategorie zadań.</p>
+    <p id="listsForLabel">Your task categories.</p>
     <ul class="existing-lists" id="existingLists"></ul>
     <form id="newListForm">
       <div class="list-form-row">
-        <select id="newListIcon" aria-label="Ikonka kategorii"></select>
-        <input id="newListInput" type="text" placeholder="Nazwa nowej kategorii" autocomplete="off" maxlength="40">
+        <select id="newListIcon" aria-label="Category icon"></select>
+        <input id="newListInput" type="text" placeholder="New category name" autocomplete="off" maxlength="40">
       </div>
-      <button type="submit" class="primary-btn">Dodaj</button>
+      <button type="submit" class="primary-btn" id="addListBtn">Add</button>
     </form>
     <div class="overlay-divider"></div>
-    <p>Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.</p>
+    <p id="tabNamesDesc">Tab names — any nickname, either of you can change both.</p>
     <form id="renameForm">
       <div class="rename-fields" id="renameFields"></div>
-      <button type="submit" class="primary-btn">Zapisz nazwy</button>
+      <button type="submit" class="primary-btn" id="saveNamesBtn">Save names</button>
     </form>
     <div class="overlay-divider"></div>
-    <p>Wygląd aplikacji.</p>
-    <div class="theme-row" id="themeRow">
-      <button type="button" class="theme-btn" data-theme-choice="system">Systemowy</button>
-      <button type="button" class="theme-btn" data-theme-choice="light">Jasny</button>
-      <button type="button" class="theme-btn" data-theme-choice="dim">Ciepły</button>
-      <button type="button" class="theme-btn" data-theme-choice="dark">Ciemny</button>
+    <p id="languageDesc">App language.</p>
+    <div class="theme-row" id="langRow">
+      <button type="button" class="theme-btn" data-lang-choice="en">English</button>
+      <button type="button" class="theme-btn" data-lang-choice="pl">Polski</button>
     </div>
     <div class="overlay-divider"></div>
-    <button type="button" class="reset-stats-btn" id="resetStatsBtn">Zresetuj statystyki</button>
+    <p id="appearanceDesc">App appearance.</p>
+    <div class="theme-row" id="themeRow">
+      <button type="button" class="theme-btn" data-theme-choice="system">System</button>
+      <button type="button" class="theme-btn" data-theme-choice="light">Light</button>
+      <button type="button" class="theme-btn" data-theme-choice="dim">Warm</button>
+      <button type="button" class="theme-btn" data-theme-choice="dark">Dark</button>
+    </div>
+    <div class="overlay-divider"></div>
+    <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
   </div>
 </div>
 
@@ -974,17 +981,27 @@
   const signedOutGate = document.getElementById("signedOutGate");
   const notAllowedGate = document.getElementById("notAllowedGate");
   const deniedEmailEl = document.getElementById("deniedEmail");
+  const notAllowedBeforeEl = document.getElementById("notAllowedBefore");
+  const notAllowedAfterEl = document.getElementById("notAllowedAfter");
+  const notAllowedTitleEl = document.getElementById("notAllowedTitle");
   const appRoot = document.getElementById("appRoot");
   const signInBtn = document.getElementById("signInBtn");
+  const signInTitleEl = document.getElementById("signInTitle");
+  const signInDescEl = document.getElementById("signInDesc");
   const authErrorEl = document.getElementById("authError");
   const signOutFromDenied = document.getElementById("signOutFromDenied");
   const signOutBtn = document.getElementById("signOutBtn");
   const whoamiNameEl = document.getElementById("whoamiName");
+  const appTitleEl = document.getElementById("appTitle");
+  const greetingHelloEl = document.getElementById("greetingHello");
   const tabsEl = document.getElementById("tabs");
   const groupsEl = document.getElementById("groups");
   const emptyEl = document.getElementById("empty");
+  const emptyGlyphEl = document.getElementById("emptyGlyph");
+  const emptyTextEl = document.getElementById("emptyText");
   const formEl = document.getElementById("form");
   const inputEl = document.getElementById("input");
+  const addTaskBtnEl = document.getElementById("addTaskBtn");
   const clearDoneEl = document.getElementById("clearDone");
   const statusNoteEl = document.getElementById("statusNote");
   const composerWrap = document.getElementById("composerWrap");
@@ -998,18 +1015,167 @@
   const newListInput = document.getElementById("newListInput");
   const newListIconEl = document.getElementById("newListIcon");
   const modalErrorEl = document.getElementById("modalError");
+  const modalTitleEl = document.getElementById("modalTitle");
   const existingListsEl = document.getElementById("existingLists");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
+  const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
   const themeButtons = document.querySelectorAll(".theme-btn");
+  const langButtons = document.querySelectorAll("[data-lang-choice]");
   const listsForLabelEl = document.getElementById("listsForLabel");
+  const tabNamesDescEl = document.getElementById("tabNamesDesc");
+  const languageDescEl = document.getElementById("languageDesc");
+  const appearanceDescEl = document.getElementById("appearanceDesc");
   const renameForm = document.getElementById("renameForm");
   const renameFieldsEl = document.getElementById("renameFields");
+  const saveNamesBtnEl = document.getElementById("saveNamesBtn");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+
+  const STRINGS = {
+    en: {
+      appTitle: "Let's do",
+      signInDesc: "Shared to-do list. Sign in with your Google account to see your tasks and tasks shared with you.",
+      signInBtn: "Sign in with Google",
+      notAllowedTitle: "No access",
+      notAllowedBefore: "This account (",
+      notAllowedAfter: ") doesn't have access to this list. Ask the person who manages it to add you.",
+      signOut: "Sign out",
+      greetingHello: "Hey",
+      emptyGlyph: "Empty",
+      emptyText: "Add your first task below.",
+      clearDone: "Clear completed",
+      chipImportant: "Important",
+      chipUrgent: "Urgent",
+      chipHabit: "🔁 Habit",
+      chipEdit: "Edit",
+      addTask: "Add task",
+      modalTitle: "Lists & tabs",
+      close: "Close",
+      newCategoryPlaceholder: "New category name",
+      categoryIcon: "Category icon",
+      add: "Add",
+      editList: "Edit list {name}",
+      deleteList: "Delete list {name}",
+      save: "Save",
+      cancel: "Cancel",
+      tabNamesDesc: "Tab names — any nickname, either of you can change both.",
+      yourTab: "Your tab",
+      tabFor: "Tab: {email}",
+      saveNames: "Save names",
+      languageDesc: "App language.",
+      appearanceDesc: "App appearance.",
+      theme_system: "System",
+      theme_light: "Light",
+      theme_dim: "Warm",
+      theme_dark: "Dark",
+      resetStats: "Reset stats",
+      resetStatsConfirm: "Reset all your stats? This can't be undone.",
+      deleteListConfirm: 'Delete list "{name}"? Its tasks will move back to the regular priority sections, and its stats will disappear.',
+      listsForLabelMine: "Your task categories.",
+      listsForLabelOther: "Categories for: {name} — you can add, but not delete.",
+      newTaskPlaceholder: "New task…",
+      newTaskPlaceholderFor: "New task for: {name}…",
+      undo: "Undo",
+      markDone: "Mark as done",
+      deleteTask: "Delete task",
+      habitStreak: "🔁 🔥 {n} days",
+      habitPlain: "🔁 habit",
+      sectionMostImportant: "🎯 Most important (important, not urgent)",
+      sectionImportantUrgent: "Important & urgent",
+      sectionOther: "Other",
+      deleteTaskConfirm: "Delete this task?",
+      deleteDoneConfirm: "Delete {n} completed tasks?",
+      nudgeMessage: "Nice, done! 🎉 Now's a good time for something important but not urgent 🎯",
+      errAddTask: "Couldn't add the task.",
+      errSaveChange: "Couldn't save the change.",
+      errDeleteTask: "Couldn't delete the task.",
+      errSaveSection: "Couldn't save section state.",
+      errSaveProgress: "Couldn't save progress ({code}): {msg}",
+      errCheckAccess: "Error checking access: {msg}",
+      errSync: "Sync error: {msg}",
+      errSignIn: "Sign-in error ({code}): {msg}",
+      errGeneric: "Error ({code}): {msg}"
+    },
+    pl: {
+      appTitle: "Do zrobienia",
+      signInDesc: "Wspólna lista zadań. Zaloguj się swoim kontem Google, żeby zobaczyć swoje zadania i zadania osób, którym udostępniono dostęp.",
+      signInBtn: "Zaloguj się przez Google",
+      notAllowedTitle: "Brak dostępu",
+      notAllowedBefore: "To konto (",
+      notAllowedAfter: ") nie ma dostępu do tej listy. Poproś osobę, która ją prowadzi, o dodanie Cię.",
+      signOut: "Wyloguj",
+      greetingHello: "Cześć",
+      emptyGlyph: "Pusto",
+      emptyText: "Dodaj pierwsze zadanie poniżej.",
+      clearDone: "Usuń ukończone",
+      chipImportant: "Ważne",
+      chipUrgent: "Pilne",
+      chipHabit: "🔁 Nawyk",
+      chipEdit: "Edytuj",
+      addTask: "Dodaj zadanie",
+      modalTitle: "Listy i zakładki",
+      close: "Zamknij",
+      newCategoryPlaceholder: "Nazwa nowej kategorii",
+      categoryIcon: "Ikonka kategorii",
+      add: "Dodaj",
+      editList: "Edytuj listę {name}",
+      deleteList: "Usuń listę {name}",
+      save: "Zapisz",
+      cancel: "Anuluj",
+      tabNamesDesc: "Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.",
+      yourTab: "Twoja zakładka",
+      tabFor: "Zakładka: {email}",
+      saveNames: "Zapisz nazwy",
+      languageDesc: "Język aplikacji.",
+      appearanceDesc: "Wygląd aplikacji.",
+      theme_system: "Systemowy",
+      theme_light: "Jasny",
+      theme_dim: "Ciepły",
+      theme_dark: "Ciemny",
+      resetStats: "Zresetuj statystyki",
+      resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
+      deleteListConfirm: 'Usunąć listę "{name}"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.',
+      listsForLabelMine: "Twoje kategorie zadań.",
+      listsForLabelOther: "Kategorie dla: {name} — możesz dodawać, ale nie usuwać.",
+      newTaskPlaceholder: "Nowe zadanie…",
+      newTaskPlaceholderFor: "Nowe zadanie dla: {name}…",
+      undo: "Cofnij",
+      markDone: "Oznacz jako zrobione",
+      deleteTask: "Usuń zadanie",
+      habitStreak: "🔁 🔥 {n} dni",
+      habitPlain: "🔁 nawyk",
+      sectionMostImportant: "🎯 Najważniejsze (ważne, niepilne)",
+      sectionImportantUrgent: "Ważne i pilne",
+      sectionOther: "Pozostałe",
+      deleteTaskConfirm: "Na pewno chcesz usunąć to zadanie?",
+      deleteDoneConfirm: "Usunąć {n} ukończonych zadań?",
+      nudgeMessage: "Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯",
+      errAddTask: "Nie udało się dodać zadania.",
+      errSaveChange: "Nie udało się zapisać zmiany.",
+      errDeleteTask: "Nie udało się usunąć zadania.",
+      errSaveSection: "Nie udało się zapisać stanu sekcji.",
+      errSaveProgress: "Nie udało się zapisać postępu ({code}): {msg}",
+      errCheckAccess: "Błąd sprawdzania dostępu: {msg}",
+      errSync: "Błąd synchronizacji: {msg}",
+      errSignIn: "Błąd logowania ({code}): {msg}",
+      errGeneric: "Błąd ({code}): {msg}"
+    }
+  };
+
+  const LANG_STORAGE_KEY = "todo-app-lang";
+  let currentLang = "en";
+
+  function t(key, vars) {
+    let s = (STRINGS[currentLang] && STRINGS[currentLang][key]) || STRINGS.en[key] || key;
+    if (vars) {
+      for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+    }
+    return s;
+  }
 
   function todayStr() {
     const d = new Date();
@@ -1043,10 +1209,10 @@
     statusNoteEl.classList.add("show");
   }
 
-  // Errors from actions inside the "Edytuj" modal show here (the header's
+  // Errors from actions inside the "Edit" modal show here (the header's
   // showStatus is hidden behind the modal overlay, so it's invisible there).
   function showModalError(err) {
-    modalErrorEl.textContent = "Błąd (" + err.code + "): " + err.message;
+    modalErrorEl.textContent = t("errGeneric", { code: err.code, msg: err.message });
     modalErrorEl.hidden = false;
   }
 
@@ -1073,7 +1239,73 @@
   for (const btn of themeButtons) {
     btn.addEventListener("click", () => applyTheme(btn.dataset.themeChoice));
   }
+
+  function refreshComposerPlaceholder() {
+    inputEl.placeholder = isMyTab() ? t("newTaskPlaceholder") : t("newTaskPlaceholderFor", { name: nameFor(activeTab) });
+  }
+
+  function applyStaticTranslations() {
+    document.documentElement.lang = currentLang;
+    signInTitleEl.textContent = t("appTitle");
+    signInDescEl.textContent = t("signInDesc");
+    signInBtn.textContent = t("signInBtn");
+    notAllowedTitleEl.textContent = t("notAllowedTitle");
+    notAllowedBeforeEl.textContent = t("notAllowedBefore");
+    notAllowedAfterEl.textContent = t("notAllowedAfter");
+    signOutFromDenied.textContent = t("signOut");
+    appTitleEl.textContent = t("appTitle");
+    greetingHelloEl.textContent = t("greetingHello");
+    signOutBtn.textContent = t("signOut");
+    emptyGlyphEl.textContent = t("emptyGlyph");
+    emptyTextEl.textContent = t("emptyText");
+    clearDoneEl.textContent = t("clearDone");
+    chipImportant.textContent = t("chipImportant");
+    chipUrgent.textContent = t("chipUrgent");
+    chipHabit.textContent = t("chipHabit");
+    chipNewList.textContent = t("chipEdit");
+    addTaskBtnEl.setAttribute("aria-label", t("addTask"));
+    modalTitleEl.textContent = t("modalTitle");
+    closeListOverlayBtn.setAttribute("aria-label", t("close"));
+    newListInput.placeholder = t("newCategoryPlaceholder");
+    newListIconEl.setAttribute("aria-label", t("categoryIcon"));
+    addListBtnEl.textContent = t("add");
+    tabNamesDescEl.textContent = t("tabNamesDesc");
+    saveNamesBtnEl.textContent = t("saveNames");
+    languageDescEl.textContent = t("languageDesc");
+    appearanceDescEl.textContent = t("appearanceDesc");
+    resetStatsBtnEl.textContent = t("resetStats");
+    for (const btn of themeButtons) {
+      btn.textContent = t("theme_" + btn.dataset.themeChoice);
+    }
+    for (const btn of langButtons) {
+      btn.classList.toggle("active", btn.dataset.langChoice === currentLang);
+    }
+    if (myEmail) refreshComposerPlaceholder();
+  }
+
+  function applyLang(choice) {
+    currentLang = choice;
+    try { localStorage.setItem(LANG_STORAGE_KEY, choice); } catch (e) {}
+    applyStaticTranslations();
+    renderTabs();
+    renderList();
+    renderStats();
+    if (!newListOverlay.hidden) { renderExistingLists(); renderRenameFields(); }
+  }
+
+  function initLang() {
+    let choice = "en";
+    try { choice = localStorage.getItem(LANG_STORAGE_KEY) || "en"; } catch (e) {}
+    currentLang = choice;
+    applyStaticTranslations();
+  }
+
+  for (const btn of langButtons) {
+    btn.addEventListener("click", () => applyLang(btn.dataset.langChoice));
+  }
+
   initTheme();
+  initLang();
 
   function showNudge(message) {
     nudgeEl.textContent = message;
@@ -1144,7 +1376,7 @@
         }, { merge: true });
       }
     } catch (e) {
-      showStatus("Nie udało się zapisać postępu (" + e.code + "): " + e.message);
+      showStatus(t("errSaveProgress", { code: e.code, msg: e.message }));
     }
   }
 
@@ -1200,7 +1432,7 @@
   }
 
   async function resetStats() {
-    if (!confirm("Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.")) return;
+    if (!confirm(t("resetStatsConfirm"))) return;
     try {
       await setDoc(doc(db, "stats", myEmail), {});
       closeListOverlay();
@@ -1210,7 +1442,7 @@
   }
 
   function updateComposerPlaceholder() {
-    inputEl.placeholder = isMyTab() ? "Nowe zadanie…" : "Nowe zadanie dla: " + nameFor(activeTab) + "…";
+    refreshComposerPlaceholder();
     selectedCustomListId = null;
     renderCustomChips();
   }
@@ -1236,15 +1468,15 @@
     existingListsEl.innerHTML = "";
     const isMine = isMyTab();
     listsForLabelEl.textContent = isMine
-      ? "Twoje kategorie zadań."
-      : "Kategorie dla: " + nameFor(activeTab) + " — możesz dodawać, ale nie usuwać.";
+      ? t("listsForLabelMine")
+      : t("listsForLabelOther", { name: nameFor(activeTab) });
     for (const list of customLists) {
       const li = document.createElement("li");
 
       if (isMine && editingListId === list.id) {
         li.className = "editing";
         const iconSelect = document.createElement("select");
-        iconSelect.setAttribute("aria-label", "Ikonka kategorii");
+        iconSelect.setAttribute("aria-label", t("categoryIcon"));
         populateIconSelect(iconSelect, list.icon || "");
         const nameInput = document.createElement("input");
         nameInput.type = "text";
@@ -1253,13 +1485,13 @@
         const save = document.createElement("button");
         save.type = "button";
         save.className = "del-list";
-        save.setAttribute("aria-label", "Zapisz");
+        save.setAttribute("aria-label", t("save"));
         save.textContent = "✔";
         save.addEventListener("click", () => saveEditedList(list, iconSelect.value, nameInput.value.trim()));
         const cancel = document.createElement("button");
         cancel.type = "button";
         cancel.className = "del-list";
-        cancel.setAttribute("aria-label", "Anuluj");
+        cancel.setAttribute("aria-label", t("cancel"));
         cancel.textContent = "✕";
         cancel.addEventListener("click", () => { editingListId = null; renderExistingLists(); });
         li.append(iconSelect, nameInput, save, cancel);
@@ -1274,13 +1506,13 @@
           const edit = document.createElement("button");
           edit.type = "button";
           edit.className = "del-list";
-          edit.setAttribute("aria-label", "Edytuj listę " + list.name);
+          edit.setAttribute("aria-label", t("editList", { name: list.name }));
           edit.textContent = "✎";
           edit.addEventListener("click", () => { editingListId = list.id; renderExistingLists(); });
           const del = document.createElement("button");
           del.type = "button";
           del.className = "del-list";
-          del.setAttribute("aria-label", "Usuń listę " + list.name);
+          del.setAttribute("aria-label", t("deleteList", { name: list.name }));
           del.innerHTML = trashIcon;
           del.addEventListener("click", () => deleteCustomList(list));
           li.append(edit, del);
@@ -1302,10 +1534,10 @@
   }
 
   async function deleteCustomList(list) {
-    if (!confirm('Usunąć listę "' + list.name + '"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.')) return;
-    const affected = tasks.filter(t => t.customListId === list.id && t.ownerEmail === myEmail);
-    for (const t of affected) {
-      try { await updateDoc(doc(db, "tasks", t.id), { customListId: null }); } catch (e) {}
+    if (!confirm(t("deleteListConfirm", { name: list.name }))) return;
+    const affected = tasks.filter(t2 => t2.customListId === list.id && t2.ownerEmail === myEmail);
+    for (const t2 of affected) {
+      try { await updateDoc(doc(db, "tasks", t2.id), { customListId: null }); } catch (e) {}
     }
     if (selectedCustomListId === list.id) selectedCustomListId = null;
     try {
@@ -1322,7 +1554,7 @@
       const wrap = document.createElement("div");
       wrap.className = "rename-field";
       const label = document.createElement("label");
-      label.textContent = person.email === myEmail ? "Twoja zakładka" : "Zakładka: " + person.email;
+      label.textContent = person.email === myEmail ? t("yourTab") : t("tabFor", { email: person.email });
       label.setAttribute("for", "rename-" + person.email);
       const input = document.createElement("input");
       input.type = "text";
@@ -1371,7 +1603,7 @@
       const check = document.createElement("button");
       check.className = "check";
       check.type = "button";
-      check.setAttribute("aria-label", done ? "Cofnij" : "Oznacz jako zrobione");
+      check.setAttribute("aria-label", done ? t("undo") : t("markDone"));
       check.innerHTML = checkIcon;
       check.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
       li.appendChild(check);
@@ -1396,7 +1628,7 @@
       const streak = computeStreak(task.completedDates);
       const tag = document.createElement("span");
       tag.className = "tag";
-      tag.textContent = streak > 0 ? "🔁 🔥 " + streak + " dni" : "🔁 nawyk";
+      tag.textContent = streak > 0 ? t("habitStreak", { n: streak }) : t("habitPlain");
       tags.appendChild(tag);
       body.appendChild(tags);
     }
@@ -1407,7 +1639,7 @@
       const del = document.createElement("button");
       del.className = "delete";
       del.type = "button";
-      del.setAttribute("aria-label", "Usuń zadanie");
+      del.setAttribute("aria-label", t("deleteTask"));
       del.innerHTML = trashIcon;
       del.addEventListener("click", () => deleteTask(task.id));
       li.appendChild(del);
@@ -1435,7 +1667,7 @@
     try {
       await setDoc(doc(db, "ui_state", myEmail), { collapsedSections: { [key]: newValue } }, { merge: true });
     } catch (e) {
-      showStatus("Nie udało się zapisać stanu sekcji.");
+      showStatus(t("errSaveSection"));
     }
   }
 
@@ -1465,7 +1697,7 @@
     if (collapsed) {
       const badge = document.createElement("span");
       badge.className = "group-badge";
-      badge.textContent = list.filter(t => !isDoneNow(t)).length;
+      badge.textContent = list.filter(t2 => !isDoneNow(t2)).length;
       titleEl.appendChild(badge);
     }
 
@@ -1491,29 +1723,29 @@
     const isMine = isMyTab();
     clearDoneEl.hidden = true;
 
-    const tabTasks = tasks.filter(t => t.ownerEmail === activeTab);
+    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab);
     emptyEl.hidden = tabTasks.length > 0;
 
-    const untagged = tabTasks.filter(t => !t.customListId);
-    const q2 = untagged.filter(t => t.important && !t.urgent);
-    const q1 = untagged.filter(t => t.important && t.urgent);
-    const rest = untagged.filter(t => !t.important);
+    const untagged = tabTasks.filter(t2 => !t2.customListId);
+    const q2 = untagged.filter(t2 => t2.important && !t2.urgent);
+    const q1 = untagged.filter(t2 => t2.important && t2.urgent);
+    const rest = untagged.filter(t2 => !t2.important);
 
-    const g2 = renderGroup("🎯 Najważniejsze (ważne, niepilne)", q2, isMine, false, true);
-    const g1 = renderGroup("Ważne i pilne", q1, isMine, false, false);
+    const g2 = renderGroup(t("sectionMostImportant"), q2, isMine, false, true);
+    const g1 = renderGroup(t("sectionImportantUrgent"), q1, isMine, false, false);
     if (g2) groupsEl.appendChild(g2);
     if (g1) groupsEl.appendChild(g1);
 
     for (const list of customLists) {
-      const listTasks = tabTasks.filter(t => t.customListId === list.id);
+      const listTasks = tabTasks.filter(t2 => t2.customListId === list.id);
       const g = renderGroup(list.name, listTasks, isMine, false, false, list.id);
       if (g) groupsEl.appendChild(g);
     }
 
-    const g3 = renderGroup("Pozostałe", rest, isMine, true, false, "rest");
+    const g3 = renderGroup(t("sectionOther"), rest, isMine, true, false, "rest");
     if (g3) groupsEl.appendChild(g3);
 
-    const deletableDone = isMine ? tabTasks.filter(t => !t.isHabit && t.done).length : 0;
+    const deletableDone = isMine ? tabTasks.filter(t2 => !t2.isHabit && t2.done).length : 0;
     clearDoneEl.hidden = deletableDone === 0;
   }
 
@@ -1522,11 +1754,11 @@
       await updateDoc(doc(db, "tasks", task.id), { done: !wasDone });
       bumpStats(task, wasDone ? -1 : 1);
       if (!wasDone && task.important && task.urgent) {
-        const stillOpenQ2 = tasks.some(t => t.ownerEmail === myEmail && t.important && !t.urgent && !isDoneNow(t));
-        if (stillOpenQ2) showNudge("Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯");
+        const stillOpenQ2 = tasks.some(t2 => t2.ownerEmail === myEmail && t2.important && !t2.urgent && !isDoneNow(t2));
+        if (stillOpenQ2) showNudge(t("nudgeMessage"));
       }
     } catch (e) {
-      showStatus("Nie udało się zapisać zmiany.");
+      showStatus(t("errSaveChange"));
     }
   }
 
@@ -1538,17 +1770,17 @@
       });
       bumpStats(task, wasDoneToday ? -1 : 1);
       if (!wasDoneToday && task.important && task.urgent) {
-        const stillOpenQ2 = tasks.some(t => t.ownerEmail === myEmail && t.important && !t.urgent && !isDoneNow(t));
-        if (stillOpenQ2) showNudge("Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯");
+        const stillOpenQ2 = tasks.some(t2 => t2.ownerEmail === myEmail && t2.important && !t2.urgent && !isDoneNow(t2));
+        if (stillOpenQ2) showNudge(t("nudgeMessage"));
       }
     } catch (e) {
-      showStatus("Nie udało się zapisać zmiany.");
+      showStatus(t("errSaveChange"));
     }
   }
 
   async function deleteTask(id) {
-    if (!confirm("Na pewno chcesz usunąć to zadanie?")) return;
-    try { await deleteDoc(doc(db, "tasks", id)); } catch (e) { showStatus("Nie udało się usunąć zadania."); }
+    if (!confirm(t("deleteTaskConfirm"))) return;
+    try { await deleteDoc(doc(db, "tasks", id)); } catch (e) { showStatus(t("errDeleteTask")); }
   }
 
   formEl.addEventListener("submit", async (e) => {
@@ -1570,14 +1802,14 @@
         createdAt: Date.now()
       });
     } catch (e) {
-      showStatus("Nie udało się dodać zadania.");
+      showStatus(t("errAddTask"));
     }
   });
 
   clearDoneEl.addEventListener("click", async () => {
-    const done = tasks.filter(t => t.ownerEmail === myEmail && !t.isHabit && t.done);
-    if (!confirm("Usunąć " + done.length + " ukończonych zadań?")) return;
-    for (const t of done) { try { await deleteDoc(doc(db, "tasks", t.id)); } catch (e) {} }
+    const done = tasks.filter(t2 => t2.ownerEmail === myEmail && !t2.isHabit && t2.done);
+    if (!confirm(t("deleteDoneConfirm", { n: done.length }))) return;
+    for (const t2 of done) { try { await deleteDoc(doc(db, "tasks", t2.id)); } catch (e) {} }
   });
 
   function setChip(chipEl, key) {
@@ -1645,7 +1877,7 @@
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") return;
-      authErrorEl.textContent = "Błąd logowania (" + err.code + "): " + err.message;
+      authErrorEl.textContent = t("errSignIn", { code: err.code, msg: err.message });
       authErrorEl.hidden = false;
     }
   });
@@ -1683,7 +1915,7 @@
     try {
       allowedSnap = await getDoc(allowedRef);
     } catch (e) {
-      showStatus("Błąd sprawdzania dostępu: " + e.message);
+      showStatus(t("errCheckAccess", { msg: e.message }));
       return;
     }
 
@@ -1715,7 +1947,7 @@
       tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderList();
     }, (err) => {
-      showStatus("Błąd synchronizacji: " + err.message);
+      showStatus(t("errSync", { msg: err.message }));
     });
   });
 </script>
