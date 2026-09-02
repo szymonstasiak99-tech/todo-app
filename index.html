@@ -1108,6 +1108,7 @@
     getFirestore, collection, addDoc, updateDoc, doc, getDoc, setDoc,
     onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC2A2CWELZhKxzWOgDhLo00MXL5XXc57Lg",
@@ -1115,10 +1116,12 @@
     projectId: "to-do-list-6a109",
     storageBucket: "to-do-list-6a109.firebasestorage.app",
     messagingSenderId: "562220006928",
-    appId: "1:562220006928:web:7c63d991fe0e3d22111495"
+    appId: "1:562220006928:web:7c63d991fe0e3d22111495",
+    measurementId: "G-KWCG8WZMWZ"
   };
 
   const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
