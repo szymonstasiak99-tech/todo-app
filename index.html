@@ -1252,8 +1252,8 @@
       newCategoryPlaceholder: "New category name",
       categoryIcon: "Category icon",
       add: "Add",
-      editList: "Edit list {name}",
-      deleteList: "Delete list {name}",
+      editList: "Edit",
+      deleteList: "Delete",
       moveListUp: "Move up",
       moveListDown: "Move down",
       save: "Save",
@@ -1286,7 +1286,7 @@
       sharedInfoLabel: "What is this?",
       fridgeInfo: "This is your virtual fridge door! 🧊 Stick notes here so nothing gets forgotten — no risk of someone eating the last egg before you see the note 🥚",
       shoppingInfo: "A shopping list everyone here can add to, tick off, and tidy up — including the surprise-gift item you'd rather hide from a certain someone 🎁",
-      manageMembers: "Manage who's in {name}",
+      manageMembers: "Members",
       removeMember: "Remove {name}",
       addMember: "Add a member",
       addAnotherFridge: "+ Add another fridge",
@@ -1307,8 +1307,8 @@
       moveTaskTop: "Move to top",
       moreActions: "More actions",
       hiddenTag: "🙈 Hidden",
-      hideList: "Hide list {name}",
-      unhideList: "Unhide list {name}",
+      hideList: "Hide",
+      unhideList: "Unhide",
       hideForMe: "Hide for me",
       unhideForMe: "Show for me again",
       hiddenPrefix: "🙈 ",
@@ -1356,8 +1356,8 @@
       newCategoryPlaceholder: "Nazwa nowej kategorii",
       categoryIcon: "Ikonka kategorii",
       add: "Dodaj",
-      editList: "Edytuj listę {name}",
-      deleteList: "Usuń listę {name}",
+      editList: "Edytuj",
+      deleteList: "Usuń",
       moveListUp: "Przenieś wyżej",
       moveListDown: "Przenieś niżej",
       save: "Zapisz",
@@ -1390,7 +1390,7 @@
       sharedInfoLabel: "Co to jest?",
       fridgeInfo: "To Wasza wirtualna lodówka! 🧊 Wklejacie tu karteczki, żeby o niczym nie zapomnieć — bez ryzyka, że ktoś zje ostatnie jajko, zanim zdążycie to zobaczyć 🥚",
       shoppingInfo: "Lista zakupów, na którą każdy tu może coś dodać, odhaczyć i posprzątać — nawet ten element z niespodzianką, który wolisz ukryć przed pewną osobą 🎁",
-      manageMembers: "Zarządzaj osobami w {name}",
+      manageMembers: "Członkowie",
       removeMember: "Usuń {name}",
       addMember: "Dodaj osobę",
       addAnotherFridge: "+ Dodaj kolejną lodówkę",
@@ -1411,8 +1411,8 @@
       moveTaskTop: "Przenieś na samą górę",
       moreActions: "Więcej opcji",
       hiddenTag: "🙈 Ukryte",
-      hideList: "Ukryj listę {name}",
-      unhideList: "Odkryj listę {name}",
+      hideList: "Ukryj",
+      unhideList: "Odkryj",
       hideForMe: "Ukryj u mnie",
       unhideForMe: "Pokaż znowu u mnie",
       hiddenPrefix: "🙈 ",
@@ -2124,7 +2124,7 @@
             if (section.canHideOthers) {
               const hideOthers = document.createElement("button");
               hideOthers.type = "button";
-              hideOthers.innerHTML = (section.hidden ? eyeOffIcon : eyeIcon) + "<span>" + (section.hidden ? t("unhideList", { name: displayTitle }) : t("hideList", { name: displayTitle })) + "</span>";
+              hideOthers.innerHTML = (section.hidden ? eyeOffIcon : eyeIcon) + "<span>" + (section.hidden ? t("unhideList") : t("hideList")) + "</span>";
               hideOthers.addEventListener("click", () => {
                 closeListMenu();
                 if (section.kind === "builtin") toggleBuiltinSectionHidden(section.key);
@@ -2145,7 +2145,7 @@
             if (section.canEditNameIcon) {
               const edit = document.createElement("button");
               edit.type = "button";
-              edit.innerHTML = "<span class=\"glyph\">✎</span><span>" + t("editList", { name: displayTitle }) + "</span>";
+              edit.innerHTML = "<span class=\"glyph\">✎</span><span>" + t("editList") + "</span>";
               edit.addEventListener("click", () => { closeListMenu(); editingListId = section.key; renderExistingLists(); });
               menu.appendChild(edit);
             }
@@ -2153,7 +2153,7 @@
             if (section.canManageMembers) {
               const members = document.createElement("button");
               members.type = "button";
-              members.innerHTML = "<span class=\"glyph\">👥</span><span>" + t("manageMembers", { name: displayTitle }) + "</span>";
+              members.innerHTML = "<span class=\"glyph\">👥</span><span>" + t("manageMembers") + "</span>";
               members.addEventListener("click", () => {
                 closeListMenu();
                 editingMembersId = editingMembersId === section.key ? null : section.key;
@@ -2166,7 +2166,7 @@
               const del = document.createElement("button");
               del.type = "button";
               del.className = "danger";
-              del.innerHTML = trashIcon + "<span>" + t("deleteList", { name: displayTitle }) + "</span>";
+              del.innerHTML = trashIcon + "<span>" + t("deleteList") + "</span>";
               del.addEventListener("click", () => { closeListMenu(); deleteCustomList(list); });
               menu.appendChild(del);
             }
