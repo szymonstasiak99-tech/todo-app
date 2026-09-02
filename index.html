@@ -982,9 +982,12 @@
   let currentUser = null;
   let myEmail = null;
   let roster = [];              // [{email, name}]
-  let tasks = [];                // all tasks across everyone
+  let tasks = [];                 // merged view: my own tasks + the active tab's visible tasks
+  let myTasks = [];               // always my own tasks (hidden included, I'm the owner)
+  let viewedTasks = [];           // the other person's tasks, only when their tab is active (hidden excluded at query level)
   let activeTab = null;          // email of tab being viewed
-  let unsubTasks = null;
+  let unsubMyTasks = null;
+  let unsubViewedTasks = null;
   let unsubRoster = null;
   let unsubCustomLists = null;
   let unsubStats = null;
@@ -1533,12 +1536,63 @@
     });
   }
 
+  async function backfillHidden(collectionName, docs) {
+    // Old documents created before "hidden" existed don't have the field at
+    // all. A query filter like where("hidden","==",false) can't match a
+    // missing field, so we backfill it once we see it (only ever run against
+    // our OWN documents, which we always receive unfiltered).
+    for (const item of docs) {
+      if (item.hidden === undefined) {
+        try { await updateDoc(doc(db, collectionName, item.id), { hidden: false }); } catch (e) {}
+      }
+    }
+  }
+
+  function recombineTasks() {
+    tasks = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
+  }
+
+  function subscribeMyTasks(email) {
+    if (unsubMyTasks) unsubMyTasks();
+    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), orderBy("createdAt"));
+    unsubMyTasks = onSnapshot(q, (snap) => {
+      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      backfillHidden("tasks", myTasks);
+      recombineTasks();
+      renderList();
+    }, (err) => {
+      showStatus(t("errSync", { msg: err.message }));
+    });
+  }
+
+  function subscribeViewedTasks(email) {
+    if (unsubViewedTasks) { unsubViewedTasks(); unsubViewedTasks = null; }
+    if (email === myEmail) {
+      viewedTasks = [];
+      recombineTasks();
+      renderList();
+      return;
+    }
+    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), where("hidden", "==", false), orderBy("createdAt"));
+    unsubViewedTasks = onSnapshot(q, (snap) => {
+      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      recombineTasks();
+      renderList();
+    }, (err) => {
+      showStatus(t("errSync", { msg: err.message }));
+    });
+  }
+
   function subscribeCustomLists(email) {
     if (unsubCustomLists) unsubCustomLists();
-    const customListsQuery = query(collection(db, "custom_lists"), where("ownerEmail", "==", email));
+    const isMine = email === myEmail;
+    const constraints = [where("ownerEmail", "==", email)];
+    if (!isMine) constraints.push(where("hidden", "==", false));
+    const customListsQuery = query(collection(db, "custom_lists"), ...constraints);
     unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
       customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      if (isMine) backfillHidden("custom_lists", customLists);
       renderCustomChips();
       renderList();
       if (!newListOverlay.hidden) renderExistingLists();
@@ -1724,7 +1778,16 @@
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
       btn.textContent = nameFor(email);
-      btn.addEventListener("click", () => { activeTab = email; renderTabs(); renderList(); updateComposerPlaceholder(); subscribeStats(email); subscribeCustomLists(email); });
+      btn.addEventListener("click", () => {
+        activeTab = email;
+        recombineTasks();
+        renderTabs();
+        renderList();
+        updateComposerPlaceholder();
+        subscribeStats(email);
+        subscribeCustomLists(email);
+        subscribeViewedTasks(email);
+      });
       tabsEl.appendChild(btn);
     }
   }
@@ -2029,6 +2092,7 @@
       await addDoc(collection(db, "custom_lists"), {
         name,
         icon: newListIconEl.value,
+        hidden: false,
         ownerEmail: activeTab,
         createdByEmail: myEmail,
         createdAt: Date.now()
@@ -2054,7 +2118,8 @@
   signOutBtn.addEventListener("click", () => signOut(auth));
 
   function teardownSubscriptions() {
-    if (unsubTasks) { unsubTasks(); unsubTasks = null; }
+    if (unsubMyTasks) { unsubMyTasks(); unsubMyTasks = null; }
+    if (unsubViewedTasks) { unsubViewedTasks(); unsubViewedTasks = null; }
     if (unsubRoster) { unsubRoster(); unsubRoster = null; }
     if (unsubCustomLists) { unsubCustomLists(); unsubCustomLists = null; }
     if (unsubStats) { unsubStats(); unsubStats = null; }
@@ -2110,14 +2175,8 @@
     subscribeCustomLists(myEmail);
     subscribeStats(myEmail);
     subscribeUiState(myEmail);
-
-    const q = query(collection(db, "tasks"), orderBy("createdAt"));
-    unsubTasks = onSnapshot(q, (snap) => {
-      tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderList();
-    }, (err) => {
-      showStatus(t("errSync", { msg: err.message }));
-    });
+    subscribeMyTasks(myEmail);
+    subscribeViewedTasks(myEmail);
   });
 </script>
 </body>
