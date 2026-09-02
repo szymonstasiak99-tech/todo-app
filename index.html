@@ -1063,9 +1063,11 @@
   let viewedStats = {};          // lifetime completion stats of whichever tab is active
   let collapsedSections = {};    // my own section-collapse preferences, synced across devices
   let activeHiddenSections = {}; // hidden built-in sections, as set by whoever owns the active tab
+  let activeSectionOrder = {};   // custom position of the 3 built-in sections, as set by whoever owns the active tab
   let openTaskMenuId = null;     // id of the task whose "more actions" menu is expanded, if any
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   const CUSTOM_TITLE_MAX_LEN = 24;
+  const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, other: Number.MAX_SAFE_INTEGER };
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -1141,12 +1143,6 @@
   const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
   const eyeOffIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.6 18.6 0 0 1 4.22-5.06M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
   const moreIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="2.4"></circle><circle cx="12" cy="12" r="2.4"></circle><circle cx="18.5" cy="12" r="2.4"></circle></svg>';
-
-  const BUILTIN_SECTIONS = [
-    { key: "mostImportant", titleKey: "sectionMostImportant" },
-    { key: "importantUrgent", titleKey: "sectionImportantUrgent" },
-    { key: "other", titleKey: "sectionOther" }
-  ];
 
   function bucketKeyOf(task) {
     if (!task.important) return "other";
@@ -1752,21 +1748,6 @@
     });
   }
 
-  async function moveList(list, direction) {
-    const index = customLists.findIndex(l => l.id === list.id);
-    const swapIndex = index + direction;
-    if (index === -1 || swapIndex < 0 || swapIndex >= customLists.length) return;
-    const other = customLists[swapIndex];
-    const listOrder = list.order ?? list.createdAt ?? 0;
-    const otherOrder = other.order ?? other.createdAt ?? 0;
-    try {
-      await updateDoc(doc(db, "custom_lists", list.id), { order: otherOrder });
-      await updateDoc(doc(db, "custom_lists", other.id), { order: listOrder });
-    } catch (e) {
-      showModalError(e);
-    }
-  }
-
   async function resetStats() {
     if (!confirm(t("resetStatsConfirm"))) return;
     try {
@@ -1807,28 +1788,14 @@
       ? t("listsForLabelMine")
       : t("listsForLabelOther", { name: nameFor(activeTab) });
 
-    if (isMine) {
-      for (const section of BUILTIN_SECTIONS) {
-        const li = document.createElement("li");
-        const hidden = !!(activeHiddenSections && activeHiddenSections[section.key]);
-        const name = document.createElement("span");
-        name.className = "list-name";
-        name.textContent = (hidden ? t("hiddenPrefix") : "") + t(section.titleKey);
-        const hide = document.createElement("button");
-        hide.type = "button";
-        hide.className = "del-list";
-        hide.setAttribute("aria-label", hidden ? t("unhideList", { name: t(section.titleKey) }) : t("hideList", { name: t(section.titleKey) }));
-        hide.innerHTML = hidden ? eyeOffIcon : eyeIcon;
-        hide.addEventListener("click", () => toggleBuiltinSectionHidden(section.key));
-        li.append(name, hide);
-        existingListsEl.appendChild(li);
-      }
-    }
+    const sections = getSections([], isMine);
 
-    customLists.forEach((list, index) => {
+    sections.forEach((section, index) => {
       const li = document.createElement("li");
+      const list = section.list;
+      const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
 
-      if (isMine && editingListId === list.id) {
+      if (section.canEditNameIcon && editingListId === section.key) {
         li.className = "editing";
         const iconSelect = document.createElement("select");
         iconSelect.setAttribute("aria-label", t("categoryIcon"));
@@ -1851,46 +1818,64 @@
         cancel.addEventListener("click", () => { editingListId = null; renderExistingLists(); });
         li.append(iconSelect, nameInput, save, cancel);
       } else {
-        const icon = document.createElement("span");
-        icon.textContent = list.icon || "";
+        if (section.kind !== "builtin") {
+          const icon = document.createElement("span");
+          icon.textContent = list.icon || "";
+          li.appendChild(icon);
+        }
         const name = document.createElement("span");
         name.className = "list-name";
-        name.textContent = (isMine && list.hidden ? t("hiddenPrefix") : "") + list.name;
-        li.append(icon, name);
-        if (isMine) {
+        name.textContent = (section.canManage && section.hidden ? t("hiddenPrefix") : "") + displayTitle;
+        li.appendChild(name);
+
+        if (section.canManage) {
           const up = document.createElement("button");
           up.type = "button";
           up.className = "del-list";
-          up.setAttribute("aria-label", t("moveListUp", { name: list.name }));
+          up.setAttribute("aria-label", t("moveListUp", { name: displayTitle }));
           up.textContent = "▲";
           up.disabled = index === 0;
-          up.addEventListener("click", () => moveList(list, -1));
+          up.addEventListener("click", () => moveSection(sections, index, -1));
+          li.appendChild(up);
+
           const down = document.createElement("button");
           down.type = "button";
           down.className = "del-list";
-          down.setAttribute("aria-label", t("moveListDown", { name: list.name }));
+          down.setAttribute("aria-label", t("moveListDown", { name: displayTitle }));
           down.textContent = "▼";
-          down.disabled = index === customLists.length - 1;
-          down.addEventListener("click", () => moveList(list, 1));
-          const hide = document.createElement("button");
-          hide.type = "button";
-          hide.className = "del-list";
-          hide.setAttribute("aria-label", list.hidden ? t("unhideList", { name: list.name }) : t("hideList", { name: list.name }));
-          hide.innerHTML = list.hidden ? eyeOffIcon : eyeIcon;
-          hide.addEventListener("click", () => toggleListHidden(list));
-          const edit = document.createElement("button");
-          edit.type = "button";
-          edit.className = "del-list";
-          edit.setAttribute("aria-label", t("editList", { name: list.name }));
-          edit.textContent = "✎";
-          edit.addEventListener("click", () => { editingListId = list.id; renderExistingLists(); });
-          const del = document.createElement("button");
-          del.type = "button";
-          del.className = "del-list";
-          del.setAttribute("aria-label", t("deleteList", { name: list.name }));
-          del.innerHTML = trashIcon;
-          del.addEventListener("click", () => deleteCustomList(list));
-          li.append(up, down, hide, edit, del);
+          down.disabled = index === sections.length - 1;
+          down.addEventListener("click", () => moveSection(sections, index, 1));
+          li.appendChild(down);
+
+          if (section.canHide) {
+            const hide = document.createElement("button");
+            hide.type = "button";
+            hide.className = "del-list";
+            hide.setAttribute("aria-label", section.hidden ? t("unhideList", { name: displayTitle }) : t("hideList", { name: displayTitle }));
+            hide.innerHTML = section.hidden ? eyeOffIcon : eyeIcon;
+            hide.addEventListener("click", () => section.kind === "builtin" ? toggleBuiltinSectionHidden(section.key) : toggleListHidden(list));
+            li.appendChild(hide);
+          }
+
+          if (section.canEditNameIcon) {
+            const edit = document.createElement("button");
+            edit.type = "button";
+            edit.className = "del-list";
+            edit.setAttribute("aria-label", t("editList", { name: displayTitle }));
+            edit.textContent = "✎";
+            edit.addEventListener("click", () => { editingListId = section.key; renderExistingLists(); });
+            li.appendChild(edit);
+          }
+
+          if (section.canDelete) {
+            const del = document.createElement("button");
+            del.type = "button";
+            del.className = "del-list";
+            del.setAttribute("aria-label", t("deleteList", { name: displayTitle }));
+            del.innerHTML = trashIcon;
+            del.addEventListener("click", () => deleteCustomList(list));
+            li.appendChild(del);
+          }
         }
       }
       existingListsEl.appendChild(li);
@@ -2134,6 +2119,7 @@
     if (unsubActiveUiState) unsubActiveUiState();
     unsubActiveUiState = onSnapshot(doc(db, "ui_state", email), (snap) => {
       activeHiddenSections = (snap.exists() && snap.data().hiddenSections) || {};
+      activeSectionOrder = (snap.exists() && snap.data().sectionOrder) || {};
       renderList();
       if (!newListOverlay.hidden) renderExistingLists();
     });
@@ -2166,6 +2152,75 @@
     }
   }
 
+  function getSections(tabTasks, isMine) {
+    const untagged = tabTasks.filter(t2 => !t2.customListId);
+    const q2 = untagged.filter(t2 => t2.important && !t2.urgent);
+    const q1 = untagged.filter(t2 => t2.important && t2.urgent);
+    const rest = untagged.filter(t2 => !t2.important);
+
+    const builtinDefs = [
+      { key: "mostImportant", titleKey: "sectionMostImportant", tasks: q2, featured: true, muted: false, collapseKey: undefined },
+      { key: "importantUrgent", titleKey: "sectionImportantUrgent", tasks: q1, featured: false, muted: false, collapseKey: undefined },
+      { key: "other", titleKey: "sectionOther", tasks: rest, featured: false, muted: true, collapseKey: "rest" }
+    ];
+
+    const builtins = builtinDefs.map(b => ({
+      kind: "builtin",
+      key: b.key,
+      list: null,
+      title: b.titleKey,
+      tasks: b.tasks,
+      order: (activeSectionOrder && activeSectionOrder[b.key] !== undefined) ? activeSectionOrder[b.key] : BUILTIN_ORDER_DEFAULTS[b.key],
+      featured: b.featured,
+      muted: b.muted,
+      collapseKey: b.collapseKey,
+      hidden: !!(activeHiddenSections && activeHiddenSections[b.key]),
+      canManage: isMine,
+      canHide: true,
+      canEditNameIcon: false,
+      canDelete: false
+    }));
+
+    const lists = customLists.map(list => ({
+      kind: "custom",
+      key: list.id,
+      list,
+      title: list.name,
+      tasks: tabTasks.filter(t2 => t2.customListId === list.id),
+      order: list.order ?? list.createdAt ?? 0,
+      featured: false,
+      muted: false,
+      collapseKey: list.id,
+      hidden: !!list.hidden,
+      canManage: isMine,
+      canHide: true,
+      canEditNameIcon: true,
+      canDelete: true
+    }));
+
+    return builtins.concat(lists).sort((a, b) => a.order - b.order);
+  }
+
+  async function writeSectionOrder(section, newOrder) {
+    if (section.kind === "builtin") {
+      await setDoc(doc(db, "ui_state", myEmail), { sectionOrder: { [section.key]: newOrder } }, { merge: true });
+    } else {
+      await updateDoc(doc(db, "custom_lists", section.key), { order: newOrder });
+    }
+  }
+
+  async function moveSection(sections, index, direction) {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= sections.length) return;
+    const a = sections[index], b = sections[swapIndex];
+    try {
+      await writeSectionOrder(a, b.order);
+      await writeSectionOrder(b, a.order);
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
   function renderGroup(title, list, isMine, muted, featured, collapseKey) {
     if (list.length === 0) return null;
     const group = document.createElement("div");
@@ -2173,8 +2228,11 @@
     const titleEl = document.createElement("div");
     titleEl.className = "group-title" + (featured ? " featured" : "");
 
+    const label = document.createElement("span");
+    label.textContent = title;
+    titleEl.appendChild(label);
+
     if (!collapseKey) {
-      titleEl.textContent = title;
       const ul = document.createElement("ul");
       list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
       group.append(titleEl, ul);
@@ -2184,10 +2242,6 @@
     const storageKey = activeTab + "::" + collapseKey;
     const collapsed = isSectionCollapsed(storageKey);
     titleEl.classList.add("collapsible");
-
-    const label = document.createElement("span");
-    label.textContent = title;
-    titleEl.appendChild(label);
 
     if (collapsed) {
       const badge = document.createElement("span");
@@ -2221,28 +2275,13 @@
     const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab);
     emptyEl.hidden = tabTasks.length > 0;
 
-    const untagged = tabTasks.filter(t2 => !t2.customListId);
-    const q2 = untagged.filter(t2 => t2.important && !t2.urgent);
-    const q1 = untagged.filter(t2 => t2.important && t2.urgent);
-    const rest = untagged.filter(t2 => !t2.important);
-
-    const title2 = (isMine && activeHiddenSections.mostImportant ? t("hiddenPrefix") : "") + t("sectionMostImportant");
-    const title1 = (isMine && activeHiddenSections.importantUrgent ? t("hiddenPrefix") : "") + t("sectionImportantUrgent");
-    const g2 = renderGroup(title2, q2, isMine, false, true);
-    const g1 = renderGroup(title1, q1, isMine, false, false);
-    if (g2) groupsEl.appendChild(g2);
-    if (g1) groupsEl.appendChild(g1);
-
-    for (const list of customLists) {
-      const listTasks = tabTasks.filter(t2 => t2.customListId === list.id);
-      const title = (isMine && list.hidden ? t("hiddenPrefix") : "") + list.name;
-      const g = renderGroup(title, listTasks, isMine, false, false, list.id);
+    const sections = getSections(tabTasks, isMine);
+    for (const section of sections) {
+      const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
+      const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
+      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey);
       if (g) groupsEl.appendChild(g);
     }
-
-    const title3 = (isMine && activeHiddenSections.other ? t("hiddenPrefix") : "") + t("sectionOther");
-    const g3 = renderGroup(title3, rest, isMine, true, false, "rest");
-    if (g3) groupsEl.appendChild(g3);
 
     const deletableDone = isMine ? tabTasks.filter(t2 => !t2.isHabit && t2.done).length : 0;
     clearDoneEl.hidden = deletableDone === 0;
