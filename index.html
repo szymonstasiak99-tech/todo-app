@@ -518,6 +518,9 @@
 
   .delete:hover { background: var(--danger-soft); color: var(--danger); }
   .delete svg { width: 18px; height: 18px; }
+  .delete.move { width: 30px; font-size: 0.75rem; }
+  .delete.move:hover { background: var(--surface-2); color: var(--text); }
+  .delete.move:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
 
   .readonly-dot {
     flex-shrink: 0;
@@ -1145,6 +1148,8 @@
       deleteTask: "Delete task",
       hideTask: "Hide task",
       unhideTask: "Unhide task",
+      moveTaskUp: "Move task up",
+      moveTaskDown: "Move task down",
       hiddenTag: "🙈 Hidden",
       hideList: "Hide list {name}",
       unhideList: "Unhide list {name}",
@@ -1227,6 +1232,8 @@
       deleteTask: "Usuń zadanie",
       hideTask: "Ukryj zadanie",
       unhideTask: "Odkryj zadanie",
+      moveTaskUp: "Przenieś zadanie wyżej",
+      moveTaskDown: "Przenieś zadanie niżej",
       hiddenTag: "🙈 Ukryte",
       hideList: "Ukryj listę {name}",
       unhideList: "Odkryj listę {name}",
@@ -1572,16 +1579,13 @@
     tasks = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
   }
 
-  function byCreatedAt(a, b) {
-    return (a.createdAt || 0) - (b.createdAt || 0);
-  }
-
   function subscribeMyTasks(email) {
     if (unsubMyTasks) unsubMyTasks();
     const q = query(collection(db, "tasks"), where("ownerEmail", "==", email));
     unsubMyTasks = onSnapshot(q, (snap) => {
-      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreatedAt);
+      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
       backfillHidden("tasks", myTasks);
+      backfillOrder("tasks", myTasks);
       recombineTasks();
       renderList();
     }, (err) => {
@@ -1599,12 +1603,34 @@
     }
     const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), where("hidden", "==", false));
     unsubViewedTasks = onSnapshot(q, (snap) => {
-      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byCreatedAt);
+      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
       recombineTasks();
       renderList();
     }, (err) => {
       showStatus(t("errSync", { msg: err.message }));
     });
+  }
+
+  function taskGroupKey(task) {
+    return task.customListId || bucketKeyOf(task);
+  }
+
+  async function moveTask(task, direction) {
+    const groupTasks = tasks
+      .filter(t2 => t2.ownerEmail === task.ownerEmail && taskGroupKey(t2) === taskGroupKey(task))
+      .sort(byOrder);
+    const index = groupTasks.findIndex(t2 => t2.id === task.id);
+    const swapIndex = index + direction;
+    if (index === -1 || swapIndex < 0 || swapIndex >= groupTasks.length) return;
+    const other = groupTasks[swapIndex];
+    const taskOrder = task.order ?? task.createdAt ?? 0;
+    const otherOrder = other.order ?? other.createdAt ?? 0;
+    try {
+      await updateDoc(doc(db, "tasks", task.id), { order: otherOrder });
+      await updateDoc(doc(db, "tasks", other.id), { order: taskOrder });
+    } catch (e) {
+      showStatus(t("errSaveChange"));
+    }
   }
 
   function subscribeCustomLists(email) {
@@ -1867,7 +1893,7 @@
     }
   }
 
-  function makeItem(task, isOwnerTab) {
+  function makeItem(task, isOwnerTab, isFirst, isLast) {
     const li = document.createElement("li");
     const done = isDoneNow(task);
     const canDelete = isOwnerTab;
@@ -1920,6 +1946,24 @@
     li.appendChild(body);
 
     if (canDelete) {
+      const up = document.createElement("button");
+      up.className = "delete move";
+      up.type = "button";
+      up.setAttribute("aria-label", t("moveTaskUp"));
+      up.textContent = "▲";
+      up.disabled = isFirst;
+      up.addEventListener("click", () => moveTask(task, -1));
+      li.appendChild(up);
+
+      const down = document.createElement("button");
+      down.className = "delete move";
+      down.type = "button";
+      down.setAttribute("aria-label", t("moveTaskDown"));
+      down.textContent = "▼";
+      down.disabled = isLast;
+      down.addEventListener("click", () => moveTask(task, 1));
+      li.appendChild(down);
+
       const listHidden = task.customListId && !!(customLists.find(l => l.id === task.customListId) || {}).hidden;
       if (!listHidden) {
         const hide = document.createElement("button");
@@ -2010,7 +2054,7 @@
     if (!collapseKey) {
       titleEl.textContent = title;
       const ul = document.createElement("ul");
-      for (const task of list) ul.appendChild(makeItem(task, isMine));
+      list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
       group.append(titleEl, ul);
       return group;
     }
@@ -2040,7 +2084,7 @@
     group.appendChild(titleEl);
     if (!collapsed) {
       const ul = document.createElement("ul");
-      for (const task of list) ul.appendChild(makeItem(task, isMine));
+      list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
       group.appendChild(ul);
     }
     return group;
@@ -2136,6 +2180,7 @@
         completedDates: [],
         customListId: selectedCustomListId,
         hidden: defaultHidden,
+        order: Date.now(),
         ownerEmail: activeTab,
         createdByEmail: myEmail,
         createdAt: Date.now()
