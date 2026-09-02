@@ -988,7 +988,7 @@
     <div class="overlay-divider"></div>
     <p id="customTitleDesc">Your own headline (optional) — shown instead of the app name above, just to you.</p>
     <form id="customTitleForm">
-      <input id="customTitleInput" type="text" maxlength="24" autocomplete="off">
+      <input id="customTitleInput" type="text" maxlength="24" autocomplete="off" placeholder="Type what motivates you!">
       <div class="char-counter" id="customTitleCounter">0/24</div>
       <button type="submit" class="primary-btn" id="saveCustomTitleBtn">Save headline</button>
     </form>
@@ -1188,6 +1188,7 @@
       saveNames: "Save names",
       languageDesc: "App language.",
       customTitleDesc: "Your own call to action (optional) — replaces the default text in the top-left corner.",
+      customTitlePlaceholder: "Type what motivates you!",
       saveCustomTitle: "Save headline",
       appearanceDesc: "App appearance.",
       theme_system: "System",
@@ -1275,6 +1276,7 @@
       saveNames: "Zapisz nazwy",
       languageDesc: "Język aplikacji.",
       customTitleDesc: "Twoje własne wezwanie do działania (opcjonalne) - zastępuje domyślny napis w górnym lewym rogu.",
+      customTitlePlaceholder: "Wpisz to, co Cię motywuje!",
       saveCustomTitle: "Zapisz napis",
       appearanceDesc: "Wygląd aplikacji.",
       theme_system: "Systemowy",
@@ -1459,6 +1461,7 @@
     saveNamesBtnEl.textContent = t("saveNames");
     languageDescEl.textContent = t("languageDesc");
     customTitleDescEl.textContent = t("customTitleDesc");
+    customTitleInput.placeholder = t("customTitlePlaceholder");
     saveCustomTitleBtnEl.textContent = t("saveCustomTitle");
     appearanceDescEl.textContent = t("appearanceDesc");
     fontSizeDescEl.textContent = t("fontSizeDesc");
