@@ -1104,6 +1104,8 @@
       hideList: "Hide list {name}",
       unhideList: "Unhide list {name}",
       hiddenPrefix: "🙈 ",
+      unhideTaskConfirm: "Unhide this task? Your partner will be able to see it.",
+      unhideListConfirm: "Unhide this list and its tasks? Your partner will be able to see them.",
       day: "day",
       days: "days",
       habitPlain: "🔁 habit",
@@ -1179,6 +1181,8 @@
       hideList: "Ukryj listę {name}",
       unhideList: "Odkryj listę {name}",
       hiddenPrefix: "🙈 ",
+      unhideTaskConfirm: "Odkryć to zadanie? Partner będzie mógł je zobaczyć.",
+      unhideListConfirm: "Odkryć tę listę i jej zadania? Partner będzie mógł je zobaczyć.",
       day: "dzień",
       days: "dni",
       habitPlain: "🔁 nawyk",
@@ -1621,6 +1625,7 @@
 
   async function toggleListHidden(list) {
     const newHidden = !list.hidden;
+    if (!newHidden && !confirm(t("unhideListConfirm"))) return;
     try {
       await updateDoc(doc(db, "custom_lists", list.id), { hidden: newHidden });
     } catch (e) {
@@ -1732,13 +1737,16 @@
     li.appendChild(body);
 
     if (canDelete) {
-      const hide = document.createElement("button");
-      hide.className = "delete";
-      hide.type = "button";
-      hide.setAttribute("aria-label", task.hidden ? t("unhideTask") : t("hideTask"));
-      hide.innerHTML = task.hidden ? eyeOffIcon : eyeIcon;
-      hide.addEventListener("click", () => toggleTaskHidden(task));
-      li.appendChild(hide);
+      const listHidden = task.customListId && !!(customLists.find(l => l.id === task.customListId) || {}).hidden;
+      if (!listHidden) {
+        const hide = document.createElement("button");
+        hide.className = "delete";
+        hide.type = "button";
+        hide.setAttribute("aria-label", task.hidden ? t("unhideTask") : t("hideTask"));
+        hide.innerHTML = task.hidden ? eyeOffIcon : eyeIcon;
+        hide.addEventListener("click", () => toggleTaskHidden(task));
+        li.appendChild(hide);
+      }
 
       const del = document.createElement("button");
       del.className = "delete";
@@ -1753,6 +1761,7 @@
   }
 
   async function toggleTaskHidden(task) {
+    if (task.hidden && !confirm(t("unhideTaskConfirm"))) return;
     try {
       await updateDoc(doc(db, "tasks", task.id), { hidden: !task.hidden });
     } catch (e) {
