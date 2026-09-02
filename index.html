@@ -1000,7 +1000,7 @@
     <div class="stats-row">
       <div class="greeting">
         <span id="greetingHello">Hey</span> <strong id="whoamiName">—</strong>!
-        <button type="button" id="signOutBtn">Sign out</button>
+        <button type="button" id="headerEditBtn">Edit</button>
       </div>
       <div class="stats-strip" id="statsStrip"></div>
     </div>
@@ -1093,6 +1093,7 @@
       <span aria-hidden="true">·</span>
       <a href="terms.html" target="_blank" rel="noopener" id="footerTerms">Terms of Service</a>
     </footer>
+    <button type="button" class="reset-stats-btn" id="modalSignOutBtn">Sign out</button>
   </div>
 </div>
 
@@ -1178,7 +1179,8 @@
   const signInDescEl = document.getElementById("signInDesc");
   const authErrorEl = document.getElementById("authError");
   const signOutFromDenied = document.getElementById("signOutFromDenied");
-  const signOutBtn = document.getElementById("signOutBtn");
+  const headerEditBtn = document.getElementById("headerEditBtn");
+  const modalSignOutBtnEl = document.getElementById("modalSignOutBtn");
   const whoamiNameEl = document.getElementById("whoamiName");
   const appTitleEl = document.getElementById("appTitle");
   const greetingHelloEl = document.getElementById("greetingHello");
@@ -1567,7 +1569,8 @@
     signOutFromDenied.textContent = t("signOut");
     appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
-    signOutBtn.textContent = t("signOut");
+    headerEditBtn.textContent = t("chipEdit");
+    modalSignOutBtnEl.textContent = t("signOut");
     emptyGlyphEl.textContent = t("emptyGlyph");
     emptyTextEl.textContent = t("emptyText");
     clearDoneEl.textContent = t("clearDone");
@@ -2892,7 +2895,8 @@
     }
   });
   signOutFromDenied.addEventListener("click", () => signOut(auth));
-  signOutBtn.addEventListener("click", () => signOut(auth));
+  headerEditBtn.addEventListener("click", openListOverlay);
+  modalSignOutBtnEl.addEventListener("click", () => signOut(auth));
 
   function teardownSubscriptions() {
     if (unsubMyTasks) { unsubMyTasks(); unsubMyTasks = null; }
