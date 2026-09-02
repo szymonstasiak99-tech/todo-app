@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — Let's do</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%85%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --font-scale: 1;
+    --bg: #F1F4F2;
+    --surface: #FFFFFF;
+    --text: #172420;
+    --text-muted: #5B6D67;
+    --border: #D7DED9;
+    --accent: #2F6F6B;
+    --accent-text: #FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1B18; --surface: #142925; --text: #E7EFEC; --text-muted: #93A9A3;
+      --border: #244039; --accent: #55B0A7; --accent-text: #08211D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1B18; --surface: #142925; --text: #E7EFEC; --text-muted: #93A9A3;
+    --border: #244039; --accent: #55B0A7; --accent-text: #08211D;
+  }
+  :root[data-theme="dim"] {
+    --bg: #362D26; --surface: #433830; --text: #F5ECE0; --text-muted: #C4AF9C;
+    --border: #55473B; --accent: #F0A855; --accent-text: #2B1806;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: calc(1rem * var(--font-scale));
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px 60px; }
+  a.back { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.6rem; margin: 18px 0 4px; }
+  .updated { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 24px; }
+  h2 { font-size: 1.05rem; margin: 28px 0 8px; }
+  p, li { line-height: 1.6; }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  .lang-toggle { display: flex; gap: 8px; margin: 18px 0 8px; }
+  .lang-toggle button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 8px; padding: 5px 10px; font-size: 0.78rem; cursor: pointer; font-family: inherit;
+  }
+  .lang-toggle button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  [data-lang-block] { display: none; }
+  [data-lang-block].active { display: block; }
+  .disclaimer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.78rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to the app</a>
+  <div class="lang-toggle">
+    <button type="button" data-lang-choice="en">English</button>
+    <button type="button" data-lang-choice="pl">Polski</button>
+  </div>
+
+  <div data-lang-block="en">
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: September 2, 2026</p>
+
+    <p>These terms cover your use of "Let's do" (the "app"), operated by Szymon ("we", "us"). By signing in and using the app, you agree to them.</p>
+
+    <h2>Access</h2>
+    <p>The app is currently invite-only: you can sign in only if your Google account's email has been explicitly added to the allow-list by someone with existing access. We can add, remove, or decline to add accounts at our discretion, including removing access from an existing account.</p>
+
+    <h2>Your content</h2>
+    <p>You own the tasks, lists, and other content you create. By adding content, you allow us to store and display it to you and to the person(s) you're paired with, for the purpose of running the app's shared-list functionality.</p>
+
+    <h2>Acceptable use</h2>
+    <p>Use the app for its intended purpose — a personal or shared to-do and habit list. Don't use it to store or share illegal content, don't try to access accounts or data that aren't yours, and don't attempt to disrupt or abuse the service.</p>
+
+    <h2>No warranty</h2>
+    <p>The app is provided "as is," on a best-effort basis, without guarantees of uptime or availability. This is a small, independently run project — while we take reasonable care with your data (see the Privacy Policy for details on how it's stored and secured), we can't guarantee against bugs, downtime, or data loss. Please don't rely on it as the sole record of anything critical or irreplaceable.</p>
+
+    <h2>Limitation of liability</h2>
+    <p>To the maximum extent permitted by law, we aren't liable for indirect, incidental, or consequential damages arising from your use of, or inability to use, the app.</p>
+
+    <h2>Termination</h2>
+    <p>We may suspend or end your access at any time, particularly in case of misuse of the service. You can stop using the app and ask us to delete your data at any time by contacting us.</p>
+
+    <h2>Changes</h2>
+    <p>We may update these terms or the app itself as it develops. If the terms change, we'll update the date at the top of this page.</p>
+
+    <h2>Governing law</h2>
+    <p>These terms are governed by the laws of Poland.</p>
+
+    <h2>Contact</h2>
+    <p><a href="mailto:szymonstasiak99@gmail.com">szymonstasiak99@gmail.com</a> (personal address for now, while the app is a small side project — this will move to a dedicated business address if the app grows beyond that).</p>
+
+    <div class="disclaimer">These terms were written to plainly and honestly describe how the app works today. They haven't been reviewed by a lawyer — if the app is ever offered publicly or commercially, this document should be properly reviewed before that happens.</div>
+  </div>
+
+  <div data-lang-block="pl">
+    <h1>Regulamin</h1>
+    <p class="updated">Ostatnia aktualizacja: 2 września 2026</p>
+
+    <p>Ten regulamin dotyczy korzystania z aplikacji „Do zrobienia” („aplikacja”), prowadzonej przez Szymona („my”). Logując się i korzystając z aplikacji, akceptujesz jego postanowienia.</p>
+
+    <h2>Dostęp</h2>
+    <p>Aplikacja jest obecnie dostępna wyłącznie na zaproszenia: możesz się zalogować tylko wtedy, gdy adres e-mail Twojego konta Google został wyraźnie dodany do listy dopuszczonych użytkowników przez osobę z istniejącym dostępem. Możemy dodawać, usuwać lub odmówić dodania konta według własnego uznania, w tym odebrać dostęp istniejącemu kontu.</p>
+
+    <h2>Twoje treści</h2>
+    <p>Zadania, listy i inne treści, które tworzysz, są Twoją własnością. Dodając treści, zezwalasz nam na ich przechowywanie i wyświetlanie Tobie oraz osobie (osobom), z którą zostałeś/zostałaś sparowany/sparowana, w celu obsługi funkcji wspólnych list w aplikacji.</p>
+
+    <h2>Dozwolone korzystanie</h2>
+    <p>Korzystaj z aplikacji zgodnie z jej przeznaczeniem — jako osobista lub wspólna lista zadań i nawyków. Nie umieszczaj ani nie udostępniaj treści niezgodnych z prawem, nie próbuj uzyskać dostępu do kont ani danych, które nie należą do Ciebie, i nie próbuj zakłócać ani nadużywać działania usługi.</p>
+
+    <h2>Brak gwarancji</h2>
+    <p>Aplikacja jest dostarczana „tak jak jest”, w miarę możliwości, bez gwarancji nieprzerwanego działania czy dostępności. To mały, niezależnie prowadzony projekt — dbamy o Twoje dane w rozsądnym zakresie (szczegóły dotyczące ich przechowywania i zabezpieczenia znajdziesz w Polityce prywatności), ale nie możemy zagwarantować braku błędów, przestojów czy utraty danych. Prosimy nie polegać na aplikacji jako jedynym miejscu przechowywania czegokolwiek krytycznego lub niezastąpionego.</p>
+
+    <h2>Ograniczenie odpowiedzialności</h2>
+    <p>W maksymalnym zakresie dozwolonym przez prawo nie ponosimy odpowiedzialności za szkody pośrednie, przypadkowe lub wynikowe powstałe w związku z korzystaniem lub niemożnością korzystania z aplikacji.</p>
+
+    <h2>Zakończenie dostępu</h2>
+    <p>Możemy zawiesić lub zakończyć Twój dostęp w dowolnym momencie, w szczególności w przypadku nadużycia usługi. Możesz w dowolnym momencie zaprzestać korzystania z aplikacji i poprosić nas o usunięcie swoich danych, kontaktując się z nami.</p>
+
+    <h2>Zmiany</h2>
+    <p>Możemy aktualizować ten regulamin lub samą aplikację w miarę jej rozwoju. Jeśli regulamin się zmieni, zaktualizujemy datę na górze tej strony.</p>
+
+    <h2>Prawo właściwe</h2>
+    <p>Ten regulamin podlega prawu polskiemu.</p>
+
+    <h2>Kontakt</h2>
+    <p><a href="mailto:szymonstasiak99@gmail.com">szymonstasiak99@gmail.com</a> (na razie adres prywatny, dopóki aplikacja jest małym projektem pobocznym — zostanie zmieniony na dedykowany adres firmowy, jeśli aplikacja się rozrośnie).</p>
+
+    <div class="disclaimer">Ten regulamin został napisany tak, żeby jasno i uczciwie opisać, jak aplikacja działa dzisiaj. Nie był sprawdzany przez prawnika — jeśli aplikacja kiedykolwiek zostanie udostępniona publicznie lub komercyjnie, ten dokument powinien zostać porządnie zweryfikowany, zanim to nastąpi.</div>
+  </div>
+</div>
+<script>
+(function () {
+  var LANG_KEY = "todo-app-lang";
+  var THEME_KEY = "todo-app-theme";
+  var FONT_KEY = "todo-app-font-size";
+  var FONT_SCALES = { small: "0.9", default: "1", large: "1.15" };
+
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || "system";
+  } catch (e) {}
+  try {
+    var font = localStorage.getItem(FONT_KEY) || "default";
+    document.documentElement.style.setProperty("--font-scale", FONT_SCALES[font] || FONT_SCALES.default);
+  } catch (e) {}
+
+  function applyLang(choice) {
+    document.querySelectorAll("[data-lang-block]").forEach(function (el) {
+      el.classList.toggle("active", el.getAttribute("data-lang-block") === choice);
+    });
+    document.querySelectorAll("[data-lang-choice]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-lang-choice") === choice);
+    });
+    document.documentElement.lang = choice;
+  }
+
+  document.querySelectorAll("[data-lang-choice]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var choice = btn.getAttribute("data-lang-choice");
+      try { localStorage.setItem(LANG_KEY, choice); } catch (e) {}
+      applyLang(choice);
+    });
+  });
+
+  var lang = "en";
+  try { lang = localStorage.getItem(LANG_KEY) || "en"; } catch (e) {}
+  applyLang(lang);
+})();
+</script>
+</body>
+</html>

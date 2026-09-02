@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Let's do</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%85%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --font-scale: 1;
+    --bg: #F1F4F2;
+    --surface: #FFFFFF;
+    --text: #172420;
+    --text-muted: #5B6D67;
+    --border: #D7DED9;
+    --accent: #2F6F6B;
+    --accent-text: #FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1B18; --surface: #142925; --text: #E7EFEC; --text-muted: #93A9A3;
+      --border: #244039; --accent: #55B0A7; --accent-text: #08211D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1B18; --surface: #142925; --text: #E7EFEC; --text-muted: #93A9A3;
+    --border: #244039; --accent: #55B0A7; --accent-text: #08211D;
+  }
+  :root[data-theme="dim"] {
+    --bg: #362D26; --surface: #433830; --text: #F5ECE0; --text-muted: #C4AF9C;
+    --border: #55473B; --accent: #F0A855; --accent-text: #2B1806;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: calc(1rem * var(--font-scale));
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px 60px; }
+  a.back { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.6rem; margin: 18px 0 4px; }
+  .updated { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 24px; }
+  h2 { font-size: 1.05rem; margin: 28px 0 8px; }
+  p, li { line-height: 1.6; }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  .lang-toggle { display: flex; gap: 8px; margin: 18px 0 8px; }
+  .lang-toggle button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 8px; padding: 5px 10px; font-size: 0.78rem; cursor: pointer; font-family: inherit;
+  }
+  .lang-toggle button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  [data-lang-block] { display: none; }
+  [data-lang-block].active { display: block; }
+  .disclaimer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.78rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to the app</a>
+  <div class="lang-toggle">
+    <button type="button" data-lang-choice="en">English</button>
+    <button type="button" data-lang-choice="pl">Polski</button>
+  </div>
+
+  <div data-lang-block="en">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: September 2, 2026</p>
+
+    <p>This policy explains what information "Let's do" collects, why, and how it's protected. The app is operated by Szymon (contact below) as a small, invite-only project.</p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li><strong>Account info</strong> — when you sign in with Google, we receive your email address and the display name Google gives us. We don't see or store your Google password.</li>
+      <li><strong>Content you add</strong> — the text of your tasks and lists, categories and icons you create, habit completion history, and your lifetime stats (things like how many tasks you've finished).</li>
+      <li><strong>App preferences</strong> — settings like language, theme, font size, and which sections you've collapsed or hidden. Some of these are stored only in your browser (localStorage) and never leave your device; others are synced to your account so they follow you across devices.</li>
+    </ul>
+
+    <h2>Where it's stored</h2>
+    <p>All account and task data is stored in Google Firebase (Cloud Firestore and Firebase Authentication), which runs on Google Cloud infrastructure. We don't run our own servers or database — Google is our infrastructure provider (a data processor), not an independent recipient of your data for its own purposes.</p>
+
+    <h2>Who can see your data</h2>
+    <p>Only accounts explicitly added to the app's allow-list can sign in at all. Within the app, your tasks are visible to you and to the specific person(s) you've been paired with (for example, a partner) — never to the wider list of allowed accounts, and never to anyone outside the allow-list. You can mark individual tasks or whole categories as hidden, which excludes them from what your partner can see, while keeping them visible to you.</p>
+    <p>We don't use analytics, advertising, or tracking cookies. We don't sell or share your data with third parties.</p>
+
+    <h2>How long we keep it</h2>
+    <p>Your data is kept for as long as your account remains on the allow-list. If you'd like your account and data removed, contact us and we'll delete it.</p>
+
+    <h2>Security</h2>
+    <p>Access to your data is enforced through Firebase security rules tied to your authenticated Google account — there's no separate password for the app to leak. That said, no system is perfectly secure, and this is a small project without a dedicated security team; please don't store anything highly sensitive (passwords, financial details, medical records) in your task list.</p>
+
+    <h2>Your rights</h2>
+    <p>You can ask to see what data we hold about you, correct it, or have it deleted, by contacting us at the address below.</p>
+
+    <h2>Children</h2>
+    <p>This app is not directed at children under 16 and we don't knowingly collect data from them.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If this policy changes, we'll update the date at the top of this page.</p>
+
+    <h2>Contact</h2>
+    <p><a href="mailto:szymonstasiak99@gmail.com">szymonstasiak99@gmail.com</a> (personal address for now, while the app is a small side project — this will move to a dedicated business address if the app grows beyond that).</p>
+
+    <div class="disclaimer">This policy was written to plainly and honestly describe how the app works today. It hasn't been reviewed by a lawyer — if the app is ever offered publicly or commercially, this document should be properly reviewed before that happens.</div>
+  </div>
+
+  <div data-lang-block="pl">
+    <h1>Polityka prywatności</h1>
+    <p class="updated">Ostatnia aktualizacja: 2 września 2026</p>
+
+    <p>Ta polityka wyjaśnia, jakie informacje zbiera aplikacja „Do zrobienia”, po co, i jak są chronione. Aplikację prowadzi Szymon (kontakt poniżej) jako mały projekt dostępny tylko na zaproszenia.</p>
+
+    <h2>Co zbieramy</h2>
+    <ul>
+      <li><strong>Dane konta</strong> — gdy logujesz się przez Google, otrzymujemy Twój adres e-mail i nazwę wyświetlaną nadaną przez Google. Nie widzimy ani nie przechowujemy Twojego hasła do Google.</li>
+      <li><strong>Treści, które dodajesz</strong> — tekst Twoich zadań i list, kategorie oraz ikony, historię wykonywania nawyków i Twoje statystyki (np. ile zadań udało Ci się ukończyć).</li>
+      <li><strong>Ustawienia aplikacji</strong> — takie jak język, motyw, rozmiar czcionki oraz to, które sekcje zwinąłeś/zwinęłaś lub ukryłeś/ukryłaś. Część z nich jest przechowywana tylko w Twojej przeglądarce (localStorage) i nigdy nie opuszcza Twojego urządzenia; inne są synchronizowane z Twoim kontem, żeby były dostępne na każdym urządzeniu.</li>
+    </ul>
+
+    <h2>Gdzie to jest przechowywane</h2>
+    <p>Wszystkie dane konta i zadań są przechowywane w Google Firebase (Cloud Firestore oraz Firebase Authentication), działającym na infrastrukturze Google Cloud. Nie prowadzimy własnych serwerów ani baz danych — Google jest naszym dostawcą infrastruktury (podmiotem przetwarzającym dane), a nie niezależnym odbiorcą Twoich danych na własne potrzeby.</p>
+
+    <h2>Kto widzi Twoje dane</h2>
+    <p>Zalogować się może wyłącznie konto wyraźnie dodane do listy dopuszczonych użytkowników aplikacji. W samej aplikacji Twoje zadania widzisz Ty oraz osoba (lub osoby), z którą zostałeś/zostałaś sparowany/sparowana (np. partner/partnerka) — nigdy szersze grono dopuszczonych kont ani nikt spoza tej listy. Możesz oznaczyć pojedyncze zadania lub całe kategorie jako ukryte, co wyklucza je z tego, co widzi partner/partnerka, przy zachowaniu ich widoczności dla Ciebie.</p>
+    <p>Nie korzystamy z analityki, reklam ani plików cookie do śledzenia. Nie sprzedajemy ani nie udostępniamy Twoich danych stronom trzecim.</p>
+
+    <h2>Jak długo przechowujemy dane</h2>
+    <p>Twoje dane są przechowywane tak długo, jak Twoje konto pozostaje na liście dopuszczonych użytkowników. Jeśli chcesz, żeby Twoje konto i dane zostały usunięte, skontaktuj się z nami — usuniemy je.</p>
+
+    <h2>Bezpieczeństwo</h2>
+    <p>Dostęp do Twoich danych jest egzekwowany przez reguły bezpieczeństwa Firebase powiązane z Twoim uwierzytelnionym kontem Google — nie ma osobnego hasła do aplikacji, które mogłoby wyciec. Mimo to żaden system nie jest w pełni bezpieczny, a to mały projekt bez dedykowanego zespołu ds. bezpieczeństwa — prosimy nie przechowywać w liście zadań niczego szczególnie wrażliwego (haseł, danych finansowych, informacji medycznych).</p>
+
+    <h2>Twoje prawa</h2>
+    <p>Możesz poprosić o wgląd w dane, które o Tobie przechowujemy, ich poprawienie lub usunięcie, kontaktując się z nami pod adresem podanym poniżej.</p>
+
+    <h2>Dzieci</h2>
+    <p>Ta aplikacja nie jest skierowana do dzieci poniżej 16 roku życia i świadomie nie zbieramy od nich danych.</p>
+
+    <h2>Zmiany w polityce</h2>
+    <p>Jeśli ta polityka się zmieni, zaktualizujemy datę na górze tej strony.</p>
+
+    <h2>Kontakt</h2>
+    <p><a href="mailto:szymonstasiak99@gmail.com">szymonstasiak99@gmail.com</a> (na razie adres prywatny, dopóki aplikacja jest małym projektem pobocznym — zostanie zmieniony na dedykowany adres firmowy, jeśli aplikacja się rozrośnie).</p>
+
+    <div class="disclaimer">Ta polityka została napisana tak, żeby jasno i uczciwie opisać, jak aplikacja działa dzisiaj. Nie była sprawdzana przez prawnika — jeśli aplikacja kiedykolwiek zostanie udostępniona publicznie lub komercyjnie, ten dokument powinien zostać porządnie zweryfikowany, zanim to nastąpi.</div>
+  </div>
+</div>
+<script>
+(function () {
+  var LANG_KEY = "todo-app-lang";
+  var THEME_KEY = "todo-app-theme";
+  var FONT_KEY = "todo-app-font-size";
+  var FONT_SCALES = { small: "0.9", default: "1", large: "1.15" };
+
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || "system";
+  } catch (e) {}
+  try {
+    var font = localStorage.getItem(FONT_KEY) || "default";
+    document.documentElement.style.setProperty("--font-scale", FONT_SCALES[font] || FONT_SCALES.default);
+  } catch (e) {}
+
+  function applyLang(choice) {
+    document.querySelectorAll("[data-lang-block]").forEach(function (el) {
+      el.classList.toggle("active", el.getAttribute("data-lang-block") === choice);
+    });
+    document.querySelectorAll("[data-lang-choice]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-lang-choice") === choice);
+    });
+    document.documentElement.lang = choice;
+  }
+
+  document.querySelectorAll("[data-lang-choice]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var choice = btn.getAttribute("data-lang-choice");
+      try { localStorage.setItem(LANG_KEY, choice); } catch (e) {}
+      applyLang(choice);
+    });
+  });
+
+  var lang = "en";
+  try { lang = localStorage.getItem(LANG_KEY) || "en"; } catch (e) {}
+  applyLang(lang);
+})();
+</script>
+</body>
+</html>

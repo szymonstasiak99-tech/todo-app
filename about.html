@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Let's do</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%85%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --font-scale: 1;
+    --bg: #F1F4F2;
+    --surface: #FFFFFF;
+    --text: #172420;
+    --text-muted: #5B6D67;
+    --border: #D7DED9;
+    --accent: #2F6F6B;
+    --accent-text: #FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1B18; --surface: #142925; --text: #E7EFEC; --text-muted: #93A9A3;
+      --border: #244039; --accent: #55B0A7; --accent-text: #08211D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1B18; --surface: #142925; --text: #E7EFEC; --text-muted: #93A9A3;
+    --border: #244039; --accent: #55B0A7; --accent-text: #08211D;
+  }
+  :root[data-theme="dim"] {
+    --bg: #362D26; --surface: #433830; --text: #F5ECE0; --text-muted: #C4AF9C;
+    --border: #55473B; --accent: #F0A855; --accent-text: #2B1806;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: calc(1rem * var(--font-scale));
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px 60px; }
+  a.back { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
+  a.back:hover { color: var(--accent); }
+  h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.6rem; margin: 18px 0 4px; }
+  .updated { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 24px; }
+  h2 { font-size: 1.05rem; margin: 28px 0 8px; }
+  p, li { line-height: 1.6; }
+  ul { padding-left: 20px; }
+  a { color: var(--accent); }
+  .lang-toggle { display: flex; gap: 8px; margin: 18px 0 8px; }
+  .lang-toggle button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 8px; padding: 5px 10px; font-size: 0.78rem; cursor: pointer; font-family: inherit;
+  }
+  .lang-toggle button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  [data-lang-block] { display: none; }
+  [data-lang-block].active { display: block; }
+  .disclaimer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.78rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to the app</a>
+  <div class="lang-toggle">
+    <button type="button" data-lang-choice="en">English</button>
+    <button type="button" data-lang-choice="pl">Polski</button>
+  </div>
+
+  <div data-lang-block="en">
+    <h1>About "Let's do"</h1>
+    <p class="updated">Last updated: September 2, 2026</p>
+
+    <p>"Let's do" is a shared to-do list and habit tracker built for two people who want to plan life together — chores, errands, habits, and the occasional reminder to do something nice for each other. It's organized around a simple idea from time-management: separate what's most important from what's merely urgent, so the important-but-not-urgent things (the ones that make the biggest difference) don't keep getting pushed aside.</p>
+
+    <h2>Who made it</h2>
+    <p>The app is built and operated by Szymon, currently as a small side project for a closed group of invited people. It isn't a company product yet — it started as a way to learn programming and share a to-do list with a partner, and has grown from there.</p>
+
+    <h2>Current status</h2>
+    <p>The app is in private, invite-only use. New accounts aren't self-service — someone with existing access has to add your email to the allow-list before you can sign in. Features are still actively being added and changed.</p>
+
+    <h2>Contact</h2>
+    <p>Questions, requests, or something looks wrong? Reach out at <a href="mailto:szymonstasiak99@gmail.com">szymonstasiak99@gmail.com</a>.</p>
+
+    <div class="disclaimer">This page, along with the Privacy Policy and Terms of Service, was written to be clear and honest about how the app works today. It hasn't been reviewed by a lawyer — if the app ever grows beyond a small invite-only circle, these documents should be reviewed properly before that happens.</div>
+  </div>
+
+  <div data-lang-block="pl">
+    <h1>O aplikacji „Do zrobienia”</h1>
+    <p class="updated">Ostatnia aktualizacja: 2 września 2026</p>
+
+    <p>„Do zrobienia” to wspólna lista zadań i nawyków dla dwóch osób, które chcą razem planować życie — obowiązki, sprawunki, nawyki i od czasu do czasu przypomnienie, żeby zrobić coś miłego dla drugiej osoby. Aplikacja opiera się na prostej zasadzie z zarządzania czasem: oddziel to, co naprawdę ważne, od tego, co tylko pilne, żeby ważne-ale-niepilne rzeczy (te, które robią największą różnicę) nie były wiecznie odkładane.</p>
+
+    <h2>Kto ją zrobił</h2>
+    <p>Aplikację tworzy i prowadzi Szymon, obecnie jako mały projekt poboczny dla zamkniętej grupy zaproszonych osób. To jeszcze nie jest produkt firmowy — zaczęło się od nauki programowania i chęci dzielenia listy zadań z partnerką, i rozwinęło się od tego momentu.</p>
+
+    <h2>Obecny status</h2>
+    <p>Aplikacja działa w trybie prywatnym, tylko na zaproszenia. Nowe konta nie zakładają się same — ktoś z istniejącym dostępem musi dodać Twój e-mail do listy dopuszczonych użytkowników, zanim będziesz mógł/mogła się zalogować. Funkcje wciąż są aktywnie dodawane i zmieniane.</p>
+
+    <h2>Kontakt</h2>
+    <p>Pytania, prośby albo coś nie działa jak trzeba? Napisz na <a href="mailto:szymonstasiak99@gmail.com">szymonstasiak99@gmail.com</a>.</p>
+
+    <div class="disclaimer">Ta strona, razem z Polityką prywatności i Regulaminem, została napisana tak, żeby jasno i uczciwie opisać, jak aplikacja działa dzisiaj. Nie była sprawdzana przez prawnika — jeśli aplikacja kiedyś wyjdzie poza małe grono zaproszonych osób, te dokumenty powinny zostać porządnie zweryfikowane, zanim to nastąpi.</div>
+  </div>
+</div>
+<script>
+(function () {
+  var LANG_KEY = "todo-app-lang";
+  var THEME_KEY = "todo-app-theme";
+  var FONT_KEY = "todo-app-font-size";
+  var FONT_SCALES = { small: "0.9", default: "1", large: "1.15" };
+
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || "system";
+  } catch (e) {}
+  try {
+    var font = localStorage.getItem(FONT_KEY) || "default";
+    document.documentElement.style.setProperty("--font-scale", FONT_SCALES[font] || FONT_SCALES.default);
+  } catch (e) {}
+
+  function applyLang(choice) {
+    document.querySelectorAll("[data-lang-block]").forEach(function (el) {
+      el.classList.toggle("active", el.getAttribute("data-lang-block") === choice);
+    });
+    document.querySelectorAll("[data-lang-choice]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-lang-choice") === choice);
+    });
+    document.documentElement.lang = choice;
+  }
+
+  document.querySelectorAll("[data-lang-choice]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var choice = btn.getAttribute("data-lang-choice");
+      try { localStorage.setItem(LANG_KEY, choice); } catch (e) {}
+      applyLang(choice);
+    });
+  });
+
+  var lang = "en";
+  try { lang = localStorage.getItem(LANG_KEY) || "en"; } catch (e) {}
+  applyLang(lang);
+})();
+</script>
+</body>
+</html>
