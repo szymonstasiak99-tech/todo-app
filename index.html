@@ -1254,8 +1254,8 @@
       add: "Add",
       editList: "Edit list {name}",
       deleteList: "Delete list {name}",
-      moveListUp: "Move list {name} up",
-      moveListDown: "Move list {name} down",
+      moveListUp: "Move up",
+      moveListDown: "Move down",
       save: "Save",
       cancel: "Cancel",
       tabNamesDesc: "Tab names — any nickname, either of you can change both.",
@@ -1356,8 +1356,8 @@
       add: "Dodaj",
       editList: "Edytuj listę {name}",
       deleteList: "Usuń listę {name}",
-      moveListUp: "Przenieś listę {name} wyżej",
-      moveListDown: "Przenieś listę {name} niżej",
+      moveListUp: "Przenieś wyżej",
+      moveListDown: "Przenieś niżej",
       save: "Zapisz",
       cancel: "Anuluj",
       tabNamesDesc: "Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.",
@@ -2103,14 +2103,14 @@
             const up = document.createElement("button");
             up.type = "button";
             up.disabled = index === 0;
-            up.innerHTML = '<span class="glyph">▲</span><span>' + t("moveListUp", { name: displayTitle }) + "</span>";
+            up.innerHTML = '<span class="glyph">▲</span><span>' + t("moveListUp") + "</span>";
             up.addEventListener("click", () => { closeListMenu(); moveSection(sections, index, -1); });
             menu.appendChild(up);
 
             const down = document.createElement("button");
             down.type = "button";
             down.disabled = index === sections.length - 1;
-            down.innerHTML = '<span class="glyph">▼</span><span>' + t("moveListDown", { name: displayTitle }) + "</span>";
+            down.innerHTML = '<span class="glyph">▼</span><span>' + t("moveListDown") + "</span>";
             down.addEventListener("click", () => { closeListMenu(); moveSection(sections, index, 1); });
             menu.appendChild(down);
 
