@@ -201,7 +201,7 @@
     gap: 10px;
   }
 
-  .title-row h1 { flex-shrink: 0; }
+  .title-row h1 { flex-shrink: 0; max-width: 62%; overflow-wrap: break-word; }
 
   .stats-row {
     display: flex;
@@ -238,7 +238,7 @@
     display: flex;
     direction: rtl;
     flex: 1;
-    min-width: 0;
+    min-width: 90px;
     gap: 6px;
     overflow-x: auto;
     padding-bottom: 2px;
@@ -803,6 +803,13 @@
 
   .overlay-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+  .char-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: -8px;
+  }
+
   .list-form-row { display: flex; gap: 8px; margin-bottom: 12px; }
   .list-form-row input { margin-bottom: 0; }
 
@@ -979,6 +986,13 @@
       <button type="button" class="theme-btn" data-lang-choice="pl">Polski</button>
     </div>
     <div class="overlay-divider"></div>
+    <p id="customTitleDesc">Your own headline (optional) — shown instead of the app name above, just to you.</p>
+    <form id="customTitleForm">
+      <input id="customTitleInput" type="text" maxlength="24" autocomplete="off">
+      <div class="char-counter" id="customTitleCounter">0/24</div>
+      <button type="submit" class="primary-btn" id="saveCustomTitleBtn">Save headline</button>
+    </form>
+    <div class="overlay-divider"></div>
     <p id="fontSizeDesc">Font size.</p>
     <div class="theme-row" id="fontSizeRow">
       <button type="button" class="theme-btn" data-font-choice="small">Small</button>
@@ -1050,6 +1064,8 @@
   let collapsedSections = {};    // my own section-collapse preferences, synced across devices
   let activeHiddenSections = {}; // hidden built-in sections, as set by whoever owns the active tab
   let openTaskMenuId = null;     // id of the task whose "more actions" menu is expanded, if any
+  let customTitle = "";          // my own optional headline, replacing the app name for me only
+  const CUSTOM_TITLE_MAX_LEN = 24;
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -1112,6 +1128,11 @@
   const renameForm = document.getElementById("renameForm");
   const renameFieldsEl = document.getElementById("renameFields");
   const saveNamesBtnEl = document.getElementById("saveNamesBtn");
+  const customTitleDescEl = document.getElementById("customTitleDesc");
+  const customTitleForm = document.getElementById("customTitleForm");
+  const customTitleInput = document.getElementById("customTitleInput");
+  const customTitleCounterEl = document.getElementById("customTitleCounter");
+  const saveCustomTitleBtnEl = document.getElementById("saveCustomTitleBtn");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
 
@@ -1166,6 +1187,8 @@
       tabFor: "Tab: {email}",
       saveNames: "Save names",
       languageDesc: "App language.",
+      customTitleDesc: "Your own headline (optional) — shown instead of the app name above, just to you.",
+      saveCustomTitle: "Save headline",
       appearanceDesc: "App appearance.",
       theme_system: "System",
       theme_light: "Light",
@@ -1251,6 +1274,8 @@
       tabFor: "Zakładka: {email}",
       saveNames: "Zapisz nazwy",
       languageDesc: "Język aplikacji.",
+      customTitleDesc: "Twój własny napis (opcjonalnie) — zastępuje nazwę appki powyżej, tylko u Ciebie.",
+      saveCustomTitle: "Zapisz napis",
       appearanceDesc: "Wygląd aplikacji.",
       theme_system: "Systemowy",
       theme_light: "Jasny",
@@ -1414,7 +1439,7 @@
     notAllowedBeforeEl.textContent = t("notAllowedBefore");
     notAllowedAfterEl.textContent = t("notAllowedAfter");
     signOutFromDenied.textContent = t("signOut");
-    appTitleEl.textContent = t("appTitle");
+    appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
     signOutBtn.textContent = t("signOut");
     emptyGlyphEl.textContent = t("emptyGlyph");
@@ -1433,6 +1458,8 @@
     tabNamesDescEl.textContent = t("tabNamesDesc");
     saveNamesBtnEl.textContent = t("saveNames");
     languageDescEl.textContent = t("languageDesc");
+    customTitleDescEl.textContent = t("customTitleDesc");
+    saveCustomTitleBtnEl.textContent = t("saveCustomTitle");
     appearanceDescEl.textContent = t("appearanceDesc");
     fontSizeDescEl.textContent = t("fontSizeDesc");
     resetStatsBtnEl.textContent = t("resetStats");
@@ -2088,6 +2115,12 @@
     if (unsubUiState) unsubUiState();
     unsubUiState = onSnapshot(doc(db, "ui_state", email), (snap) => {
       collapsedSections = (snap.exists() && snap.data().collapsedSections) || {};
+      customTitle = (snap.exists() && snap.data().customTitle) || "";
+      appTitleEl.textContent = customTitle || t("appTitle");
+      if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
+        customTitleInput.value = customTitle;
+        customTitleCounterEl.textContent = customTitle.length + "/" + CUSTOM_TITLE_MAX_LEN;
+      }
       renderList();
     });
   }
@@ -2299,6 +2332,8 @@
     editingListId = null;
     renderExistingLists();
     renderRenameFields();
+    customTitleInput.value = customTitle;
+    customTitleCounterEl.textContent = customTitle.length + "/" + CUSTOM_TITLE_MAX_LEN;
     newListOverlay.hidden = false;
     newListInput.focus();
   }
@@ -2317,6 +2352,23 @@
   renameForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     await saveRenamedTabs();
+  });
+
+  customTitleInput.addEventListener("input", () => {
+    customTitleCounterEl.textContent = customTitleInput.value.length + "/" + CUSTOM_TITLE_MAX_LEN;
+  });
+
+  customTitleForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!myEmail) return;
+    const value = customTitleInput.value.trim().slice(0, CUSTOM_TITLE_MAX_LEN);
+    customTitle = value;
+    appTitleEl.textContent = value || t("appTitle");
+    try {
+      await setDoc(doc(db, "ui_state", myEmail), { customTitle: value }, { merge: true });
+    } catch (e) {
+      showModalError(e);
+    }
   });
 
   newListForm.addEventListener("submit", async (e) => {
