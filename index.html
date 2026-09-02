@@ -1082,7 +1082,8 @@
       undo: "Undo",
       markDone: "Mark as done",
       deleteTask: "Delete task",
-      habitStreak: "🔁 🔥 {n} days",
+      day: "day",
+      days: "days",
       habitPlain: "🔁 habit",
       sectionMostImportant: "🎯 Most important (important, not urgent)",
       sectionImportantUrgent: "Important & urgent",
@@ -1146,7 +1147,8 @@
       undo: "Cofnij",
       markDone: "Oznacz jako zrobione",
       deleteTask: "Usuń zadanie",
-      habitStreak: "🔁 🔥 {n} dni",
+      day: "dzień",
+      days: "dni",
       habitPlain: "🔁 nawyk",
       sectionMostImportant: "🎯 Najważniejsze (ważne, niepilne)",
       sectionImportantUrgent: "Ważne i pilne",
@@ -1628,7 +1630,9 @@
       const streak = computeStreak(task.completedDates);
       const tag = document.createElement("span");
       tag.className = "tag";
-      tag.textContent = streak > 0 ? t("habitStreak", { n: streak }) : t("habitPlain");
+      tag.textContent = streak > 0
+        ? "🔁 🔥 " + streak + " " + (streak === 1 ? t("day") : t("days"))
+        : t("habitPlain");
       tags.appendChild(tag);
       body.appendChild(tags);
     }
