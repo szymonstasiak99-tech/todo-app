@@ -1002,8 +1002,8 @@
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
       <div class="chip-row" id="chipRow">
-        <button type="button" class="chip important" id="chipImportant">Important</button>
         <button type="button" class="chip hidden" id="chipHidden" aria-label="Add as hidden">🙈</button>
+        <button type="button" class="chip important" id="chipImportant">Important</button>
         <button type="button" class="chip urgent" id="chipUrgent">Urgent</button>
         <button type="button" class="chip habit" id="chipHabit">🔁 Habit</button>
         <div class="custom-chips" id="customChips"></div>
@@ -1139,6 +1139,8 @@
     shopping: { icon: "🛒", nameKey: "shoppingDefaultName", nameKeyN: "shoppingDefaultNameN", order: -0.5, allowHide: true }
   };
   const sharedSeedAttempted = { fridge: false, shopping: false };
+  let sharedListsReady = false;  // true once subscribeSharedLists has delivered its first real snapshot
+  let sharedTasksReady = false;  // true once subscribeSharedTasks has delivered its first real snapshot
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -1883,7 +1885,6 @@
   }
 
   async function maybeSeedSharedLists() {
-    if (!myEmail || roster.length === 0) return;
     for (const type of Object.keys(SHARED_LIST_TYPES)) {
       if (sharedSeedAttempted[type]) continue;
       if (sharedLists.some(l => l.sharedType === type)) { sharedSeedAttempted[type] = true; continue; }
@@ -1892,12 +1893,32 @@
     }
   }
 
+  async function cleanupDuplicateSharedLists() {
+    for (const type of Object.keys(SHARED_LIST_TYPES)) {
+      const matches = sharedLists.filter(l => l.sharedType === type).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      for (let i = 1; i < matches.length; i++) {
+        const extra = matches[i];
+        const hasTasks = sharedTasks.some(t2 => t2.customListId === extra.id);
+        if (hasTasks) continue;
+        try { await updateDoc(doc(db, "custom_lists", extra.id), { deleted: true, deletedAt: Date.now() }); } catch (e) {}
+      }
+    }
+  }
+
+  function maybeRunSharedListMaintenance() {
+    if (!myEmail || roster.length === 0 || !sharedListsReady || !sharedTasksReady) return;
+    maybeSeedSharedLists();
+    cleanupDuplicateSharedLists();
+  }
+
   function subscribeSharedLists() {
     if (unsubSharedLists) unsubSharedLists();
+    sharedListsReady = false;
     const q = query(collection(db, "custom_lists"), where("members", "array-contains", myEmail));
     unsubSharedLists = onSnapshot(q, (snap) => {
       sharedLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted);
-      maybeSeedSharedLists();
+      sharedListsReady = true;
+      maybeRunSharedListMaintenance();
       recombineLists();
       renderCustomChips();
       renderList();
@@ -1909,9 +1930,12 @@
 
   function subscribeSharedTasks() {
     if (unsubSharedTasks) unsubSharedTasks();
+    sharedTasksReady = false;
     const q = query(collection(db, "tasks"), where("members", "array-contains", myEmail));
     unsubSharedTasks = onSnapshot(q, (snap) => {
       sharedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
+      sharedTasksReady = true;
+      maybeRunSharedListMaintenance();
       recombineTasks();
       renderList();
     }, (err) => {
@@ -2775,6 +2799,8 @@
     if (unsubSharedTasks) { unsubSharedTasks(); unsubSharedTasks = null; }
     sharedSeedAttempted.fridge = false;
     sharedSeedAttempted.shopping = false;
+    sharedListsReady = false;
+    sharedTasksReady = false;
   }
 
   function showGate(which) {
@@ -2821,7 +2847,7 @@
       renderTabs();
       renderList();
       if (!newListOverlay.hidden) renderRenameFields();
-      maybeSeedSharedLists();
+      maybeRunSharedListMaintenance();
     });
 
     subscribeCustomLists(myEmail);
