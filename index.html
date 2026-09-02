@@ -692,6 +692,7 @@
   }
 
   .existing-lists .del-list:hover { background: var(--danger-soft); color: var(--danger); }
+  .existing-lists .del-list:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
   .existing-lists .del-list svg { width: 16px; height: 16px; }
 
   .overlay-card form { display: flex; flex-direction: column; gap: 12px; }
@@ -1111,6 +1112,8 @@
       add: "Add",
       editList: "Edit list {name}",
       deleteList: "Delete list {name}",
+      moveListUp: "Move list {name} up",
+      moveListDown: "Move list {name} down",
       save: "Save",
       cancel: "Cancel",
       tabNamesDesc: "Tab names — any nickname, either of you can change both.",
@@ -1191,6 +1194,8 @@
       add: "Dodaj",
       editList: "Edytuj listę {name}",
       deleteList: "Usuń listę {name}",
+      moveListUp: "Przenieś listę {name} wyżej",
+      moveListDown: "Przenieś listę {name} niżej",
       save: "Zapisz",
       cancel: "Anuluj",
       tabNamesDesc: "Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.",
@@ -1548,6 +1553,21 @@
     }
   }
 
+  async function backfillOrder(collectionName, docs) {
+    // Old documents created before "order" existed don't have the field.
+    // Use their createdAt as a stable initial order so they keep the same
+    // relative position they already had.
+    for (const item of docs) {
+      if (item.order === undefined) {
+        try { await updateDoc(doc(db, collectionName, item.id), { order: item.createdAt || 0 }); } catch (e) {}
+      }
+    }
+  }
+
+  function byOrder(a, b) {
+    return (a.order ?? a.createdAt ?? 0) - (b.order ?? b.createdAt ?? 0);
+  }
+
   function recombineTasks() {
     tasks = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
   }
@@ -1594,13 +1614,30 @@
     if (!isMine) constraints.push(where("hidden", "==", false));
     const customListsQuery = query(collection(db, "custom_lists"), ...constraints);
     unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
-      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      if (isMine) backfillHidden("custom_lists", customLists);
+      customLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+      if (isMine) {
+        backfillHidden("custom_lists", customLists);
+        backfillOrder("custom_lists", customLists);
+      }
       renderCustomChips();
       renderList();
       if (!newListOverlay.hidden) renderExistingLists();
     });
+  }
+
+  async function moveList(list, direction) {
+    const index = customLists.findIndex(l => l.id === list.id);
+    const swapIndex = index + direction;
+    if (index === -1 || swapIndex < 0 || swapIndex >= customLists.length) return;
+    const other = customLists[swapIndex];
+    const listOrder = list.order ?? list.createdAt ?? 0;
+    const otherOrder = other.order ?? other.createdAt ?? 0;
+    try {
+      await updateDoc(doc(db, "custom_lists", list.id), { order: otherOrder });
+      await updateDoc(doc(db, "custom_lists", other.id), { order: listOrder });
+    } catch (e) {
+      showModalError(e);
+    }
   }
 
   async function resetStats() {
@@ -1661,7 +1698,7 @@
       }
     }
 
-    for (const list of customLists) {
+    customLists.forEach((list, index) => {
       const li = document.createElement("li");
 
       if (isMine && editingListId === list.id) {
@@ -1694,6 +1731,20 @@
         name.textContent = (isMine && list.hidden ? t("hiddenPrefix") : "") + list.name;
         li.append(icon, name);
         if (isMine) {
+          const up = document.createElement("button");
+          up.type = "button";
+          up.className = "del-list";
+          up.setAttribute("aria-label", t("moveListUp", { name: list.name }));
+          up.textContent = "▲";
+          up.disabled = index === 0;
+          up.addEventListener("click", () => moveList(list, -1));
+          const down = document.createElement("button");
+          down.type = "button";
+          down.className = "del-list";
+          down.setAttribute("aria-label", t("moveListDown", { name: list.name }));
+          down.textContent = "▼";
+          down.disabled = index === customLists.length - 1;
+          down.addEventListener("click", () => moveList(list, 1));
           const hide = document.createElement("button");
           hide.type = "button";
           hide.className = "del-list";
@@ -1712,11 +1763,11 @@
           del.setAttribute("aria-label", t("deleteList", { name: list.name }));
           del.innerHTML = trashIcon;
           del.addEventListener("click", () => deleteCustomList(list));
-          li.append(hide, edit, del);
+          li.append(up, down, hide, edit, del);
         }
       }
       existingListsEl.appendChild(li);
-    }
+    });
   }
 
   async function saveEditedList(list, icon, name) {
@@ -2149,6 +2200,7 @@
         name,
         icon: newListIconEl.value,
         hidden: false,
+        order: Date.now(),
         ownerEmail: activeTab,
         createdByEmail: myEmail,
         createdAt: Date.now()
