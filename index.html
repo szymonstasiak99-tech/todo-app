@@ -345,13 +345,11 @@
   }
 
   .app-footer {
-    margin-top: auto;
-    padding-top: 18px;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    font-size: calc(0.78rem * var(--font-scale));
+    font-size: calc(0.72rem * var(--font-scale));
     color: var(--text-muted);
   }
 
@@ -853,7 +851,7 @@
 
 <div class="gate" id="signedOutGate" hidden>
   <div class="gate-card">
-    <h1 id="signInTitle">To Do</h1>
+    <h1 id="signInTitle">To do</h1>
     <p id="signInDesc">Shared to-do list. Sign in with your Google account to see your tasks and tasks shared with you.</p>
     <button type="button" id="signInBtn">Sign in with Google</button>
     <p class="error-text" id="authError" hidden></p>
@@ -871,7 +869,7 @@
 <div class="app" id="appRoot" hidden>
   <header>
     <div class="title-row">
-      <h1 id="appTitle">To Do</h1>
+      <h1 id="appTitle">To do</h1>
       <div class="tabs" id="tabs"></div>
     </div>
     <div class="stats-row">
@@ -890,13 +888,6 @@
     </div>
     <div id="groups"></div>
     <button class="clear-done" id="clearDone" hidden>Clear completed</button>
-    <footer class="app-footer">
-      <a href="about.html" target="_blank" rel="noopener" id="footerAbout">About</a>
-      <span aria-hidden="true">·</span>
-      <a href="privacy.html" target="_blank" rel="noopener" id="footerPrivacy">Privacy Policy</a>
-      <span aria-hidden="true">·</span>
-      <a href="terms.html" target="_blank" rel="noopener" id="footerTerms">Terms of Service</a>
-    </footer>
   </main>
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
@@ -960,6 +951,14 @@
     </div>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
+    <div class="overlay-divider"></div>
+    <footer class="app-footer">
+      <a href="about.html" target="_blank" rel="noopener" id="footerAbout">About</a>
+      <span aria-hidden="true">·</span>
+      <a href="privacy.html" target="_blank" rel="noopener" id="footerPrivacy">Privacy Policy</a>
+      <span aria-hidden="true">·</span>
+      <a href="terms.html" target="_blank" rel="noopener" id="footerTerms">Terms of Service</a>
+    </footer>
   </div>
 </div>
 
@@ -1089,7 +1088,7 @@
 
   const STRINGS = {
     en: {
-      appTitle: "To Do",
+      appTitle: "To do",
       signInDesc: "Shared to-do list. Sign in with your Google account to see your tasks and tasks shared with you.",
       signInBtn: "Sign in with Google",
       notAllowedTitle: "No access",
