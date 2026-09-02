@@ -708,7 +708,7 @@
 
   .existing-lists li {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -717,7 +717,9 @@
     font-size: 0.92rem;
   }
 
-  .existing-lists .list-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .existing-lists .list-name { flex: 1; min-width: 0; overflow-wrap: break-word; padding-top: 5px; }
+  .existing-lists li > span:first-child { padding-top: 3px; }
+  .existing-lists .task-menu-wrap, .existing-lists .del-list, .existing-lists .info-btn { flex-shrink: 0; }
 
   .existing-lists li.members-panel {
     flex-direction: column;
@@ -1127,9 +1129,11 @@
   let customLists = [];          // rawCustomLists + sharedLists, merged and sorted
   let viewedStats = {};          // lifetime completion stats of whichever tab is active
   let collapsedSections = {};    // my own section-collapse preferences, synced across devices
+  let myHiddenSharedLists = {};  // shared lists I've personally hidden from my own view (doesn't affect other members)
   let activeHiddenSections = {}; // hidden built-in sections, as set by whoever owns the active tab
   let activeSectionOrder = {};   // custom position of the 3 built-in sections, as set by whoever owns the active tab
   let openTaskMenuId = null;     // id of the task whose "more actions" menu is expanded, if any
+  let openListMenuId = null;     // key of the category row (in Edytuj) whose "more actions" menu is expanded, if any
   let editingMembersId = null;   // id of the shared list whose member list is expanded for editing, if any
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   const CUSTOM_TITLE_MAX_LEN = 24;
@@ -1831,8 +1835,19 @@
     renderList();
   }
 
+  function toggleListMenu(key) {
+    openListMenuId = openListMenuId === key ? null : key;
+    renderExistingLists();
+  }
+
+  function closeListMenu() {
+    openListMenuId = null;
+    renderExistingLists();
+  }
+
   document.addEventListener("click", (e) => {
     if (openTaskMenuId && !e.target.closest(".task-menu-wrap")) closeTaskMenu();
+    if (openListMenuId && !e.target.closest(".task-menu-wrap")) closeListMenu();
   });
 
   function recombineLists() {
@@ -1995,6 +2010,7 @@
   function renderCustomChips() {
     customChipsEl.innerHTML = "";
     for (const list of customLists) {
+      if (list.sharedType && myHiddenSharedLists && myHiddenSharedLists[list.id]) continue;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip list" + (selectedCustomListId === list.id ? " on list" : "");
@@ -2047,6 +2063,7 @@
         cancel.addEventListener("click", () => { editingListId = null; renderExistingLists(); });
         li.append(iconSelect, nameInput, save, cancel);
       } else {
+        const effectiveHidden = section.kind === "shared" ? section.selfHidden : section.hidden;
         if (section.kind !== "builtin") {
           const icon = document.createElement("span");
           icon.textContent = list.icon || "";
@@ -2054,70 +2071,95 @@
         }
         const name = document.createElement("span");
         name.className = "list-name";
-        name.textContent = (section.canManage && section.hidden ? t("hiddenPrefix") : "") + displayTitle;
+        name.textContent = (section.canManage && effectiveHidden ? t("hiddenPrefix") : "") + displayTitle;
         li.appendChild(name);
 
+        if (section.kind === "shared") {
+          const info = document.createElement("button");
+          info.type = "button";
+          info.className = "info-btn";
+          info.setAttribute("aria-label", t("sharedInfoLabel"));
+          info.textContent = "ⓘ";
+          info.addEventListener("click", () => alert(t(list.sharedType + "Info")));
+          li.appendChild(info);
+        }
+
         if (section.canManage) {
-          const up = document.createElement("button");
-          up.type = "button";
-          up.className = "del-list";
-          up.setAttribute("aria-label", t("moveListUp", { name: displayTitle }));
-          up.textContent = "▲";
-          up.disabled = index === 0;
-          up.addEventListener("click", () => moveSection(sections, index, -1));
-          li.appendChild(up);
+          const menuWrap = document.createElement("div");
+          menuWrap.className = "task-menu-wrap";
 
-          const down = document.createElement("button");
-          down.type = "button";
-          down.className = "del-list";
-          down.setAttribute("aria-label", t("moveListDown", { name: displayTitle }));
-          down.textContent = "▼";
-          down.disabled = index === sections.length - 1;
-          down.addEventListener("click", () => moveSection(sections, index, 1));
-          li.appendChild(down);
+          const menuBtn = document.createElement("button");
+          menuBtn.type = "button";
+          menuBtn.className = "del-list";
+          menuBtn.setAttribute("aria-label", t("moreActions"));
+          menuBtn.innerHTML = moreIcon;
+          menuBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleListMenu(section.key); });
+          menuWrap.appendChild(menuBtn);
 
-          if (section.canHide) {
-            const hide = document.createElement("button");
-            hide.type = "button";
-            hide.className = "del-list";
-            hide.setAttribute("aria-label", section.hidden ? t("unhideList", { name: displayTitle }) : t("hideList", { name: displayTitle }));
-            hide.innerHTML = section.hidden ? eyeOffIcon : eyeIcon;
-            hide.addEventListener("click", () => section.kind === "builtin" ? toggleBuiltinSectionHidden(section.key) : toggleListHidden(list));
-            li.appendChild(hide);
+          if (openListMenuId === section.key) {
+            const menu = document.createElement("div");
+            menu.className = "task-menu";
+
+            const up = document.createElement("button");
+            up.type = "button";
+            up.disabled = index === 0;
+            up.innerHTML = '<span class="glyph">▲</span><span>' + t("moveListUp", { name: displayTitle }) + "</span>";
+            up.addEventListener("click", () => { closeListMenu(); moveSection(sections, index, -1); });
+            menu.appendChild(up);
+
+            const down = document.createElement("button");
+            down.type = "button";
+            down.disabled = index === sections.length - 1;
+            down.innerHTML = '<span class="glyph">▼</span><span>' + t("moveListDown", { name: displayTitle }) + "</span>";
+            down.addEventListener("click", () => { closeListMenu(); moveSection(sections, index, 1); });
+            menu.appendChild(down);
+
+            if (section.canHide) {
+              const hide = document.createElement("button");
+              hide.type = "button";
+              hide.innerHTML = (effectiveHidden ? eyeOffIcon : eyeIcon) + "<span>" + (effectiveHidden ? t("unhideList", { name: displayTitle }) : t("hideList", { name: displayTitle })) + "</span>";
+              hide.addEventListener("click", () => {
+                closeListMenu();
+                if (section.kind === "builtin") toggleBuiltinSectionHidden(section.key);
+                else if (section.kind === "shared") toggleSharedListSelfHidden(list);
+                else toggleListHidden(list);
+              });
+              menu.appendChild(hide);
+            }
+
+            if (section.canEditNameIcon) {
+              const edit = document.createElement("button");
+              edit.type = "button";
+              edit.innerHTML = "<span class=\"glyph\">✎</span><span>" + t("editList", { name: displayTitle }) + "</span>";
+              edit.addEventListener("click", () => { closeListMenu(); editingListId = section.key; renderExistingLists(); });
+              menu.appendChild(edit);
+            }
+
+            if (section.canManageMembers) {
+              const members = document.createElement("button");
+              members.type = "button";
+              members.innerHTML = "<span class=\"glyph\">👥</span><span>" + t("manageMembers", { name: displayTitle }) + "</span>";
+              members.addEventListener("click", () => {
+                closeListMenu();
+                editingMembersId = editingMembersId === section.key ? null : section.key;
+                renderExistingLists();
+              });
+              menu.appendChild(members);
+            }
+
+            if (section.canDelete) {
+              const del = document.createElement("button");
+              del.type = "button";
+              del.className = "danger";
+              del.innerHTML = trashIcon + "<span>" + t("deleteList", { name: displayTitle }) + "</span>";
+              del.addEventListener("click", () => { closeListMenu(); deleteCustomList(list); });
+              menu.appendChild(del);
+            }
+
+            menuWrap.appendChild(menu);
           }
 
-          if (section.canEditNameIcon) {
-            const edit = document.createElement("button");
-            edit.type = "button";
-            edit.className = "del-list";
-            edit.setAttribute("aria-label", t("editList", { name: displayTitle }));
-            edit.textContent = "✎";
-            edit.addEventListener("click", () => { editingListId = section.key; renderExistingLists(); });
-            li.appendChild(edit);
-          }
-
-          if (section.canManageMembers) {
-            const members = document.createElement("button");
-            members.type = "button";
-            members.className = "del-list";
-            members.setAttribute("aria-label", t("manageMembers", { name: displayTitle }));
-            members.textContent = "👥";
-            members.addEventListener("click", () => {
-              editingMembersId = editingMembersId === section.key ? null : section.key;
-              renderExistingLists();
-            });
-            li.appendChild(members);
-          }
-
-          if (section.canDelete) {
-            const del = document.createElement("button");
-            del.type = "button";
-            del.className = "del-list";
-            del.setAttribute("aria-label", t("deleteList", { name: displayTitle }));
-            del.innerHTML = trashIcon;
-            del.addEventListener("click", () => deleteCustomList(list));
-            li.appendChild(del);
-          }
+          li.appendChild(menuWrap);
         }
       }
       existingListsEl.appendChild(li);
@@ -2415,14 +2457,26 @@
     if (unsubUiState) unsubUiState();
     unsubUiState = onSnapshot(doc(db, "ui_state", email), (snap) => {
       collapsedSections = (snap.exists() && snap.data().collapsedSections) || {};
+      myHiddenSharedLists = (snap.exists() && snap.data().hiddenSharedLists) || {};
       customTitle = (snap.exists() && snap.data().customTitle) || "";
       appTitleEl.textContent = customTitle || t("appTitle");
       if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
         customTitleInput.value = customTitle;
         customTitleCounterEl.textContent = customTitle.length + "/" + CUSTOM_TITLE_MAX_LEN;
       }
+      renderCustomChips();
       renderList();
+      if (!newListOverlay.hidden) renderExistingLists();
     });
+  }
+
+  async function toggleSharedListSelfHidden(list) {
+    const newHidden = !(myHiddenSharedLists && myHiddenSharedLists[list.id]);
+    try {
+      await setDoc(doc(db, "ui_state", myEmail), { hiddenSharedLists: { [list.id]: newHidden } }, { merge: true });
+    } catch (e) {
+      showModalError(e);
+    }
   }
 
   function subscribeActiveUiState(email) {
@@ -2504,8 +2558,9 @@
         muted: false,
         collapseKey: list.id,
         hidden: !!list.hidden,
+        selfHidden: isShared && !!(myHiddenSharedLists && myHiddenSharedLists[list.id]),
         canManage: isShared ? true : isMine,
-        canHide: !isShared,
+        canHide: true,
         canEditNameIcon: true,
         canDelete: true,
         canManageMembers: isShared
@@ -2601,6 +2656,7 @@
 
     const sections = getSections(tabTasks, isMine);
     for (const section of sections) {
+      if (section.selfHidden) continue;
       const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
       const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
       const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
