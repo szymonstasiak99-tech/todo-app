@@ -32,7 +32,8 @@ service cloud.firestore {
     }
 
     match /ui_state/{email} {
-      allow read, write: if isAllowed() && email == request.auth.token.email;
+      allow read: if isAllowed();
+      allow write: if isAllowed() && email == request.auth.token.email;
     }
   }
 }
