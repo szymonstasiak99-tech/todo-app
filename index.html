@@ -1698,20 +1698,26 @@
 
   function renderStats() {
     statsStripEl.innerHTML = "";
+    const isMine = isMyTab();
 
     const q2 = viewedStats.q2 || {};
     const q1 = viewedStats.q1 || {};
     const q3 = viewedStats.q3 || {};
     const q4 = viewedStats.q4 || {};
 
-    addStatPill(QUADRANT_ICON.q2, q2.total || 0, q2.habit || 0);
-    addStatPill(QUADRANT_ICON.q1, q1.total || 0, q1.habit || 0);
-    addStatPill("🍃", (q3.total || 0) + (q4.total || 0), (q3.habit || 0) + (q4.habit || 0));
+    if (!(isMine && activeHiddenSections.mostImportant)) addStatPill(QUADRANT_ICON.q2, q2.total || 0, q2.habit || 0);
+    if (!(isMine && activeHiddenSections.importantUrgent)) addStatPill(QUADRANT_ICON.q1, q1.total || 0, q1.habit || 0);
+    if (!(isMine && activeHiddenSections.other)) addStatPill("🍃", (q3.total || 0) + (q4.total || 0), (q3.habit || 0) + (q4.habit || 0));
 
     const lists = viewedStats.lists || {};
-    const isMine = isMyTab();
     const listIds = isMine ? customLists.map(l => l.id) : Object.keys(lists);
     for (const listId of listIds) {
+      if (isMine) {
+        const list = customLists.find(l => l.id === listId);
+        const selfHiddenShared = list && list.sharedType && myHiddenSharedLists && myHiddenSharedLists[listId];
+        const hiddenNormal = list && !list.sharedType && list.hidden;
+        if (selfHiddenShared || hiddenNormal) continue;
+      }
       const s = lists[listId] || {};
       const label = (s.name || "").slice(0, 3);
       addStatPill((s.icon ? s.icon + " " : "") + label, s.total || 0, s.habit || 0);
@@ -1871,6 +1877,7 @@
       recombineLists();
       renderCustomChips();
       renderList();
+      renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
     });
   }
@@ -1937,6 +1944,7 @@
       recombineLists();
       renderCustomChips();
       renderList();
+      renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
     }, (err) => {
       showStatus(t("errSync", { msg: err.message }));
@@ -2009,8 +2017,10 @@
 
   function renderCustomChips() {
     customChipsEl.innerHTML = "";
+    const isMine = isMyTab();
     for (const list of customLists) {
       if (list.sharedType && myHiddenSharedLists && myHiddenSharedLists[list.id]) continue;
+      if (!list.sharedType && isMine && list.hidden) continue;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip list" + (selectedCustomListId === list.id ? " on list" : "");
@@ -2466,6 +2476,7 @@
       }
       renderCustomChips();
       renderList();
+      renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
     });
   }
@@ -2485,6 +2496,7 @@
       activeHiddenSections = (snap.exists() && snap.data().hiddenSections) || {};
       activeSectionOrder = (snap.exists() && snap.data().sectionOrder) || {};
       renderList();
+      renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
     });
   }
@@ -2657,9 +2669,9 @@
     const sections = getSections(tabTasks, isMine);
     for (const section of sections) {
       if (section.selfHidden) continue;
+      if (section.canManage && section.kind !== "shared" && section.hidden) continue;
       const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
-      const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
-      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
+      const g = renderGroup(displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
       if (g) groupsEl.appendChild(g);
     }
 
