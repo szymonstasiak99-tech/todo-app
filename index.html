@@ -1969,6 +1969,7 @@
   let onboardingStep = 0;             // 0=first task, 1=priority quiz, 2=categories, 3+=tutorial slides
   let onboardingHidePriority = false; // set during the quiz step; applied when leaving it
   let onboardingCategoryChoices = null; // { fridge: bool, shopping: bool, work: bool } while on the categories step
+  let onboardingCustomCategories = []; // [{ id, name, icon, visible }] added during the categories step
 
   const signedOutGate = document.getElementById("signedOutGate");
   const registerGate = document.getElementById("registerGate");
@@ -4733,6 +4734,7 @@
     onboardingStep = 0;
     onboardingHidePriority = false;
     onboardingCategoryChoices = { fridge: true, shopping: true, work: true };
+    onboardingCustomCategories = [];
     renderOnboardingStep();
     onboardingOverlay.hidden = false;
   }
@@ -4758,6 +4760,9 @@
       if (list.presetType === "work" && !onboardingCategoryChoices.work) toHide[list.id] = true;
       if (list.sharedType === "fridge" && !onboardingCategoryChoices.fridge) toHide[list.id] = true;
       if (list.sharedType === "shopping" && !onboardingCategoryChoices.shopping) toHide[list.id] = true;
+    }
+    for (const cat of onboardingCustomCategories) {
+      if (!cat.visible) toHide[cat.id] = true;
     }
     if (Object.keys(toHide).length > 0) {
       try { await setDoc(doc(db, "ui_state", myEmail), { hiddenCategories: toHide }, { merge: true }); } catch (e) {}
@@ -4857,40 +4862,69 @@
     onboardingBodyEl.appendChild(onbTitleEl(t("onbCategoriesTitle")));
     onboardingBodyEl.appendChild(onbBodyEl(t("onbCategoriesBody")));
 
-    const rows = [
-      { key: "fridge", name: t("fridgeDefaultName") },
-      { key: "shopping", name: t("shoppingDefaultName") },
-      { key: "work", name: t("workDefaultName") }
-    ];
-    for (const row of rows) {
+    const rowsContainer = document.createElement("div");
+    onboardingBodyEl.appendChild(rowsContainer);
+
+    function addToggleRow(label, isVisible, onToggle) {
       const wrap = document.createElement("div");
       wrap.className = "onboarding-category-row";
-      const label = document.createElement("span");
-      label.textContent = row.name;
-      wrap.appendChild(label);
+      const labelEl = document.createElement("span");
+      labelEl.textContent = label;
+      wrap.appendChild(labelEl);
       const toggle = document.createElement("button");
       toggle.type = "button";
-      const syncToggle = () => {
-        toggle.classList.toggle("theme-btn", true);
-        toggle.classList.toggle("active", onboardingCategoryChoices[row.key]);
-        toggle.textContent = onboardingCategoryChoices[row.key] ? t("onbCategoryVisible") : t("onbCategoryHidden");
-      };
       toggle.className = "theme-btn";
+      const syncToggle = () => {
+        toggle.classList.toggle("active", isVisible());
+        toggle.textContent = isVisible() ? t("onbCategoryVisible") : t("onbCategoryHidden");
+      };
       syncToggle();
-      toggle.addEventListener("click", () => {
-        onboardingCategoryChoices[row.key] = !onboardingCategoryChoices[row.key];
-        syncToggle();
-      });
+      toggle.addEventListener("click", () => { onToggle(); syncToggle(); });
       wrap.appendChild(toggle);
-      onboardingBodyEl.appendChild(wrap);
+      rowsContainer.appendChild(wrap);
     }
+
+    function renderRows() {
+      rowsContainer.innerHTML = "";
+      const presets = [
+        { key: "fridge", name: t("fridgeDefaultName") },
+        { key: "shopping", name: t("shoppingDefaultName") },
+        { key: "work", name: t("workDefaultName") }
+      ];
+      for (const row of presets) {
+        addToggleRow(
+          row.name,
+          () => onboardingCategoryChoices[row.key],
+          () => { onboardingCategoryChoices[row.key] = !onboardingCategoryChoices[row.key]; }
+        );
+      }
+      for (const cat of onboardingCustomCategories) {
+        addToggleRow(
+          cat.icon ? `${cat.icon} ${cat.name}` : cat.name,
+          () => cat.visible,
+          () => { cat.visible = !cat.visible; }
+        );
+      }
+    }
+    renderRows();
+
+    const addRow = document.createElement("div");
+    addRow.style.display = "flex";
+    addRow.style.gap = "8px";
+    addRow.style.marginTop = "6px";
+
+    const iconSelect = document.createElement("select");
+    iconSelect.setAttribute("aria-label", t("categoryIcon"));
+    populateIconSelect(iconSelect, "");
+    addRow.appendChild(iconSelect);
 
     const customInput = document.createElement("input");
     customInput.type = "text";
     customInput.placeholder = t("onbCustomCategoryPlaceholder");
     customInput.maxLength = 40;
-    customInput.style.marginTop = "6px";
-    onboardingBodyEl.appendChild(customInput);
+    customInput.style.flex = "1";
+    addRow.appendChild(customInput);
+    onboardingBodyEl.appendChild(addRow);
 
     const addCustomBtn = document.createElement("button");
     addCustomBtn.type = "button";
@@ -4900,12 +4934,16 @@
     addCustomBtn.addEventListener("click", async () => {
       const name = customInput.value.trim();
       if (!name) return;
+      const icon = iconSelect.value;
       try {
-        await addDoc(collection(db, "custom_lists"), {
-          name, icon: "", hidden: false, order: Date.now(),
+        const ref = await addDoc(collection(db, "custom_lists"), {
+          name, icon, hidden: false, order: Date.now(),
           ownerEmail: myEmail, members: myMembers(false), createdByEmail: myEmail, createdAt: Date.now()
         });
+        onboardingCustomCategories.push({ id: ref.id, name, icon, visible: true });
         customInput.value = "";
+        iconSelect.value = "";
+        renderRows();
       } catch (e) {}
     });
     onboardingBodyEl.appendChild(addCustomBtn);
