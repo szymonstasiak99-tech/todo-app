@@ -1377,7 +1377,10 @@
     background: var(--danger);
   }
 
+  .calendar-day-dot.done { background: var(--text-muted); opacity: 0.5; }
+
   .calendar-day.selected .calendar-day-dot { background: var(--accent-text); }
+  .calendar-day.selected .calendar-day-dot.done { opacity: 0.55; }
 
   .calendar-day-list {
     list-style: none;
@@ -4577,8 +4580,9 @@
         + (dateStr === calendarSelectedDate ? " selected" : "");
       cell.textContent = day;
       if (byDate[dateStr] && byDate[dateStr].length) {
+        const allDoneHere = byDate[dateStr].every((entry) => entry.doneHere);
         const dot = document.createElement("span");
-        dot.className = "calendar-day-dot";
+        dot.className = "calendar-day-dot" + (allDoneHere ? " done" : "");
         cell.appendChild(dot);
       }
       cell.addEventListener("click", () => {
