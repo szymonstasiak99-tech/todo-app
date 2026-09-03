@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "schedule.type", "order": "ASCENDING" },
+        { "fieldPath": "schedule.dueAtMs", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "schedule.type", "order": "ASCENDING" },
+        { "fieldPath": "schedule.renewsAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerEmail", "order": "ASCENDING" },
+        { "fieldPath": "isHabit", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

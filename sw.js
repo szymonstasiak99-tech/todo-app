@@ -1,3 +1,35 @@
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
+
+firebase.initializeApp({
+  apiKey: "AIzaSyC2A2CWELZhKxzWOgDhLo00MXL5XXc57Lg",
+  authDomain: "to-do-list-6a109.firebaseapp.com",
+  projectId: "to-do-list-6a109",
+  storageBucket: "to-do-list-6a109.firebasestorage.app",
+  messagingSenderId: "562220006928",
+  appId: "1:562220006928:web:7c63d991fe0e3d22111495"
+});
+
+// Background pushes (app/tab closed) land here. Foreground pushes (app open)
+// are handled client-side instead, see onMessage() in index.html.
+const messaging = firebase.messaging();
+messaging.onBackgroundMessage((payload) => {
+  const title = (payload.notification && payload.notification.title) || "Tandem";
+  const body = (payload.notification && payload.notification.body) || "";
+  self.registration.showNotification(title, {
+    body,
+    icon: "./icons/icon-192.png",
+    badge: "./icons/icon-192.png",
+    data: { link: (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.link) || "./index.html" }
+  });
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const link = (event.notification.data && event.notification.data.link) || "./index.html";
+  event.waitUntil(clients.openWindow(link));
+});
+
 const CACHE_NAME = "tandem-shell-v1";
 const APP_SHELL = [
   "./index.html",

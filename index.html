@@ -1771,6 +1771,30 @@
     <p id="timeZoneRow"><span id="timeZoneLabel">Time zone</span>: <strong id="timeZoneValue">—</strong></p>
     <button type="button" class="reset-order-btn" id="refreshTimeZoneBtn">Use this device's time zone</button>
     <div class="overlay-divider"></div>
+    <p id="notifDesc">Push notifications.</p>
+    <div class="theme-row" id="notifMasterRow">
+      <button type="button" class="theme-btn" id="notifEnableBtn">Enable notifications</button>
+    </div>
+    <p class="gate-hint" id="notifDeniedHint" hidden></p>
+    <div id="notifDetailRows" hidden>
+      <div class="onboarding-category-row">
+        <span id="notifTaskRemindersLabel">Scheduled task reminders</span>
+        <button type="button" class="theme-btn" id="notifTaskRemindersToggle"></button>
+      </div>
+      <div class="onboarding-category-row">
+        <span id="notifHabitReminderLabel">Daily habit reminder</span>
+        <button type="button" class="theme-btn" id="notifHabitReminderToggle"></button>
+      </div>
+      <div class="onboarding-category-row" id="notifHabitTimeRow">
+        <span id="notifHabitTimeLabel">Reminder time</span>
+        <select id="notifHabitTimeSelect"></select>
+      </div>
+      <div class="onboarding-category-row">
+        <span id="notifPartnerActivityLabel">Partner activity</span>
+        <button type="button" class="theme-btn" id="notifPartnerActivityToggle"></button>
+      </div>
+    </div>
+    <div class="overlay-divider"></div>
     <button type="button" class="reset-order-btn" id="replayTutorialBtn">Personalize categories / replay tutorial</button>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
@@ -1905,6 +1929,7 @@
     onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+  import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC2A2CWELZhKxzWOgDhLo00MXL5XXc57Lg",
@@ -1915,6 +1940,10 @@
     appId: "1:562220006928:web:7c63d991fe0e3d22111495",
     measurementId: "G-KWCG8WZMWZ"
   };
+
+  // Firebase Console -> Project settings -> Cloud Messaging -> Web Push
+  // certificates -> generate a key pair, then paste its value here.
+  const VAPID_KEY = "REPLACE_WITH_YOUR_VAPID_KEY";
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
@@ -1950,6 +1979,9 @@
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   let myTimeZone = null;         // IANA time zone (e.g. "Europe/Warsaw"), synced via ui_state so every one of my devices agrees on "today" for habit streaks
   let myPendingInviteCode = null; // an invite code I generated that's still waiting to be redeemed, if any
+  const DEFAULT_NOTIF = { enabled: false, taskReminders: true, habitReminder: true, habitReminderTime: "09:00", partnerActivity: true, tokens: [] };
+  let myNotif = { ...DEFAULT_NOTIF }; // push notification prefs, synced via ui_state.notif
+  let messaging = null; // lazily created once the person opts in, see ensureMessaging()
   const CUSTOM_TITLE_MAX_LEN = 24;
   const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
   const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, urgentNotImportant: -1.9, other: -1.75 };
@@ -2041,6 +2073,18 @@
   const timeZoneLabelEl = document.getElementById("timeZoneLabel");
   const timeZoneValueEl = document.getElementById("timeZoneValue");
   const refreshTimeZoneBtnEl = document.getElementById("refreshTimeZoneBtn");
+  const notifDescEl = document.getElementById("notifDesc");
+  const notifEnableBtnEl = document.getElementById("notifEnableBtn");
+  const notifDeniedHintEl = document.getElementById("notifDeniedHint");
+  const notifDetailRowsEl = document.getElementById("notifDetailRows");
+  const notifTaskRemindersLabelEl = document.getElementById("notifTaskRemindersLabel");
+  const notifTaskRemindersToggleEl = document.getElementById("notifTaskRemindersToggle");
+  const notifHabitReminderLabelEl = document.getElementById("notifHabitReminderLabel");
+  const notifHabitReminderToggleEl = document.getElementById("notifHabitReminderToggle");
+  const notifHabitTimeLabelEl = document.getElementById("notifHabitTimeLabel");
+  const notifHabitTimeSelectEl = document.getElementById("notifHabitTimeSelect");
+  const notifPartnerActivityLabelEl = document.getElementById("notifPartnerActivityLabel");
+  const notifPartnerActivityToggleEl = document.getElementById("notifPartnerActivityToggle");
   const themeButtons = document.querySelectorAll("[data-theme-choice]");
   const langButtons = document.querySelectorAll("[data-lang-choice]");
   const fontSizeButtons = document.querySelectorAll("[data-font-choice]");
@@ -2271,6 +2315,15 @@
       font_large: "Large",
       timeZoneDesc: "Time zone",
       refreshTimeZoneBtn: "Use this device's time zone",
+      notifDesc: "Push notifications.",
+      notifEnableBtn: "Enable notifications",
+      notifEnabled: "Notifications enabled",
+      notifDenied: "Notifications are blocked for this site in your browser settings.",
+      notifUnsupported: "Push notifications aren't supported in this browser.",
+      notifTaskRemindersLabel: "Scheduled task reminders",
+      notifHabitReminderLabel: "Daily habit reminder",
+      notifHabitTimeLabel: "Reminder time",
+      notifPartnerActivityLabel: "Partner activity",
       replayTutorial: "Personalize categories / replay tutorial",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
@@ -2485,6 +2538,15 @@
       font_large: "Duża",
       timeZoneDesc: "Strefa czasowa",
       refreshTimeZoneBtn: "Użyj strefy czasowej tego urządzenia",
+      notifDesc: "Powiadomienia push.",
+      notifEnableBtn: "Włącz powiadomienia",
+      notifEnabled: "Powiadomienia włączone",
+      notifDenied: "Powiadomienia są zablokowane dla tej strony w ustawieniach przeglądarki.",
+      notifUnsupported: "Powiadomienia push nie są obsługiwane w tej przeglądarce.",
+      notifTaskRemindersLabel: "Przypomnienia o zaplanowanych zadaniach",
+      notifHabitReminderLabel: "Codzienne przypomnienie o nawykach",
+      notifHabitTimeLabel: "Godzina przypomnienia",
+      notifPartnerActivityLabel: "Aktywność partnera/partnerki",
       replayTutorial: "Dostosuj kategorie / powtórz samouczek",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
@@ -2880,6 +2942,12 @@
     fontSizeDescEl.textContent = t("fontSizeDesc");
     timeZoneLabelEl.textContent = t("timeZoneDesc");
     refreshTimeZoneBtnEl.textContent = t("refreshTimeZoneBtn");
+    notifDescEl.textContent = t("notifDesc");
+    notifTaskRemindersLabelEl.textContent = t("notifTaskRemindersLabel");
+    notifHabitReminderLabelEl.textContent = t("notifHabitReminderLabel");
+    notifHabitTimeLabelEl.textContent = t("notifHabitTimeLabel");
+    notifPartnerActivityLabelEl.textContent = t("notifPartnerActivityLabel");
+    renderNotifSettings();
     replayTutorialBtnEl.textContent = t("replayTutorial");
     resetStatsBtnEl.textContent = t("resetStats");
     if (!onboardingOverlay.hidden) renderOnboardingStep();
@@ -2903,6 +2971,8 @@
   function applyLang(choice) {
     currentLang = choice;
     try { localStorage.setItem(LANG_STORAGE_KEY, choice); } catch (e) {}
+    // Synced so server-sent push notifications can be worded in the right language.
+    if (myEmail) setDoc(doc(db, "ui_state", myEmail), { lang: choice }, { merge: true }).catch(() => {});
     applyStaticTranslations();
     renderTabs();
     renderList();
@@ -3880,6 +3950,11 @@
         setDoc(doc(db, "ui_state", myEmail), { timeZone: myTimeZone }, { merge: true }).catch(() => {});
       }
       updateTimeZoneDisplay();
+      if (snap.exists() && !snap.data().lang) {
+        setDoc(doc(db, "ui_state", myEmail), { lang: currentLang }, { merge: true }).catch(() => {});
+      }
+      myNotif = { ...DEFAULT_NOTIF, ...((snap.exists() && snap.data().notif) || {}) };
+      renderNotifSettings();
       appTitleEl.textContent = customTitle || t("appTitle");
       if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
         customTitleInput.value = customTitle;
@@ -3909,6 +3984,103 @@
       showModalError(e);
     }
   }
+
+  async function ensureMessaging() {
+    if (messaging) return messaging;
+    try {
+      if (!("Notification" in window) || !("serviceWorker" in navigator)) return null;
+      if (!(await isMessagingSupported())) return null;
+      messaging = getMessaging(app);
+      return messaging;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function saveNotif(patch) {
+    myNotif = { ...myNotif, ...patch };
+    renderNotifSettings();
+    try {
+      await setDoc(doc(db, "ui_state", myEmail), { notif: patch }, { merge: true });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  async function enableNotifications() {
+    const msg = await ensureMessaging();
+    if (!msg) { notifDeniedHintEl.textContent = t("notifUnsupported"); notifDeniedHintEl.hidden = false; return; }
+    let permission = Notification.permission;
+    if (permission === "default") permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      notifDeniedHintEl.textContent = t("notifDenied");
+      notifDeniedHintEl.hidden = false;
+      renderNotifSettings();
+      return;
+    }
+    notifDeniedHintEl.hidden = true;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const token = await getToken(msg, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+      if (!token) return;
+      await setDoc(doc(db, "ui_state", myEmail), {
+        notif: { enabled: true, tokens: arrayUnion(token) }
+      }, { merge: true });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  function populateNotifTimeSelect() {
+    notifHabitTimeSelectEl.innerHTML = "";
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const value = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = value;
+        notifHabitTimeSelectEl.appendChild(opt);
+      }
+    }
+  }
+
+  function renderNotifSettings() {
+    const denied = ("Notification" in window) && Notification.permission === "denied";
+    notifEnableBtnEl.classList.toggle("active", myNotif.enabled);
+    notifEnableBtnEl.textContent = myNotif.enabled ? t("notifEnabled") : t("notifEnableBtn");
+    notifEnableBtnEl.disabled = denied;
+    if (denied) {
+      notifDeniedHintEl.textContent = t("notifDenied");
+      notifDeniedHintEl.hidden = false;
+    }
+    notifDetailRowsEl.hidden = !myNotif.enabled;
+    notifTaskRemindersToggleEl.classList.toggle("active", myNotif.taskReminders);
+    notifTaskRemindersToggleEl.textContent = myNotif.taskReminders ? t("onbCategoryVisible") : t("onbCategoryHidden");
+    notifHabitReminderToggleEl.classList.toggle("active", myNotif.habitReminder);
+    notifHabitReminderToggleEl.textContent = myNotif.habitReminder ? t("onbCategoryVisible") : t("onbCategoryHidden");
+    notifPartnerActivityToggleEl.classList.toggle("active", myNotif.partnerActivity);
+    notifPartnerActivityToggleEl.textContent = myNotif.partnerActivity ? t("onbCategoryVisible") : t("onbCategoryHidden");
+    notifHabitTimeSelectEl.value = myNotif.habitReminderTime || DEFAULT_NOTIF.habitReminderTime;
+  }
+
+  notifEnableBtnEl.addEventListener("click", () => {
+    if (myNotif.enabled) { saveNotif({ enabled: false }); return; }
+    enableNotifications();
+  });
+  notifTaskRemindersToggleEl.addEventListener("click", () => saveNotif({ taskReminders: !myNotif.taskReminders }));
+  notifHabitReminderToggleEl.addEventListener("click", () => saveNotif({ habitReminder: !myNotif.habitReminder }));
+  notifPartnerActivityToggleEl.addEventListener("click", () => saveNotif({ partnerActivity: !myNotif.partnerActivity }));
+  notifHabitTimeSelectEl.addEventListener("change", () => saveNotif({ habitReminderTime: notifHabitTimeSelectEl.value }));
+  populateNotifTimeSelect();
+
+  ensureMessaging().then((msg) => {
+    if (!msg) return;
+    onMessage(msg, (payload) => {
+      const title = (payload.notification && payload.notification.title) || "";
+      const body = (payload.notification && payload.notification.body) || "";
+      showStatus((title ? title + " — " : "") + body);
+    });
+  });
 
   refreshTimeZoneBtnEl.addEventListener("click", refreshTimeZoneFromDevice);
 
@@ -4225,7 +4397,7 @@
 
   async function toggleTask(task, wasDone) {
     try {
-      await updateDoc(doc(db, "tasks", task.id), { done: !wasDone });
+      await updateDoc(doc(db, "tasks", task.id), { done: !wasDone, lastModifiedByEmail: myEmail });
       bumpStats(task, wasDone ? -1 : 1);
       if (!wasDone && task.important && task.urgent) {
         const stillOpenQ2 = tasks.some(t2 => t2.ownerEmail === myEmail && t2.important && !t2.urgent && !isDoneNow(t2));
@@ -4268,6 +4440,7 @@
     };
     if (isToday) {
       updates["schedule.renewsAt"] = wasDone ? null : computeRenewsAt(task.schedule);
+      updates.lastModifiedByEmail = myEmail;
     }
     try {
       await updateDoc(doc(db, "tasks", task.id), updates);
@@ -4534,6 +4707,11 @@
     } else {
       schedule.date = scheduleDateInput.value;
       schedule.time = scheduleTimeInput.value || null;
+      // Precomputed so the reminder Cloud Function can query by a plain
+      // timestamp instead of recomputing time zones for every task.
+      if (schedule.time) {
+        schedule.dueAtMs = zonedTimeToUtcMs(schedule.date, schedule.time, myTimeZone || detectTimeZone());
+      }
     }
     composerSchedule = schedule;
     updateScheduleChipState();
