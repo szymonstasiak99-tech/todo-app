@@ -1663,7 +1663,6 @@
     </div>
     <div class="stats-row">
       <div class="greeting">
-        <span id="greetingHello">Hey</span> <strong id="whoamiName">—</strong>!
         <button type="button" id="headerEditBtn">Edit</button>
       </div>
       <div class="stats-strip" id="statsStrip"></div>
@@ -1994,9 +1993,7 @@
   const authErrorEl = document.getElementById("authError");
   const headerEditBtn = document.getElementById("headerEditBtn");
   const modalSignOutBtnEl = document.getElementById("modalSignOutBtn");
-  const whoamiNameEl = document.getElementById("whoamiName");
   const appTitleEl = document.getElementById("appTitle");
-  const greetingHelloEl = document.getElementById("greetingHello");
   const tabsEl = document.getElementById("tabs");
   const groupsEl = document.getElementById("groups");
   const emptyEl = document.getElementById("empty");
@@ -2151,7 +2148,6 @@
       pairTabLabel: "+",
       errPairRedeem: "Couldn't redeem that code ({msg}).",
       signOut: "Sign out",
-      greetingHello: "Hey",
       emptyGlyph: "Empty",
       emptyText: "Add your first task below.",
       clearDone: "Clear completed",
@@ -2365,7 +2361,6 @@
       pairTabLabel: "+",
       errPairRedeem: "Nie udało się użyć tego kodu ({msg}).",
       signOut: "Wyloguj",
-      greetingHello: "Cześć",
       emptyGlyph: "Pusto",
       emptyText: "Dodaj pierwsze zadanie poniżej.",
       clearDone: "Usuń ukończone",
@@ -2842,7 +2837,6 @@
     calendarAddForDayBtnEl.textContent = t("calendarAddForDay");
     if (!calendarOverlay.hidden) renderCalendarOverlay();
     appTitleEl.textContent = customTitle || t("appTitle");
-    greetingHelloEl.textContent = t("greetingHello");
     headerEditBtn.textContent = t("chipEdit");
     modalSignOutBtnEl.textContent = t("signOut");
     emptyGlyphEl.textContent = t("emptyGlyph");
@@ -5186,7 +5180,6 @@
   function rebuildRoster() {
     roster = [{ email: myEmail, name: myProfile.name || myEmail }];
     if (myPartnerEmail) roster.push({ email: myPartnerEmail, name: (partnerProfile && partnerProfile.name) || myPartnerEmail });
-    whoamiNameEl.textContent = nameFor(myEmail);
     renderTabs();
     renderList();
     renderStats();
@@ -5231,7 +5224,6 @@
     roster = [{ email: myEmail, name: myProfile.name }];
     partnerProfile = null;
     activeTab = myEmail;
-    whoamiNameEl.textContent = myProfile.name;
     updateComposerPlaceholder();
     showGate("app");
     checkAnalyticsConsent();
