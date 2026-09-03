@@ -1021,7 +1021,21 @@
   .chip.on.habit { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
   .chip.on.list { background: var(--surface-2); border-color: var(--text); color: var(--text); }
   .chip.on.hidden { background: var(--surface-2); border-color: var(--text); color: var(--text); }
+  .chip.on.schedule { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
   .chip:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+
+  .chip.schedule { position: relative; }
+
+  .chip-badge-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--danger);
+    border: 1px solid var(--surface);
+  }
 
   .overlay {
     position: fixed;
@@ -1437,6 +1451,7 @@
       </div>
       <div class="chip-row" id="chipRow">
         <button type="button" class="chip hidden" id="chipHidden" aria-label="Add as hidden">🙈</button>
+        <button type="button" class="chip schedule" id="chipSchedule" aria-label="Schedule">📅<span class="chip-badge-dot" id="scheduleBadgeDot" hidden></span></button>
         <button type="button" class="chip important" id="chipImportant">Important</button>
         <button type="button" class="chip urgent" id="chipUrgent">Urgent</button>
         <button type="button" class="chip habit" id="chipHabit">🔁 Habit</button>
@@ -1570,6 +1585,41 @@
   </div>
 </div>
 
+<div class="overlay" id="scheduleOverlay" hidden>
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="scheduleTitle">Schedule</h2>
+      <button type="button" class="overlay-close" id="closeScheduleOverlay" aria-label="Close">✕</button>
+    </div>
+    <div class="theme-row" id="scheduleTypeRow">
+      <button type="button" class="theme-btn" data-schedule-type="once">One-time</button>
+      <button type="button" class="theme-btn" data-schedule-type="recurring">Recurring</button>
+    </div>
+    <div class="overlay-divider"></div>
+    <p id="scheduleDateLabel">Date</p>
+    <div class="list-form-row">
+      <input id="scheduleDateInput" type="date">
+      <input id="scheduleTimeInput" type="time">
+    </div>
+    <p id="scheduleAllDayHint" class="char-counter">Leave the time empty for an all-day reminder.</p>
+    <div id="scheduleIntervalWrap" hidden>
+      <div class="overlay-divider"></div>
+      <p id="scheduleIntervalLabel">Repeat every</p>
+      <input id="scheduleIntervalValueInput" type="number" min="1" value="1">
+      <div class="theme-row" id="scheduleIntervalUnitRow">
+        <button type="button" class="theme-btn" data-interval-unit="days">Days</button>
+        <button type="button" class="theme-btn" data-interval-unit="hours">Hours</button>
+      </div>
+    </div>
+    <div class="overlay-divider"></div>
+    <p class="error-text" id="scheduleError" hidden></p>
+    <div class="invite-code-actions">
+      <button type="button" class="secondary-btn" id="scheduleClearBtn">No schedule</button>
+      <button type="button" class="primary-btn" id="scheduleSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="nudge" id="nudge" hidden></div>
 
 <script type="module">
@@ -1645,7 +1695,9 @@
   let composerHabit = false;
   let composerHidden = false;
   let selectedCustomListId = null;
+  let composerSchedule = null;   // { type: "once"|"recurring", date, time, intervalUnit, intervalValue } or null
   let editingTaskId = null;      // id of the task being edited via the composer, or null when adding a new task
+  let scheduleDraft = { type: "once", intervalUnit: "days" }; // working state while the schedule popup is open
 
   const signedOutGate = document.getElementById("signedOutGate");
   const registerGate = document.getElementById("registerGate");
@@ -1740,6 +1792,23 @@
   const pairYourCodeDescEl = document.getElementById("pairYourCodeDesc");
   const pairRedeemDescEl = document.getElementById("pairRedeemDesc");
   const pairTitleEl = document.getElementById("pairTitle");
+  const chipScheduleEl = document.getElementById("chipSchedule");
+  const scheduleBadgeDotEl = document.getElementById("scheduleBadgeDot");
+  const scheduleOverlay = document.getElementById("scheduleOverlay");
+  const scheduleTitleEl = document.getElementById("scheduleTitle");
+  const closeScheduleOverlayBtn = document.getElementById("closeScheduleOverlay");
+  const scheduleTypeButtons = document.querySelectorAll("[data-schedule-type]");
+  const scheduleDateLabelEl = document.getElementById("scheduleDateLabel");
+  const scheduleDateInput = document.getElementById("scheduleDateInput");
+  const scheduleTimeInput = document.getElementById("scheduleTimeInput");
+  const scheduleAllDayHintEl = document.getElementById("scheduleAllDayHint");
+  const scheduleIntervalWrap = document.getElementById("scheduleIntervalWrap");
+  const scheduleIntervalLabelEl = document.getElementById("scheduleIntervalLabel");
+  const scheduleIntervalValueInput = document.getElementById("scheduleIntervalValueInput");
+  const scheduleIntervalUnitButtons = document.querySelectorAll("[data-interval-unit]");
+  const scheduleErrorEl = document.getElementById("scheduleError");
+  const scheduleClearBtnEl = document.getElementById("scheduleClearBtn");
+  const scheduleSaveBtnEl = document.getElementById("scheduleSaveBtn");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
@@ -1804,6 +1873,21 @@
       moveListDown: "Move down",
       save: "Save",
       cancel: "Cancel",
+      chipSchedule: "Schedule",
+      scheduleTitle: "Schedule",
+      scheduleOnce: "One-time",
+      scheduleRecurring: "Recurring",
+      scheduleDateLabel: "Date and time",
+      scheduleAllDayHint: "Leave the time empty for an all-day reminder.",
+      scheduleIntervalLabel: "Repeat every",
+      intervalDays: "Days",
+      intervalHours: "Hours",
+      scheduleClear: "No schedule",
+      scheduleEvery: "every {n} {unit}",
+      errScheduleDate: "Pick a date first.",
+      renewsIn: "Renews in {n} {unit}",
+      dueToday: "Due today: {name}",
+      dueTodayN: "You have {n} things due today",
       tabNamesDesc: "Tab names — any nickname, either of you can change both.",
       yourTab: "Your tab",
       tabFor: "Tab: {email}",
@@ -1950,6 +2034,21 @@
       moveListDown: "Przenieś niżej",
       save: "Zapisz",
       cancel: "Anuluj",
+      chipSchedule: "Harmonogram",
+      scheduleTitle: "Harmonogram",
+      scheduleOnce: "Jednorazowe",
+      scheduleRecurring: "Powtarzalne",
+      scheduleDateLabel: "Data i godzina",
+      scheduleAllDayHint: "Zostaw godzinę pustą dla przypomnienia na cały dzień.",
+      scheduleIntervalLabel: "Powtarzaj co",
+      intervalDays: "Dni",
+      intervalHours: "Godziny",
+      scheduleClear: "Brak harmonogramu",
+      scheduleEvery: "co {n} {unit}",
+      errScheduleDate: "Najpierw wybierz datę.",
+      renewsIn: "Odnowi się za {n} {unit}",
+      dueToday: "Dziś: {name}",
+      dueTodayN: "Masz dziś {n} zaplanowanych rzeczy",
       tabNamesDesc: "Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.",
       yourTab: "Twoja zakładka",
       tabFor: "Zakładka: {email}",
@@ -2085,8 +2184,116 @@
     return todayStrFor(new Date());
   }
 
+  function addDaysToDateStr(dateStr, days) {
+    const [y, mo, da] = dateStr.split("-").map(Number);
+    const d = new Date(Date.UTC(y, mo - 1, da));
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+  }
+
+  // Converts a wall-clock date+time as seen in a given IANA zone into the
+  // matching UTC timestamp, without needing a timezone-database library.
+  // Two passes always converge for real-world zones (verified against DST
+  // transitions and both positive/negative offsets).
+  function zonedTimeToUtcMs(dateStr, timeStr, zone) {
+    const [y, mo, da] = dateStr.split("-").map(Number);
+    const [h, mi] = (timeStr || "00:00").split(":").map(Number);
+    const target = Date.UTC(y, mo - 1, da, h, mi, 0);
+    let guess = target;
+    for (let i = 0; i < 2; i++) {
+      try {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: zone, hour12: false,
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit"
+        }).formatToParts(new Date(guess));
+        const map = {};
+        for (const p of parts) map[p.type] = p.value;
+        const hour = map.hour === "24" ? 0 : Number(map.hour);
+        const shown = Date.UTC(Number(map.year), Number(map.month) - 1, Number(map.day), hour, Number(map.minute), Number(map.second));
+        guess -= (shown - target);
+      } catch (e) { break; }
+    }
+    return guess;
+  }
+
+  // For a recurring task: when the current "done" (checked) state should
+  // expire and the task becomes due again. Day-based intervals snap to
+  // midnight in the person's own time zone; hour-based ones are a literal
+  // duration from the moment of checking it off.
+  function computeRenewsAt(schedule) {
+    if (!schedule || schedule.type !== "recurring") return null;
+    const value = Math.max(1, Number(schedule.intervalValue) || 1);
+    if (schedule.intervalUnit === "hours") {
+      return Date.now() + value * 3600000;
+    }
+    const targetDate = addDaysToDateStr(todayStr(), value);
+    return zonedTimeToUtcMs(targetDate, "00:00", myTimeZone || detectTimeZone());
+  }
+
+  function pluralForm(n, forms) {
+    if (currentLang === "pl") {
+      if (n === 1) return forms.pl[0];
+      const mod10 = n % 10, mod100 = n % 100;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms.pl[1];
+      return forms.pl[2];
+    }
+    return n === 1 ? forms.en[0] : forms.en[1];
+  }
+
+  function formatTimeRemaining(renewsAt) {
+    if (!renewsAt) return null;
+    const diffMs = renewsAt - Date.now();
+    if (diffMs <= 0) return null;
+    const hours = Math.ceil(diffMs / 3600000);
+    if (hours < 24) {
+      const unit = pluralForm(hours, { en: ["hour", "hours"], pl: ["godzinę", "godziny", "godzin"] });
+      return t("renewsIn", { n: hours, unit });
+    }
+    const days = Math.ceil(diffMs / 86400000);
+    const unit = pluralForm(days, { en: ["day", "days"], pl: ["dzień", "dni", "dni"] });
+    return t("renewsIn", { n: days, unit });
+  }
+
+  function formatScheduleDate(dateStr, timeStr) {
+    const [y, mo, da] = dateStr.split("-").map(Number);
+    const d = new Date(Date.UTC(y, mo - 1, da, 12));
+    const dateFmt = new Intl.DateTimeFormat(currentLang === "pl" ? "pl-PL" : "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    let out = dateFmt.format(d);
+    if (timeStr) out += ", " + timeStr;
+    return out;
+  }
+
+  function formatScheduleTag(task) {
+    const s = task.schedule;
+    if (!s) return null;
+    if (s.type === "recurring") {
+      if (isDoneNow(task)) return "📅 " + formatTimeRemaining(s.renewsAt);
+      const value = s.intervalValue || 1;
+      const unit = s.intervalUnit === "hours"
+        ? pluralForm(value, { en: ["hour", "hours"], pl: ["godzinę", "godziny", "godzin"] })
+        : pluralForm(value, { en: ["day", "days"], pl: ["dzień", "dni", "dni"] });
+      return "📅 " + t("scheduleEvery", { n: value, unit });
+    }
+    return "📅 " + formatScheduleDate(s.date, s.time);
+  }
+
+  // Whether a task's schedule is due today (or overdue) — used for the
+  // due-today banner and the composer's calendar-chip badge dot.
+  function isScheduleDueToday(task) {
+    const s = task.schedule;
+    if (!s) return false;
+    if (s.type === "recurring") return !isDoneNow(task);
+    return !task.done && s.date <= todayStr();
+  }
+
+  function isRecurring(task) {
+    return !!(task.schedule && task.schedule.type === "recurring");
+  }
+
   function isDoneNow(task) {
     if (task.isHabit) return (task.completedDates || []).includes(todayStr());
+    if (isRecurring(task)) return !!(task.schedule.renewsAt && task.schedule.renewsAt > Date.now());
     return !!task.done;
   }
 
@@ -2185,6 +2392,20 @@
     pairRedeemDescEl.textContent = t("pairRedeemDesc");
     pairRedeemInput.placeholder = t("pairRedeemPlaceholder");
     pairRedeemBtnEl.textContent = t("pairRedeemBtn");
+    chipScheduleEl.setAttribute("aria-label", t("chipSchedule"));
+    scheduleTitleEl.textContent = t("scheduleTitle");
+    closeScheduleOverlayBtn.setAttribute("aria-label", t("close"));
+    for (const btn of scheduleTypeButtons) {
+      btn.textContent = t(btn.dataset.scheduleType === "recurring" ? "scheduleRecurring" : "scheduleOnce");
+    }
+    scheduleDateLabelEl.textContent = t("scheduleDateLabel");
+    scheduleAllDayHintEl.textContent = t("scheduleAllDayHint");
+    scheduleIntervalLabelEl.textContent = t("scheduleIntervalLabel");
+    for (const btn of scheduleIntervalUnitButtons) {
+      btn.textContent = t(btn.dataset.intervalUnit === "hours" ? "intervalHours" : "intervalDays");
+    }
+    scheduleClearBtnEl.textContent = t("scheduleClear");
+    scheduleSaveBtnEl.textContent = t("save");
     appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
     headerEditBtn.textContent = t("chipEdit");
@@ -2457,9 +2678,26 @@
       syncOwnMembers("tasks", tasks);
       maybeRunSharedListMaintenance();
       renderList();
+      updateScheduleBadgeDot();
+      maybeShowDueTodayBanner();
     }, (err) => {
       showStatus(t("errSync", { msg: err.message }));
     });
+  }
+
+  let dueTodayBannerShown = false;
+
+  function updateScheduleBadgeDot() {
+    const hasDueToday = tasks.some(t2 => t2.ownerEmail === myEmail && t2.schedule && isScheduleDueToday(t2));
+    scheduleBadgeDotEl.hidden = !hasDueToday;
+  }
+
+  function maybeShowDueTodayBanner() {
+    if (dueTodayBannerShown) return;
+    const due = tasks.filter(t2 => t2.ownerEmail === myEmail && t2.schedule && isScheduleDueToday(t2));
+    if (due.length === 0) return;
+    dueTodayBannerShown = true;
+    showNudge(due.length === 1 ? t("dueToday", { name: due[0].text }) : t("dueTodayN", { n: due.length }));
   }
 
   function taskGroupKey(task) {
@@ -3032,6 +3270,12 @@
     }
   }
 
+  function handleTaskToggle(task, done) {
+    if (task.isHabit) return toggleHabitToday(task, done);
+    if (isRecurring(task)) return toggleRecurringTask(task, done);
+    return toggleTask(task, done);
+  }
+
   function makeItem(task, isOwnerTab, isFirst, isLast) {
     const li = document.createElement("li");
     const done = isDoneNow(task);
@@ -3044,7 +3288,7 @@
       check.type = "button";
       check.setAttribute("aria-label", done ? t("undo") : t("markDone"));
       check.innerHTML = checkIcon;
-      check.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
+      check.addEventListener("click", () => handleTaskToggle(task, done));
       li.appendChild(check);
     } else {
       const dot = document.createElement("span");
@@ -3058,10 +3302,10 @@
     const text = document.createElement("div");
     text.className = "task-text";
     text.textContent = task.text;
-    if (isOwnerTab) text.addEventListener("click", () => task.isHabit ? toggleHabitToday(task, done) : toggleTask(task, done));
+    if (isOwnerTab) text.addEventListener("click", () => handleTaskToggle(task, done));
     body.appendChild(text);
 
-    if (task.isHabit || (isOwnerTab && task.hidden)) {
+    if (task.isHabit || task.schedule || (isOwnerTab && task.hidden)) {
       const tags = document.createElement("div");
       tags.className = "task-tags";
       if (task.isHabit) {
@@ -3072,6 +3316,12 @@
           ? "🔁 🔥 " + streak + " " + (streak === 1 ? t("day") : t("days"))
           : t("habitPlain");
         tags.appendChild(tag);
+      }
+      if (task.schedule) {
+        const scheduleTag = document.createElement("span");
+        scheduleTag.className = "tag";
+        scheduleTag.textContent = formatScheduleTag(task);
+        tags.appendChild(scheduleTag);
       }
       if (isOwnerTab && task.hidden) {
         const hiddenTag = document.createElement("span");
@@ -3545,6 +3795,24 @@
     }
   }
 
+  async function toggleRecurringTask(task, wasDone) {
+    const newRenewsAt = wasDone ? null : computeRenewsAt(task.schedule);
+    try {
+      await updateDoc(doc(db, "tasks", task.id), { "schedule.renewsAt": newRenewsAt });
+      bumpStats(task, wasDone ? -1 : 1);
+      if (!wasDone) {
+        if (task.important && task.urgent) {
+          const stillOpenQ2 = tasks.some(t2 => t2.ownerEmail === myEmail && t2.important && !t2.urgent && !isDoneNow(t2));
+          if (stillOpenQ2) showNudge(t("nudgeMessage"));
+        }
+        const remaining = formatTimeRemaining(newRenewsAt);
+        if (remaining) showStatus(remaining);
+      }
+    } catch (e) {
+      showStatus(t("errSaveChange"));
+    }
+  }
+
   async function deleteTask(id) {
     if (!confirm(t("deleteTaskConfirm"))) return;
     try {
@@ -3567,11 +3835,13 @@
     composerUrgent = !!task.urgent;
     composerHabit = !!task.isHabit;
     composerHidden = !!task.hidden;
+    composerSchedule = task.schedule ? { ...task.schedule } : null;
     selectedCustomListId = task.customListId || null;
     chipImportant.classList.toggle("on", composerImportant);
     chipUrgent.classList.toggle("on", composerUrgent);
     chipHabit.classList.toggle("on", composerHabit);
     chipHidden.classList.toggle("on", composerHidden);
+    updateScheduleChipState();
     renderCustomChips();
     updateEditingBanner();
     inputEl.focus();
@@ -3585,11 +3855,13 @@
     composerUrgent = false;
     composerHabit = false;
     composerHidden = false;
+    composerSchedule = null;
     selectedCustomListId = null;
     chipImportant.classList.remove("on");
     chipUrgent.classList.remove("on");
     chipHabit.classList.remove("on");
     chipHidden.classList.remove("on");
+    updateScheduleChipState();
     renderCustomChips();
     updateEditingBanner();
   }
@@ -3613,7 +3885,8 @@
         customListId: selectedCustomListId,
         hidden: composerHidden,
         order: Date.now(),
-        ownerEmail: isSharedTask ? "shared" : activeTab
+        ownerEmail: isSharedTask ? "shared" : activeTab,
+        schedule: composerSchedule || deleteField()
       };
       updates.members = isSharedTask ? selectedList.members : myMembers(composerHidden);
       try {
@@ -3648,9 +3921,12 @@
       createdByEmail: myEmail,
       createdAt: Date.now()
     };
+    if (composerSchedule) taskData.schedule = composerSchedule;
     taskData.members = isSharedTask ? selectedList.members : myMembers(defaultHidden);
     try {
       await addDoc(collection(db, "tasks"), taskData);
+      composerSchedule = null;
+      updateScheduleChipState();
     } catch (e) {
       showStatus(t("errAddTask"));
     }
@@ -3675,6 +3951,81 @@
   setChip(chipUrgent, "urgent");
   setChip(chipHabit, "habit");
   setChip(chipHidden, "hidden");
+
+  function updateScheduleChipState() {
+    chipScheduleEl.classList.toggle("on", !!composerSchedule);
+  }
+
+  function renderScheduleOverlay() {
+    for (const btn of scheduleTypeButtons) {
+      btn.classList.toggle("active", btn.dataset.scheduleType === scheduleDraft.type);
+    }
+    scheduleIntervalWrap.hidden = scheduleDraft.type !== "recurring";
+    scheduleDateInput.value = scheduleDraft.date || "";
+    scheduleTimeInput.value = scheduleDraft.time || "";
+    scheduleIntervalValueInput.value = scheduleDraft.intervalValue || 1;
+    for (const btn of scheduleIntervalUnitButtons) {
+      btn.classList.toggle("active", btn.dataset.intervalUnit === (scheduleDraft.intervalUnit || "days"));
+    }
+  }
+
+  function openScheduleOverlay() {
+    scheduleErrorEl.hidden = true;
+    scheduleDraft = composerSchedule ? { ...composerSchedule } : { type: "once", date: todayStr(), intervalUnit: "days", intervalValue: 1 };
+    renderScheduleOverlay();
+    scheduleOverlay.hidden = false;
+  }
+
+  function closeScheduleOverlay() {
+    scheduleOverlay.hidden = true;
+  }
+
+  chipScheduleEl.addEventListener("click", openScheduleOverlay);
+  closeScheduleOverlayBtn.addEventListener("click", closeScheduleOverlay);
+  scheduleOverlay.addEventListener("click", (e) => { if (e.target === scheduleOverlay) closeScheduleOverlay(); });
+
+  for (const btn of scheduleTypeButtons) {
+    btn.addEventListener("click", () => {
+      scheduleDraft.type = btn.dataset.scheduleType;
+      if (!scheduleDraft.date) scheduleDraft.date = todayStr();
+      renderScheduleOverlay();
+    });
+  }
+
+  for (const btn of scheduleIntervalUnitButtons) {
+    btn.addEventListener("click", () => {
+      scheduleDraft.intervalUnit = btn.dataset.intervalUnit;
+      renderScheduleOverlay();
+    });
+  }
+
+  scheduleClearBtnEl.addEventListener("click", () => {
+    composerSchedule = null;
+    updateScheduleChipState();
+    closeScheduleOverlay();
+  });
+
+  scheduleSaveBtnEl.addEventListener("click", () => {
+    scheduleErrorEl.hidden = true;
+    const date = scheduleDateInput.value;
+    if (!date) {
+      scheduleErrorEl.textContent = t("errScheduleDate");
+      scheduleErrorEl.hidden = false;
+      return;
+    }
+    const schedule = {
+      type: scheduleDraft.type === "recurring" ? "recurring" : "once",
+      date,
+      time: scheduleTimeInput.value || null
+    };
+    if (schedule.type === "recurring") {
+      schedule.intervalUnit = scheduleDraft.intervalUnit === "hours" ? "hours" : "days";
+      schedule.intervalValue = Math.max(1, parseInt(scheduleIntervalValueInput.value, 10) || 1);
+    }
+    composerSchedule = schedule;
+    updateScheduleChipState();
+    closeScheduleOverlay();
+  });
 
   function maybeInitAnalytics() {
     if (analytics) return;
@@ -3842,6 +4193,7 @@
     sharedSeedAttempted.fridge = false;
     sharedSeedAttempted.shopping = false;
     workListSeedAttempted = false;
+    dueTodayBannerShown = false;
     listsReady = false;
     tasksReady = false;
     myPartnerEmail = null;
