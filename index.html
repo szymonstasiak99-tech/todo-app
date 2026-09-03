@@ -1869,7 +1869,7 @@
   let myPendingInviteCode = null; // an invite code I generated that's still waiting to be redeemed, if any
   const CUSTOM_TITLE_MAX_LEN = 24;
   const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
-  const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, other: -1.75 };
+  const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, urgentNotImportant: -1.9, other: -1.75 };
   const SHARED_LIST_TYPES = {
     fridge: { icon: "🗄️", nameKey: "fridgeDefaultName", nameKeyN: "fridgeDefaultNameN", order: -1, allowHide: false },
     shopping: { icon: "🛒", nameKey: "shoppingDefaultName", nameKeyN: "shoppingDefaultNameN", order: -0.5, allowHide: true }
@@ -2025,8 +2025,8 @@
   const moreIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="2.4"></circle><circle cx="12" cy="12" r="2.4"></circle><circle cx="18.5" cy="12" r="2.4"></circle></svg>';
 
   function bucketKeyOf(task) {
-    if (!task.important) return "other";
-    return task.urgent ? "importantUrgent" : "mostImportant";
+    if (task.important) return task.urgent ? "importantUrgent" : "mostImportant";
+    return task.urgent ? "urgentNotImportant" : "other";
   }
 
   // Who's allowed to see a personal (non-shared) task/list of mine: just me while it's
@@ -2194,6 +2194,7 @@
       habitPlain: "🔁 habit",
       sectionMostImportant: "🎯 Most important (important, not urgent)",
       sectionImportantUrgent: "Important & urgent",
+      sectionUrgentNotImportant: "Urgent (not important)",
       sectionOther: "Other",
       deleteTaskConfirm: "Delete this task?",
       deleteDoneConfirm: "Delete {n} completed tasks?",
@@ -2366,6 +2367,7 @@
       habitPlain: "🔁 nawyk",
       sectionMostImportant: "🎯 Najważniejsze (ważne, niepilne)",
       sectionImportantUrgent: "Ważne i pilne",
+      sectionUrgentNotImportant: "Pilne (niekonieczne ważne)",
       sectionOther: "Pozostałe",
       deleteTaskConfirm: "Na pewno chcesz usunąć to zadanie?",
       deleteDoneConfirm: "Usunąć {n} ukończonych zadań?",
@@ -3879,11 +3881,13 @@
     const untagged = tabTasks.filter(t2 => !t2.customListId);
     const q2 = untagged.filter(t2 => t2.important && !t2.urgent);
     const q1 = untagged.filter(t2 => t2.important && t2.urgent);
-    const rest = untagged.filter(t2 => !t2.important);
+    const q3 = untagged.filter(t2 => !t2.important && t2.urgent);
+    const rest = untagged.filter(t2 => !t2.important && !t2.urgent);
 
     const builtinDefs = [
       { key: "mostImportant", titleKey: "sectionMostImportant", tasks: q2, featured: true, muted: false, collapseKey: "mostImportant" },
       { key: "importantUrgent", titleKey: "sectionImportantUrgent", tasks: q1, featured: false, muted: false, collapseKey: "importantUrgent" },
+      { key: "urgentNotImportant", titleKey: "sectionUrgentNotImportant", tasks: q3, featured: false, muted: false, collapseKey: "urgentNotImportant" },
       { key: "other", titleKey: "sectionOther", tasks: rest, featured: false, muted: true, collapseKey: "rest" }
     ];
 
@@ -3956,6 +3960,7 @@
         sectionOrder: {
           mostImportant: deleteField(),
           importantUrgent: deleteField(),
+          urgentNotImportant: deleteField(),
           other: deleteField()
         }
       }, { merge: true });
@@ -4190,7 +4195,9 @@
     }
 
     inputEl.value = "";
-    const bucketKey = !composerImportant ? "other" : (composerUrgent ? "importantUrgent" : "mostImportant");
+    const bucketKey = composerImportant
+      ? (composerUrgent ? "importantUrgent" : "mostImportant")
+      : (composerUrgent ? "urgentNotImportant" : "other");
     const defaultHidden = !selectedListAllowsHide()
       ? false
       : composerHidden
