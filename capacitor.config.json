@@ -1,0 +1,8 @@
+{
+  "appId": "com.szymonstasiak.tandem",
+  "appName": "Tandem",
+  "webDir": "docs",
+  "server": {
+    "androidScheme": "https"
+  }
+}
