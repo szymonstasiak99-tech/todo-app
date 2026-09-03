@@ -1402,7 +1402,7 @@
       pairCopyCode: "Copy code",
       pairCopied: "Copied!",
       pairSendEmail: "Send by email",
-      pairEmailSubject: "Join me on To do :)",
+      pairEmailSubject: "Join me on Tandem",
       pairEmailBody: "Hey! Use this code to pair up with me in the app: {code}",
       pairRedeemDesc: "Already have a code from your partner?",
       pairRedeemPlaceholder: "Enter their code",
@@ -1528,7 +1528,7 @@
       pairCopyCode: "Kopiuj kod",
       pairCopied: "Skopiowano!",
       pairSendEmail: "Wyślij mailem",
-      pairEmailSubject: "Dołącz do mnie w To do :)",
+      pairEmailSubject: "Dołącz do mnie w Tandem",
       pairEmailBody: "Cześć! Wpisz ten kod, żeby połączyć się ze mną w aplikacji: {code}",
       pairRedeemDesc: "Masz już kod od swojej drugiej połówki?",
       pairRedeemPlaceholder: "Wpisz jej/jego kod",
@@ -2529,6 +2529,15 @@
 
   function renderTabs() {
     tabsEl.innerHTML = "";
+    if (!myPartnerEmail) {
+      const plusBtn = document.createElement("button");
+      plusBtn.type = "button";
+      plusBtn.className = "tab pair-tab";
+      plusBtn.textContent = t("pairTabLabel");
+      plusBtn.setAttribute("aria-label", t("pairTitle"));
+      plusBtn.addEventListener("click", openPairOverlay);
+      tabsEl.appendChild(plusBtn);
+    }
     const emails = [...roster.map(p => p.email).filter(e => e !== myEmail), myEmail];
     for (const email of emails) {
       const btn = document.createElement("button");
@@ -2546,15 +2555,6 @@
         subscribeActiveUiState(email);
       });
       tabsEl.appendChild(btn);
-    }
-    if (!myPartnerEmail) {
-      const plusBtn = document.createElement("button");
-      plusBtn.type = "button";
-      plusBtn.className = "tab pair-tab";
-      plusBtn.textContent = t("pairTabLabel");
-      plusBtn.setAttribute("aria-label", t("pairTitle"));
-      plusBtn.addEventListener("click", openPairOverlay);
-      tabsEl.appendChild(plusBtn);
     }
   }
 
