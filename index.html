@@ -1369,12 +1369,19 @@
   }
 
   .calendar-day-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 0.88rem;
   }
+
+  .calendar-day-list .check { width: 30px; height: 30px; }
+  .calendar-day-list .check svg { width: 14px; height: 14px; }
+  .calendar-day-list li.done span { text-decoration: line-through; color: var(--text-muted); }
 
   .overlay-card select {
     flex-shrink: 0;
@@ -2851,6 +2858,7 @@
       renderList();
       updateScheduleBadgeDot();
       maybeShowDueTodayBanner();
+      if (!calendarOverlay.hidden) renderCalendarOverlay();
     }, (err) => {
       showStatus(t("errSync", { msg: err.message }));
     });
@@ -4263,8 +4271,22 @@
     calendarDayLabelEl.textContent = formatScheduleDate(calendarSelectedDate, null);
     calendarDayListEl.innerHTML = "";
     for (const t2 of dayTasks) {
+      const doneNow = isDoneNow(t2);
       const li = document.createElement("li");
-      li.textContent = (t2.schedule.time ? t2.schedule.time + " — " : "") + t2.text;
+      li.className = doneNow ? "done" : "";
+
+      const check = document.createElement("button");
+      check.type = "button";
+      check.className = "check";
+      check.setAttribute("aria-label", doneNow ? t("undo") : t("markDone"));
+      check.innerHTML = checkIcon;
+      check.addEventListener("click", () => handleTaskToggle(t2, doneNow));
+      li.appendChild(check);
+
+      const label = document.createElement("span");
+      label.textContent = (t2.schedule.time ? t2.schedule.time + " — " : "") + t2.text;
+      li.appendChild(label);
+
       calendarDayListEl.appendChild(li);
     }
     calendarDayEmptyEl.hidden = dayTasks.length > 0;
