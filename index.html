@@ -1433,6 +1433,16 @@
     margin: 8px 0 0;
   }
 
+  .calendar-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .calendar-day-header p { margin: 0; }
+  .calendar-day-header .reset-order-btn { margin: 0; white-space: nowrap; }
+
   .overlay-card select {
     flex-shrink: 0;
     width: 56px;
@@ -1791,10 +1801,12 @@
     <div class="calendar-weekdays" id="calendarWeekdays"></div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="overlay-divider"></div>
-    <p id="calendarDayLabel">—</p>
+    <div class="calendar-day-header">
+      <p id="calendarDayLabel">—</p>
+      <button type="button" class="reset-order-btn" id="calendarAddForDayBtn">+ Add for this day</button>
+    </div>
     <ul class="calendar-day-list" id="calendarDayList"></ul>
     <p class="calendar-day-empty" id="calendarDayEmpty" hidden></p>
-    <button type="button" class="reset-order-btn" id="calendarAddForDayBtn">+ Add for this day</button>
   </div>
 </div>
 
