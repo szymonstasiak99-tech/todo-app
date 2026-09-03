@@ -834,6 +834,12 @@
   li.done .check { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   li.done.habit .check { color: var(--habit-check-color); }
 
+  :root[data-theme="dim"] li.done.habit .check {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--accent-text);
+  }
+
   .task-body { flex: 1; min-width: 0; padding: 8px 0 4px; }
 
   .task-text {
