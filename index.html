@@ -1443,6 +1443,68 @@
   .calendar-day-header p { margin: 0; }
   .calendar-day-header .reset-order-btn { margin: 0; white-space: nowrap; }
 
+  .onboarding-nav { display: flex; gap: 10px; margin-top: 16px; }
+  .onboarding-nav button { flex: 1; }
+
+  .onboarding-progress {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .onboarding-emoji { font-size: 2.6rem; text-align: center; margin-bottom: 6px; }
+
+  .onboarding-title {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.2rem;
+    text-align: center;
+    margin: 0 0 10px;
+  }
+
+  .onboarding-body {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    text-align: center;
+    margin: 0 0 14px;
+  }
+
+  .onboarding-choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+
+  .onboarding-choice-btn:hover { border-color: var(--accent); }
+
+  .onboarding-category-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .onboarding-category-row span { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+  .onboarding-category-row .theme-btn { flex: 0 0 auto; width: auto; padding: 6px 14px; }
+
   .overlay-card select {
     flex-shrink: 0;
     width: 56px;
@@ -1701,6 +1763,8 @@
     <p id="timeZoneRow"><span id="timeZoneLabel">Time zone</span>: <strong id="timeZoneValue">—</strong></p>
     <button type="button" class="reset-order-btn" id="refreshTimeZoneBtn">Use this device's time zone</button>
     <div class="overlay-divider"></div>
+    <button type="button" class="reset-order-btn" id="replayTutorialBtn">Personalize categories / replay tutorial</button>
+    <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="modalSignOutBtn">Sign out</button>
@@ -1810,6 +1874,17 @@
   </div>
 </div>
 
+<div class="overlay" id="onboardingOverlay" hidden>
+  <div class="overlay-card">
+    <div id="onboardingBody"></div>
+    <div class="onboarding-nav">
+      <button type="button" class="secondary-btn" id="onboardingBackBtn">Back</button>
+      <button type="button" class="primary-btn" id="onboardingNextBtn">Next</button>
+    </div>
+    <button type="button" class="footer-link-btn" id="onboardingSkipBtn">Skip tutorial</button>
+  </div>
+</div>
+
 <div class="nudge" id="nudge" hidden></div>
 
 <script type="module">
@@ -1891,6 +1966,9 @@
   let calendarViewYear = null;
   let calendarViewMonth = null;   // 0-11
   let calendarSelectedDate = null; // "YYYY-MM-DD"
+  let onboardingStep = 0;             // 0=first task, 1=priority quiz, 2=categories, 3+=tutorial slides
+  let onboardingHidePriority = false; // set during the quiz step; applied when leaving it
+  let onboardingCategoryChoices = null; // { fridge: bool, shopping: bool, work: bool } while on the categories step
 
   const signedOutGate = document.getElementById("signedOutGate");
   const registerGate = document.getElementById("registerGate");
@@ -1950,6 +2028,7 @@
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
+  const replayTutorialBtnEl = document.getElementById("replayTutorialBtn");
   const timeZoneLabelEl = document.getElementById("timeZoneLabel");
   const timeZoneValueEl = document.getElementById("timeZoneValue");
   const refreshTimeZoneBtnEl = document.getElementById("refreshTimeZoneBtn");
@@ -2017,6 +2096,11 @@
   const calendarDayListEl = document.getElementById("calendarDayList");
   const calendarDayEmptyEl = document.getElementById("calendarDayEmpty");
   const calendarAddForDayBtnEl = document.getElementById("calendarAddForDayBtn");
+  const onboardingOverlay = document.getElementById("onboardingOverlay");
+  const onboardingBodyEl = document.getElementById("onboardingBody");
+  const onboardingBackBtnEl = document.getElementById("onboardingBackBtn");
+  const onboardingNextBtnEl = document.getElementById("onboardingNextBtn");
+  const onboardingSkipBtnEl = document.getElementById("onboardingSkipBtn");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
@@ -2102,6 +2186,46 @@
       calendarNext: "Next month",
       calendarDayEmpty: "Nothing scheduled for this day.",
       calendarAddForDay: "+ Add for this day",
+      onbProgress: "Step {current} of {total}",
+      onbNext: "Next",
+      onbBack: "Back",
+      onbFinish: "Finish",
+      onbSkipTutorial: "Skip tutorial",
+      onbFirstTaskTitle: "Let's try it! 🚀",
+      onbFirstTaskBody: "Add one task below — anything at all — so you can see exactly how this works before we show you the rest.",
+      onbFirstTaskPlaceholder: "e.g. Buy milk",
+      onbFirstTaskAdd: "Add my first task",
+      onbFirstTaskSkip: "Skip this step",
+      onbQuizTitle: "Quick question 🎯",
+      onbQuizBody: "This app sorts tasks using a well-known technique: splitting them by how important and how urgent they are. Do you already know it?",
+      onbQuizYes: "Yes, I know it — keep it visible",
+      onbQuizExplain: "No, explain it to me",
+      onbQuizNo: "No, and I don't want to use it",
+      onbQuizExplainBody: "It's simple: every task is either Important or not, and Urgent or not. That gives 4 groups — Most Important (important, not urgent) for things to plan ahead; Important & Urgent for things to do right now; Urgent (not important) for quick stuff that can't wait but doesn't matter much; and Other for everything else. Tag a task as Important and/or Urgent with the chips above the text box, and it sorts itself into the right group.",
+      onbQuizUseIt: "Got it, I'll use it",
+      onbQuizHideIt: "Thanks, but hide it for me",
+      onbCategoriesTitle: "Your categories 🏷️",
+      onbCategoriesBody: "Besides priority, the app comes with a few ready-made categories. Pick which ones you want to see — you can change this any time in Settings. Every category is hidden from your partner by default; you choose if and when to share one, and you can pair up later (tap the + tile next to your name) to start sharing tasks with each other.",
+      onbCategoryVisible: "Visible",
+      onbCategoryHidden: "Hidden",
+      onbCustomCategoryPlaceholder: "Add your own category…",
+      onbCustomCategoryAdd: "Add",
+      onbSlideAddTitle: "Adding tasks 📝",
+      onbSlideAddBody: "Type in the box at the bottom and tap + to add it. Before you do, tap the chips above the box (Important, Urgent, Habit, 🙈, 📅) to tag it — or tap a category chip to file it straight into one of your lists.",
+      onbSlideCategoriesTitle: "Managing categories ✏️",
+      onbSlideCategoriesBody: "Tap \"Edit\" in the chip row to add, rename, reorder, or hide whole categories — including the built-in priority sections.",
+      onbSlideScheduleTitle: "Reminders 📅",
+      onbSlideScheduleBody: "Tap the 📅 chip to give a task a one-time or repeating schedule, with an optional time. Recurring tasks come back on their own after you check them off — no need to add them again.",
+      onbSlideHideTitle: "Keeping things private 🙈",
+      onbSlideHideBody: "Tap ⋯ on any task or category and choose Hide — only you'll see it, not your partner. Unhide it any time to share it with them.",
+      onbSlideHabitTitle: "Habits 🔁",
+      onbSlideHabitBody: "Mark a task as a Habit and it never disappears — checking it off just resets it the next day, and builds up a streak you can see.",
+      onbSlidePairTitle: "Pairing up 💞",
+      onbSlidePairBody: "Tap the + tile next to your name to get a code to share with your partner, or to enter theirs. Once paired, you'll see what they choose to share with you, and they'll see what you share with them.",
+      onbSlideSettingsTitle: "Settings ⚙️",
+      onbSlideSettingsBody: "Tap Edit for colors, category order, hiding whole sections, renaming yourself or your partner, language, font size, and resetting your stats.",
+      onbSlideClearDoneTitle: "Tidying up ✅",
+      onbSlideClearDoneBody: "Finished one-off tasks pile up — tap \"Clear completed\" at the bottom of your list any time to sweep them all away in one go. Habits and recurring tasks are untouched — they come back on their own.",
       errScheduleDate: "Pick a date first.",
       errScheduleTimePast: "That time has already passed today — pick a later time, or a different day.",
       renewsIn: "Renews in {n} {unit}",
@@ -2139,6 +2263,7 @@
       font_large: "Large",
       timeZoneDesc: "Time zone",
       refreshTimeZoneBtn: "Use this device's time zone",
+      replayTutorial: "Personalize categories / replay tutorial",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
       deleteListConfirm: 'Delete list "{name}"? Its tasks will move back to the regular priority sections, and its stats will disappear.',
@@ -2276,6 +2401,46 @@
       calendarNext: "Następny miesiąc",
       calendarDayEmpty: "Nic zaplanowanego na ten dzień.",
       calendarAddForDay: "+ Dodaj na ten dzień",
+      onbProgress: "Krok {current} z {total}",
+      onbNext: "Dalej",
+      onbBack: "Wstecz",
+      onbFinish: "Zakończ",
+      onbSkipTutorial: "Pomiń samouczek",
+      onbFirstTaskTitle: "Spróbujmy! 🚀",
+      onbFirstTaskBody: "Dodaj poniżej jedno zadanie — cokolwiek — żeby od razu zobaczyć jak to działa, zanim pokażemy Ci resztę.",
+      onbFirstTaskPlaceholder: "np. Kup mleko",
+      onbFirstTaskAdd: "Dodaj pierwsze zadanie",
+      onbFirstTaskSkip: "Pomiń ten krok",
+      onbQuizTitle: "Szybkie pytanie 🎯",
+      onbQuizBody: "Ta apka sortuje zadania znaną techniką: dzieli je wg tego, jak ważne i jak pilne są. Znasz już taką technikę?",
+      onbQuizYes: "Tak, znam ją — zostaw widoczną",
+      onbQuizExplain: "Nie, wytłumacz mi",
+      onbQuizNo: "Nie, i nie chcę jej używać",
+      onbQuizExplainBody: "To proste: każde zadanie jest albo Ważne, albo nie, i albo Pilne, albo nie. Daje to 4 grupy — Najważniejsze (ważne, niepilne) na rzeczy do zaplanowania; Ważne i pilne na rzeczy do zrobienia od razu; Pilne (niekonieczne ważne) na drobiazgi, które nie mogą czekać, ale nie są istotne; i Pozostałe na całą resztę. Oznaczasz zadanie jako Ważne i/lub Pilne chipami nad polem tekstu, a ono samo trafia do właściwej grupy.",
+      onbQuizUseIt: "Rozumiem, będę jej używać",
+      onbQuizHideIt: "Dzięki, ale ukryj mi ją",
+      onbCategoriesTitle: "Twoje kategorie 🏷️",
+      onbCategoriesBody: "Oprócz priorytetów apka ma kilka gotowych kategorii. Wybierz, które chcesz widzieć — możesz to zmienić w każdej chwili w Ustawieniach. Każda kategoria jest domyślnie ukryta przed partnerem/partnerką; sam/a decydujesz czy i kiedy się nią podzielić, a sparować się (kafelek + obok Twojego imienia) możesz później, żeby zacząć dzielić się zadaniami nawzajem.",
+      onbCategoryVisible: "Widoczna",
+      onbCategoryHidden: "Ukryta",
+      onbCustomCategoryPlaceholder: "Dodaj własną kategorię…",
+      onbCustomCategoryAdd: "Dodaj",
+      onbSlideAddTitle: "Dodawanie zadań 📝",
+      onbSlideAddBody: "Wpisz w polu na dole i naciśnij +, żeby dodać. Zanim to zrobisz, naciśnij chipy nad polem (Ważne, Pilne, Nawyk, 🙈, 📅), żeby je oznaczyć — albo chip kategorii, żeby od razu trafiło do jednej z Twoich list.",
+      onbSlideCategoriesTitle: "Zarządzanie kategoriami ✏️",
+      onbSlideCategoriesBody: "Naciśnij \"Edytuj\" w rzędzie chipów, żeby dodawać, zmieniać nazwę, kolejność albo ukrywać całe kategorie — w tym wbudowane sekcje priorytetów.",
+      onbSlideScheduleTitle: "Przypomnienia 📅",
+      onbSlideScheduleBody: "Naciśnij chip 📅, żeby ustawić zadaniu jednorazowy albo powtarzalny harmonogram, opcjonalnie z godziną. Zadania powtarzalne same wracają po odhaczeniu — nie trzeba dodawać ich ponownie.",
+      onbSlideHideTitle: "Prywatność 🙈",
+      onbSlideHideBody: "Naciśnij ⋯ przy dowolnym zadaniu albo kategorii i wybierz Ukryj — zobaczysz to tylko Ty, nie partner/partnerka. Odkryj w każdej chwili, żeby się tym podzielić.",
+      onbSlideHabitTitle: "Nawyki 🔁",
+      onbSlideHabitBody: "Oznacz zadanie jako Nawyk, a nigdy nie zniknie — odhaczenie po prostu resetuje je następnego dnia i buduje widoczną serię.",
+      onbSlidePairTitle: "Parowanie 💞",
+      onbSlidePairBody: "Naciśnij kafelek + obok swojego imienia, żeby dostać kod do podania partnerowi/partnerce albo wpisać jego/jej kod. Po sparowaniu zobaczysz to, czym on/ona zechce się z Tobą podzielić, a on/ona zobaczy to, czym Ty się podzielisz.",
+      onbSlideSettingsTitle: "Ustawienia ⚙️",
+      onbSlideSettingsBody: "Naciśnij Edytuj, żeby zmienić kolorystykę, kolejność kategorii, ukryć całe sekcje, zmienić imię swoje lub partnera, język, wielkość czcionki i zresetować statystyki.",
+      onbSlideClearDoneTitle: "Porządki ✅",
+      onbSlideClearDoneBody: "Skończone, jednorazowe zadania się gromadzą — naciśnij \"Usuń ukończone\" na dole listy, żeby je wszystkie naraz sprzątnąć. Nawyki i zadania powtarzalne zostają nietknięte — wracają same.",
       errScheduleDate: "Najpierw wybierz datę.",
       errScheduleTimePast: "Ta godzina już dziś minęła — wybierz późniejszą godzinę albo inny dzień.",
       renewsIn: "Odnowi się za {n} {unit}",
@@ -2313,6 +2478,7 @@
       font_large: "Duża",
       timeZoneDesc: "Strefa czasowa",
       refreshTimeZoneBtn: "Użyj strefy czasowej tego urządzenia",
+      replayTutorial: "Dostosuj kategorie / powtórz samouczek",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
       deleteListConfirm: 'Usunąć listę "{name}"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.',
@@ -2710,7 +2876,9 @@
     fontSizeDescEl.textContent = t("fontSizeDesc");
     timeZoneLabelEl.textContent = t("timeZoneDesc");
     refreshTimeZoneBtnEl.textContent = t("refreshTimeZoneBtn");
+    replayTutorialBtnEl.textContent = t("replayTutorial");
     resetStatsBtnEl.textContent = t("resetStats");
+    if (!onboardingOverlay.hidden) renderOnboardingStep();
     footerAboutEl.textContent = t("footerAbout");
     footerPrivacyEl.textContent = t("footerPrivacy");
     footerTermsEl.textContent = t("footerTerms");
@@ -4530,6 +4698,266 @@
     inputEl.focus();
   });
 
+  const ONBOARDING_SLIDES = [
+    { emoji: "📝", titleKey: "onbSlideAddTitle", bodyKey: "onbSlideAddBody" },
+    { emoji: "✏️", titleKey: "onbSlideCategoriesTitle", bodyKey: "onbSlideCategoriesBody" },
+    { emoji: "📅", titleKey: "onbSlideScheduleTitle", bodyKey: "onbSlideScheduleBody" },
+    { emoji: "🙈", titleKey: "onbSlideHideTitle", bodyKey: "onbSlideHideBody" },
+    { emoji: "🔁", titleKey: "onbSlideHabitTitle", bodyKey: "onbSlideHabitBody" },
+    { emoji: "💞", titleKey: "onbSlidePairTitle", bodyKey: "onbSlidePairBody" },
+    { emoji: "⚙️", titleKey: "onbSlideSettingsTitle", bodyKey: "onbSlideSettingsBody" },
+    { emoji: "✅", titleKey: "onbSlideClearDoneTitle", bodyKey: "onbSlideClearDoneBody" }
+  ];
+  const ONBOARDING_TOTAL_STEPS = 3 + ONBOARDING_SLIDES.length;
+
+  function onbEmojiEl(text) {
+    const d = document.createElement("div");
+    d.className = "onboarding-emoji";
+    d.textContent = text;
+    return d;
+  }
+  function onbTitleEl(text) {
+    const d = document.createElement("div");
+    d.className = "onboarding-title";
+    d.textContent = text;
+    return d;
+  }
+  function onbBodyEl(text) {
+    const p = document.createElement("p");
+    p.className = "onboarding-body";
+    p.textContent = text;
+    return p;
+  }
+
+  function startOnboarding() {
+    onboardingStep = 0;
+    onboardingHidePriority = false;
+    onboardingCategoryChoices = { fridge: true, shopping: true, work: true };
+    renderOnboardingStep();
+    onboardingOverlay.hidden = false;
+  }
+
+  function finishOnboarding() {
+    onboardingOverlay.hidden = true;
+  }
+
+  async function applyOnboardingChoices() {
+    if (onboardingHidePriority) {
+      try {
+        await setDoc(doc(db, "ui_state", myEmail), {
+          hiddenCategories: {
+            mostImportant: true, importantUrgent: true, urgentNotImportant: true, other: true
+          }
+        }, { merge: true });
+      } catch (e) {}
+    }
+    if (!onboardingCategoryChoices) return;
+    const toHide = {};
+    for (const list of allLists) {
+      if (list.ownerEmail !== myEmail) continue;
+      if (list.presetType === "work" && !onboardingCategoryChoices.work) toHide[list.id] = true;
+      if (list.sharedType === "fridge" && !onboardingCategoryChoices.fridge) toHide[list.id] = true;
+      if (list.sharedType === "shopping" && !onboardingCategoryChoices.shopping) toHide[list.id] = true;
+    }
+    if (Object.keys(toHide).length > 0) {
+      try { await setDoc(doc(db, "ui_state", myEmail), { hiddenCategories: toHide }, { merge: true }); } catch (e) {}
+    }
+  }
+
+  function renderOnboardingFirstTask() {
+    onboardingBodyEl.appendChild(onbEmojiEl("🚀"));
+    onboardingBodyEl.appendChild(onbTitleEl(t("onbFirstTaskTitle")));
+    onboardingBodyEl.appendChild(onbBodyEl(t("onbFirstTaskBody")));
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = t("onbFirstTaskPlaceholder");
+    input.maxLength = 200;
+    input.style.marginBottom = "10px";
+    onboardingBodyEl.appendChild(input);
+
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "primary-btn";
+    addBtn.style.marginBottom = "10px";
+    addBtn.textContent = t("onbFirstTaskAdd");
+    addBtn.addEventListener("click", async () => {
+      const text = input.value.trim();
+      if (!text) { goOnboardingNext(); return; }
+      try {
+        await addDoc(collection(db, "tasks"), {
+          text, done: false, important: false, urgent: false, isHabit: false,
+          completedDates: [], customListId: null, hidden: false, order: Date.now(),
+          ownerEmail: myEmail, members: myMembers(false), createdByEmail: myEmail, createdAt: Date.now()
+        });
+      } catch (e) {}
+      goOnboardingNext();
+    });
+    onboardingBodyEl.appendChild(addBtn);
+
+    const skipBtn = document.createElement("button");
+    skipBtn.type = "button";
+    skipBtn.className = "footer-link-btn";
+    skipBtn.textContent = t("onbFirstTaskSkip");
+    skipBtn.addEventListener("click", goOnboardingNext);
+    onboardingBodyEl.appendChild(skipBtn);
+  }
+
+  function renderOnboardingQuiz() {
+    onboardingBodyEl.appendChild(onbEmojiEl("🎯"));
+    onboardingBodyEl.appendChild(onbTitleEl(t("onbQuizTitle")));
+    onboardingBodyEl.appendChild(onbBodyEl(t("onbQuizBody")));
+
+    const yesBtn = document.createElement("button");
+    yesBtn.type = "button";
+    yesBtn.className = "onboarding-choice-btn";
+    yesBtn.textContent = t("onbQuizYes");
+    yesBtn.addEventListener("click", () => { onboardingHidePriority = false; goOnboardingNext(); });
+    onboardingBodyEl.appendChild(yesBtn);
+
+    const explainBtn = document.createElement("button");
+    explainBtn.type = "button";
+    explainBtn.className = "onboarding-choice-btn";
+    explainBtn.textContent = t("onbQuizExplain");
+    explainBtn.addEventListener("click", renderOnboardingQuizExplain);
+    onboardingBodyEl.appendChild(explainBtn);
+
+    const noBtn = document.createElement("button");
+    noBtn.type = "button";
+    noBtn.className = "onboarding-choice-btn";
+    noBtn.textContent = t("onbQuizNo");
+    noBtn.addEventListener("click", () => { onboardingHidePriority = true; goOnboardingNext(); });
+    onboardingBodyEl.appendChild(noBtn);
+  }
+
+  function renderOnboardingQuizExplain() {
+    onboardingBodyEl.innerHTML = "";
+    onboardingBodyEl.appendChild(onbEmojiEl("🎯"));
+    onboardingBodyEl.appendChild(onbTitleEl(t("onbQuizTitle")));
+    onboardingBodyEl.appendChild(onbBodyEl(t("onbQuizExplainBody")));
+
+    const useBtn = document.createElement("button");
+    useBtn.type = "button";
+    useBtn.className = "primary-btn";
+    useBtn.style.marginBottom = "8px";
+    useBtn.textContent = t("onbQuizUseIt");
+    useBtn.addEventListener("click", () => { onboardingHidePriority = false; goOnboardingNext(); });
+    onboardingBodyEl.appendChild(useBtn);
+
+    const hideBtn = document.createElement("button");
+    hideBtn.type = "button";
+    hideBtn.className = "secondary-btn";
+    hideBtn.textContent = t("onbQuizHideIt");
+    hideBtn.addEventListener("click", () => { onboardingHidePriority = true; goOnboardingNext(); });
+    onboardingBodyEl.appendChild(hideBtn);
+  }
+
+  function renderOnboardingCategories() {
+    onboardingBodyEl.appendChild(onbEmojiEl("🏷️"));
+    onboardingBodyEl.appendChild(onbTitleEl(t("onbCategoriesTitle")));
+    onboardingBodyEl.appendChild(onbBodyEl(t("onbCategoriesBody")));
+
+    const rows = [
+      { key: "fridge", name: t("fridgeDefaultName") },
+      { key: "shopping", name: t("shoppingDefaultName") },
+      { key: "work", name: t("workDefaultName") }
+    ];
+    for (const row of rows) {
+      const wrap = document.createElement("div");
+      wrap.className = "onboarding-category-row";
+      const label = document.createElement("span");
+      label.textContent = row.name;
+      wrap.appendChild(label);
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      const syncToggle = () => {
+        toggle.classList.toggle("theme-btn", true);
+        toggle.classList.toggle("active", onboardingCategoryChoices[row.key]);
+        toggle.textContent = onboardingCategoryChoices[row.key] ? t("onbCategoryVisible") : t("onbCategoryHidden");
+      };
+      toggle.className = "theme-btn";
+      syncToggle();
+      toggle.addEventListener("click", () => {
+        onboardingCategoryChoices[row.key] = !onboardingCategoryChoices[row.key];
+        syncToggle();
+      });
+      wrap.appendChild(toggle);
+      onboardingBodyEl.appendChild(wrap);
+    }
+
+    const customInput = document.createElement("input");
+    customInput.type = "text";
+    customInput.placeholder = t("onbCustomCategoryPlaceholder");
+    customInput.maxLength = 40;
+    customInput.style.marginTop = "6px";
+    onboardingBodyEl.appendChild(customInput);
+
+    const addCustomBtn = document.createElement("button");
+    addCustomBtn.type = "button";
+    addCustomBtn.className = "secondary-btn";
+    addCustomBtn.style.marginTop = "8px";
+    addCustomBtn.textContent = t("onbCustomCategoryAdd");
+    addCustomBtn.addEventListener("click", async () => {
+      const name = customInput.value.trim();
+      if (!name) return;
+      try {
+        await addDoc(collection(db, "custom_lists"), {
+          name, icon: "", hidden: false, order: Date.now(),
+          ownerEmail: myEmail, members: myMembers(false), createdByEmail: myEmail, createdAt: Date.now()
+        });
+        customInput.value = "";
+      } catch (e) {}
+    });
+    onboardingBodyEl.appendChild(addCustomBtn);
+  }
+
+  function renderOnboardingSlide(slide) {
+    onboardingBodyEl.appendChild(onbEmojiEl(slide.emoji));
+    onboardingBodyEl.appendChild(onbTitleEl(t(slide.titleKey)));
+    onboardingBodyEl.appendChild(onbBodyEl(t(slide.bodyKey)));
+  }
+
+  function renderOnboardingStep() {
+    onboardingBodyEl.innerHTML = "";
+    const progress = document.createElement("div");
+    progress.className = "onboarding-progress";
+    progress.textContent = t("onbProgress", { current: onboardingStep + 1, total: ONBOARDING_TOTAL_STEPS });
+    onboardingBodyEl.appendChild(progress);
+
+    if (onboardingStep === 0) renderOnboardingFirstTask();
+    else if (onboardingStep === 1) renderOnboardingQuiz();
+    else if (onboardingStep === 2) renderOnboardingCategories();
+    else renderOnboardingSlide(ONBOARDING_SLIDES[onboardingStep - 3]);
+    updateOnboardingNav();
+  }
+
+  function updateOnboardingNav() {
+    onboardingBackBtnEl.hidden = onboardingStep === 0;
+    onboardingBackBtnEl.textContent = t("onbBack");
+    const showGenericNext = onboardingStep === 2 || onboardingStep >= 3;
+    onboardingNextBtnEl.hidden = !showGenericNext;
+    onboardingNextBtnEl.textContent = (onboardingStep === ONBOARDING_TOTAL_STEPS - 1) ? t("onbFinish") : t("onbNext");
+    onboardingSkipBtnEl.hidden = onboardingStep < 3;
+    onboardingSkipBtnEl.textContent = t("onbSkipTutorial");
+  }
+
+  function goOnboardingNext() {
+    if (onboardingStep === 2) applyOnboardingChoices();
+    if (onboardingStep >= ONBOARDING_TOTAL_STEPS - 1) { finishOnboarding(); return; }
+    onboardingStep++;
+    renderOnboardingStep();
+  }
+
+  function goOnboardingBack() {
+    if (onboardingStep === 0) return;
+    onboardingStep--;
+    renderOnboardingStep();
+  }
+
+  onboardingNextBtnEl.addEventListener("click", goOnboardingNext);
+  onboardingBackBtnEl.addEventListener("click", goOnboardingBack);
+  onboardingSkipBtnEl.addEventListener("click", finishOnboarding);
+
   function maybeInitAnalytics() {
     if (analytics) return;
     try { analytics = getAnalytics(app); } catch (e) {}
@@ -4583,6 +5011,10 @@
   chipNewList.addEventListener("click", openListOverlay);
   closeListOverlayBtn.addEventListener("click", closeListOverlay);
   resetStatsBtnEl.addEventListener("click", resetStats);
+  replayTutorialBtnEl.addEventListener("click", () => {
+    closeListOverlay();
+    startOnboarding();
+  });
   resetOrderBtnEl.addEventListener("click", resetBuiltinOrder);
   newListOverlay.addEventListener("click", (e) => {
     if (e.target === newListOverlay) closeListOverlay();
@@ -4679,6 +5111,7 @@
       }
       enterApp({ name, partnerEmail });
       if (!partnerEmail) await ensureMyInviteCode();
+      startOnboarding();
     } catch (err) {
       registerErrorEl.textContent = t("errRegister", { msg: err.message });
       registerErrorEl.hidden = false;
