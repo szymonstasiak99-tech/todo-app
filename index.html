@@ -1679,8 +1679,7 @@
       <button type="button" class="theme-btn" data-theme-choice="business">Business</button>
     </div>
     <div class="overlay-divider"></div>
-    <p id="timeZoneDesc">Time zone — decides when a new day starts for habit streaks.</p>
-    <p class="char-counter" id="timeZoneValue">—</p>
+    <p id="timeZoneRow"><span id="timeZoneLabel">Time zone</span>: <strong id="timeZoneValue">—</strong></p>
     <button type="button" class="reset-order-btn" id="refreshTimeZoneBtn">Use this device's time zone</button>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
@@ -1928,7 +1927,7 @@
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
-  const timeZoneDescEl = document.getElementById("timeZoneDesc");
+  const timeZoneLabelEl = document.getElementById("timeZoneLabel");
   const timeZoneValueEl = document.getElementById("timeZoneValue");
   const refreshTimeZoneBtnEl = document.getElementById("refreshTimeZoneBtn");
   const themeButtons = document.querySelectorAll("[data-theme-choice]");
@@ -2109,7 +2108,7 @@
       font_small: "Small",
       font_default: "Default",
       font_large: "Large",
-      timeZoneDesc: "Time zone.",
+      timeZoneDesc: "Time zone",
       refreshTimeZoneBtn: "Use this device's time zone",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
@@ -2277,7 +2276,7 @@
       font_small: "Mała",
       font_default: "Domyślna",
       font_large: "Duża",
-      timeZoneDesc: "Strefa czasowa.",
+      timeZoneDesc: "Strefa czasowa",
       refreshTimeZoneBtn: "Użyj strefy czasowej tego urządzenia",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
@@ -2669,7 +2668,7 @@
     saveCustomTitleBtnEl.textContent = t("saveCustomTitle");
     appearanceDescEl.textContent = t("appearanceDesc");
     fontSizeDescEl.textContent = t("fontSizeDesc");
-    timeZoneDescEl.textContent = t("timeZoneDesc");
+    timeZoneLabelEl.textContent = t("timeZoneDesc");
     refreshTimeZoneBtnEl.textContent = t("refreshTimeZoneBtn");
     resetStatsBtnEl.textContent = t("resetStats");
     footerAboutEl.textContent = t("footerAbout");
