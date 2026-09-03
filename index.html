@@ -2087,6 +2087,7 @@
       calendarNext: "Next month",
       calendarDayEmpty: "Nothing scheduled for this day.",
       errScheduleDate: "Pick a date first.",
+      errScheduleTimePast: "That time has already passed today — pick a later time, or a different day.",
       renewsIn: "Renews in {n} {unit}",
       dueToday: "Due today: {name}",
       dueTodayAt: "Due today at {time}: {name}",
@@ -2257,6 +2258,7 @@
       calendarNext: "Następny miesiąc",
       calendarDayEmpty: "Nic zaplanowanego na ten dzień.",
       errScheduleDate: "Najpierw wybierz datę.",
+      errScheduleTimePast: "Ta godzina już dziś minęła — wybierz późniejszą godzinę albo inny dzień.",
       renewsIn: "Odnowi się za {n} {unit}",
       dueToday: "Dziś: {name}",
       dueTodayAt: "Dziś o {time}: {name}",
@@ -4225,6 +4227,7 @@
   }
 
   function renderScheduleOverlay() {
+    scheduleDateInput.min = todayStr();
     for (const btn of scheduleTypeButtons) {
       btn.classList.toggle("active", btn.dataset.scheduleType === scheduleDraft.type);
     }
@@ -4257,7 +4260,7 @@
     scheduleErrorEl.hidden = true;
     scheduleDraft = composerSchedule
       ? { ...composerSchedule }
-      : { type: "once", date: todayStr(), time: "08:00", intervalUnit: "days", intervalValue: 1 };
+      : { type: "once", date: todayStr(), intervalUnit: "days", intervalValue: 1 };
     renderScheduleOverlay();
     scheduleOverlay.hidden = false;
   }
@@ -4274,6 +4277,10 @@
     btn.addEventListener("click", () => {
       scheduleDraft.type = btn.dataset.scheduleType;
       if (!scheduleDraft.date) scheduleDraft.date = todayStr();
+      // Recurring's time-of-day never lands "in the past" (it always renews
+      // on a future day), so a default is a harmless convenience there —
+      // unlike for a one-time reminder, where it isn't offered at all.
+      if (scheduleDraft.type === "recurring" && !scheduleDraft.time) scheduleDraft.time = "08:00";
       renderScheduleOverlay();
     });
   }
@@ -4299,6 +4306,17 @@
       scheduleErrorEl.textContent = t("errScheduleDate");
       scheduleErrorEl.hidden = false;
       return;
+    }
+
+    if (!isRecurringType && scheduleDateInput.value === todayStr() && scheduleTimeInput.value) {
+      const nowStr = new Intl.DateTimeFormat("en-GB", {
+        timeZone: myTimeZone || detectTimeZone(), hour: "2-digit", minute: "2-digit", hour12: false
+      }).format(new Date());
+      if (scheduleTimeInput.value <= nowStr) {
+        scheduleErrorEl.textContent = t("errScheduleTimePast");
+        scheduleErrorEl.hidden = false;
+        return;
+      }
     }
 
     const schedule = { type: isRecurringType ? "recurring" : "once" };
