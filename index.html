@@ -3560,7 +3560,11 @@
       if (isOwnerTab && task.hidden) {
         const hiddenTag = document.createElement("span");
         hiddenTag.className = "tag";
-        hiddenTag.textContent = t("hiddenTag");
+        // Drop the label and keep just the emoji when the schedule tag next
+        // to it is already at its longest (interval + a specific time) —
+        // otherwise the two tags would wrap onto a second row.
+        const crowded = !!(task.schedule && task.schedule.type === "recurring" && task.schedule.time);
+        hiddenTag.textContent = crowded ? "🙈" : t("hiddenTag");
         tags.appendChild(hiddenTag);
       }
       body.appendChild(tags);
