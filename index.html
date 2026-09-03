@@ -2050,6 +2050,7 @@
       scheduleAllDayHint: "Leave the time empty for an all-day reminder.",
       scheduleTimeOfDayLabel: "Reminder time",
       scheduleRecurringTimeHint: "Leave empty to renew at midnight instead of a specific time.",
+      scheduleHoursHint: "The task reappears exactly that many hours after you check it off — not at a fixed time of day.",
       scheduleIntervalLabel: "Repeat every",
       intervalDays: "Days",
       intervalHours: "Hours",
@@ -2217,6 +2218,7 @@
       scheduleAllDayHint: "Zostaw godzinę pustą dla przypomnienia na cały dzień.",
       scheduleTimeOfDayLabel: "Godzina przypomnienia",
       scheduleRecurringTimeHint: "Zostaw puste, żeby odnawiało się o północy zamiast o konkretnej godzinie.",
+      scheduleHoursHint: "Zadanie pojawi się ponownie dokładnie po tylu godzinach od odhaczenia — nie o stałej porze dnia.",
       scheduleIntervalLabel: "Powtarzaj co",
       intervalDays: "Dni",
       intervalHours: "Godziny",
@@ -4197,15 +4199,17 @@
     scheduleIntervalWrap.hidden = !isRecurringType;
 
     // Hour-based recurrence is a pure duration from the moment you check it
-    // off — no date or time-of-day is actually used, so hide those fields
-    // entirely rather than showing inputs that silently do nothing.
+    // off — no date or time-of-day is actually used, so hide those inputs
+    // and explain the actual behavior with a hint instead.
     const hideDateTimeRow = isRecurringType && unit === "hours";
     scheduleDateLabelEl.hidden = hideDateTimeRow;
     scheduleDateRowEl.hidden = hideDateTimeRow;
-    scheduleAllDayHintEl.hidden = hideDateTimeRow;
     scheduleDateInput.hidden = isRecurringType; // recurring never needs a start date, only "once" does
     scheduleDateLabelEl.textContent = isRecurringType ? t("scheduleTimeOfDayLabel") : t("scheduleDateLabel");
-    scheduleAllDayHintEl.textContent = isRecurringType ? t("scheduleRecurringTimeHint") : t("scheduleAllDayHint");
+    scheduleAllDayHintEl.hidden = false;
+    scheduleAllDayHintEl.textContent = hideDateTimeRow
+      ? t("scheduleHoursHint")
+      : isRecurringType ? t("scheduleRecurringTimeHint") : t("scheduleAllDayHint");
 
     scheduleDateInput.value = scheduleDraft.date || "";
     scheduleTimeInput.value = scheduleDraft.time || "";
