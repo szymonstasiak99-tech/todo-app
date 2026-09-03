@@ -546,7 +546,16 @@
     gap: 10px;
   }
 
-  .title-row h1 { flex-shrink: 0; max-width: 62%; overflow-wrap: break-word; }
+  .title-block { flex-shrink: 0; min-width: 0; max-width: 62%; }
+  .title-block h1 { overflow-wrap: break-word; }
+
+  .app-subtitle {
+    margin: 2px 0 0;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
 
   .stats-row {
     display: flex;
@@ -1658,7 +1667,10 @@
 <div class="app" id="appRoot" hidden>
   <header>
     <div class="title-row">
-      <h1 id="appTitle">To do :)</h1>
+      <div class="title-block">
+        <h1 id="appTitle">To do :)</h1>
+        <p class="app-subtitle">Tandem</p>
+      </div>
       <div class="tabs" id="tabs"></div>
     </div>
     <div class="stats-row">
