@@ -2089,9 +2089,9 @@
       errScheduleDate: "Pick a date first.",
       errScheduleTimePast: "That time has already passed today — pick a later time, or a different day.",
       renewsIn: "Renews in {n} {unit}",
-      dueToday: "Due today: {name}",
-      dueTodayAt: "Due today at {time}: {name}",
-      dueTodayN: "You have {n} things due today",
+      dueToday: "Today: {name}",
+      dueTodayAt: "Today at {time}: {name}",
+      dueTodayN: "You have {n} things planned today — tap to see them in the calendar 📅",
       tabNamesDesc: "Tab names — any nickname, either of you can change both.",
       yourTab: "Your tab",
       tabFor: "Tab: {email}",
@@ -2262,7 +2262,7 @@
       renewsIn: "Odnowi się za {n} {unit}",
       dueToday: "Dziś: {name}",
       dueTodayAt: "Dziś o {time}: {name}",
-      dueTodayN: "Masz dziś {n} zaplanowanych rzeczy",
+      dueTodayN: "Masz dziś {n} zaplanowanych rzeczy — kliknij, żeby zobaczyć je w kalendarzu 📅",
       tabNamesDesc: "Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.",
       yourTab: "Twoja zakładka",
       tabFor: "Zakładka: {email}",
@@ -2730,9 +2730,11 @@
   initFontSize();
   initLang();
 
-  function showNudge(message) {
+  function showNudge(message, onClick) {
     nudgeEl.textContent = message;
     nudgeEl.hidden = false;
+    nudgeEl.onclick = onClick || null;
+    nudgeEl.style.cursor = onClick ? "pointer" : "";
     clearTimeout(showNudge._t);
     showNudge._t = setTimeout(() => { nudgeEl.hidden = true; }, 4500);
   }
@@ -2945,9 +2947,9 @@
     dueTodayBannerShown = true;
     if (due.length === 1) {
       const time = due[0].schedule.time;
-      showNudge(time ? t("dueTodayAt", { time, name: due[0].text }) : t("dueToday", { name: due[0].text }));
+      showNudge(time ? t("dueTodayAt", { time, name: due[0].text }) : t("dueToday", { name: due[0].text }), openCalendarOverlay);
     } else {
-      showNudge(t("dueTodayN", { n: due.length }));
+      showNudge(t("dueTodayN", { n: due.length }), openCalendarOverlay);
     }
   }
 
