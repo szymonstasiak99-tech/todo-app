@@ -21,6 +21,7 @@
     --accent: #2F6F6B;
     --accent-text: #FFFFFF;
     --accent-soft: #DCEAE7;
+    --accent-gradient: var(--accent);
     --danger: #B5503A;
     --danger-soft: #F3DED7;
     --warn: #9A7B2F;
@@ -87,6 +88,225 @@
     --gold: #F0C56E;
     --gold-soft: #4C3B1E;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  }
+
+  :root[data-theme="pink"] {
+    --bg: #FDF1F6;
+    --surface: #FFFFFF;
+    --surface-2: #FBE4ED;
+    --text: #3A1B29;
+    --text-muted: #8C5A72;
+    --border: #F5D2E1;
+    --accent: #E8548D;
+    --accent-text: #FFFFFF;
+    --accent-soft: #FBDCE9;
+    --danger: #C23B3B;
+    --danger-soft: #F6DCDC;
+  }
+
+  :root[data-theme="blue"] {
+    --bg: #EFF4FB;
+    --surface: #FFFFFF;
+    --surface-2: #E1EBF7;
+    --text: #16233A;
+    --text-muted: #5A6E8C;
+    --border: #CFE0F3;
+    --accent: #2F6FD1;
+    --accent-text: #FFFFFF;
+    --accent-soft: #DCE8FA;
+    --danger: #C0503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="green"] {
+    --bg: #EFF8EF;
+    --surface: #FFFFFF;
+    --surface-2: #E1F2E1;
+    --text: #17291B;
+    --text-muted: #587A5C;
+    --border: #CFE9CF;
+    --accent: #3FA34D;
+    --accent-text: #FFFFFF;
+    --accent-soft: #DCF3DE;
+    --danger: #C0503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="red"] {
+    --bg: #FBEFEF;
+    --surface: #FFFFFF;
+    --surface-2: #F6DFDF;
+    --text: #2E1616;
+    --text-muted: #8C5A5A;
+    --border: #F0CFCF;
+    --accent: #CB3A3A;
+    --accent-text: #FFFFFF;
+    --accent-soft: #F6DBDB;
+    --danger: #8A4B1E;
+    --danger-soft: #F0E0CF;
+  }
+
+  :root[data-theme="purple"] {
+    --bg: #F5F0FB;
+    --surface: #FFFFFF;
+    --surface-2: #EAE0F7;
+    --text: #241830;
+    --text-muted: #7A6590;
+    --border: #DCCCF0;
+    --accent: #7B4FC7;
+    --accent-text: #FFFFFF;
+    --accent-soft: #EAE0FA;
+    --danger: #C0503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="orange"] {
+    --bg: #FBF3EA;
+    --surface: #FFFFFF;
+    --surface-2: #F7E5CF;
+    --text: #301F0F;
+    --text-muted: #8C6A45;
+    --border: #F0DAB8;
+    --accent: #E0792E;
+    --accent-text: #FFFFFF;
+    --accent-soft: #FBE7D2;
+    --danger: #B5503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="rainbow"] {
+    --bg: #F7F3FB;
+    --surface: #FFFFFF;
+    --surface-2: #EFE6F7;
+    --text: #221A2E;
+    --text-muted: #7A6A8C;
+    --border: #E0D2EF;
+    --accent: #A855C7;
+    --accent-text: #FFFFFF;
+    --accent-soft: #F0E0F7;
+    --accent-gradient: linear-gradient(90deg, #FF5F6D, #FFC371, #4ADE80, #38BDF8, #A855F7, #FF5F6D);
+    --danger: #B5503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="rainbow"] .primary-btn,
+  :root[data-theme="rainbow"] .gate-card button,
+  :root[data-theme="rainbow"] .tab.active,
+  :root[data-theme="rainbow"] #addTaskBtn,
+  :root[data-theme="rainbow"] li.done .check {
+    background: var(--accent-gradient);
+    background-size: 300% 300%;
+    border-color: transparent;
+    animation: rainbowShift 6s ease infinite;
+  }
+
+  @keyframes rainbowShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  :root[data-theme="business"] {
+    --bg: #F3F4F6;
+    --surface: #FFFFFF;
+    --surface-2: #E7E9ED;
+    --text: #1A2233;
+    --text-muted: #5B6478;
+    --border: #D6DAE1;
+    --accent: #1F3A5F;
+    --accent-text: #FFFFFF;
+    --accent-soft: #DDE4EE;
+    --danger: #A5402E;
+    --danger-soft: #EFDAD3;
+  }
+
+  :root[data-theme="anime"] {
+    --bg: #FEF1F8;
+    --surface: #FFFFFF;
+    --surface-2: #FDE0F0;
+    --text: #2B1830;
+    --text-muted: #8A5A8C;
+    --border: #F7CDE8;
+    --accent: #FF3D9A;
+    --accent-text: #FFFFFF;
+    --accent-soft: #FFE0F0;
+    --danger: #C0503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="contrast"] {
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #EDEDED;
+    --text: #000000;
+    --text-muted: #333333;
+    --border: #444444;
+    --accent: #0057B8;
+    --accent-text: #FFFFFF;
+    --accent-soft: #CCE0F5;
+    --danger: #E86A00;
+    --danger-soft: #FCE3CC;
+  }
+
+  :root[data-theme="ocean"] {
+    --bg: #EEF7F8;
+    --surface: #FFFFFF;
+    --surface-2: #DCEFF2;
+    --text: #122A2E;
+    --text-muted: #4E7378;
+    --border: #C7E4E8;
+    --accent: #1683A0;
+    --accent-text: #FFFFFF;
+    --accent-soft: #D4EEF3;
+    --danger: #B5503A;
+    --danger-soft: #F3DED7;
+  }
+
+  :root[data-theme="neon"] {
+    --bg: #0B0B14;
+    --surface: #15151F;
+    --surface-2: #1D1D2B;
+    --text: #EAEAF7;
+    --text-muted: #9494B8;
+    --border: #2A2A3D;
+    --accent: #4DFF9F;
+    --accent-text: #08150D;
+    --accent-soft: #1E3A2C;
+    --danger: #FF3B6B;
+    --danger-soft: #3A1420;
+    --warn: #FFE066;
+    --warn-soft: #3A2E12;
+    --gold: #FFE066;
+    --gold-soft: #3A2E12;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.65);
+  }
+
+  :root[data-theme="pastel"] {
+    --bg: #FBF7FB;
+    --surface: #FFFFFF;
+    --surface-2: #F3ECF7;
+    --text: #3A3040;
+    --text-muted: #8A7E96;
+    --border: #E9DEEF;
+    --accent: #B79CE0;
+    --accent-text: #2A1F3A;
+    --accent-soft: #F0E7F7;
+    --danger: #D98A7A;
+    --danger-soft: #F7E4DE;
+  }
+
+  :root[data-theme="mono"] {
+    --bg: #F5F5F5;
+    --surface: #FFFFFF;
+    --surface-2: #E8E8E8;
+    --text: #141414;
+    --text-muted: #666666;
+    --border: #D4D4D4;
+    --accent: #2B2B2B;
+    --accent-text: #FFFFFF;
+    --accent-soft: #E0E0E0;
+    --danger: #B5503A;
+    --danger-soft: #F3DED7;
   }
 
   * { box-sizing: border-box; }
@@ -952,6 +1172,14 @@
     font-weight: 600;
   }
 
+  #themeRow {
+    max-height: 100px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-content: flex-start;
+    padding-right: 2px;
+  }
+
   .overlay-card input {
     width: 100%;
     background: var(--surface-2);
@@ -1193,6 +1421,20 @@
       <button type="button" class="theme-btn" data-theme-choice="light">Light</button>
       <button type="button" class="theme-btn" data-theme-choice="dim">Warm</button>
       <button type="button" class="theme-btn" data-theme-choice="dark">Dark</button>
+      <button type="button" class="theme-btn" data-theme-choice="pink">Pink</button>
+      <button type="button" class="theme-btn" data-theme-choice="blue">Blue</button>
+      <button type="button" class="theme-btn" data-theme-choice="green">Green</button>
+      <button type="button" class="theme-btn" data-theme-choice="red">Red</button>
+      <button type="button" class="theme-btn" data-theme-choice="purple">Purple</button>
+      <button type="button" class="theme-btn" data-theme-choice="orange">Orange</button>
+      <button type="button" class="theme-btn" data-theme-choice="rainbow">Rainbow</button>
+      <button type="button" class="theme-btn" data-theme-choice="ocean">Ocean</button>
+      <button type="button" class="theme-btn" data-theme-choice="neon">Neon</button>
+      <button type="button" class="theme-btn" data-theme-choice="pastel">Pastel</button>
+      <button type="button" class="theme-btn" data-theme-choice="mono">Mono</button>
+      <button type="button" class="theme-btn" data-theme-choice="business">Business</button>
+      <button type="button" class="theme-btn" data-theme-choice="anime">Anime</button>
+      <button type="button" class="theme-btn" data-theme-choice="contrast">Contrast</button>
     </div>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
@@ -1483,6 +1725,20 @@
       theme_light: "Light",
       theme_dim: "Warm",
       theme_dark: "Dark",
+      theme_pink: "Pink",
+      theme_blue: "Blue",
+      theme_green: "Green",
+      theme_red: "Red",
+      theme_purple: "Purple",
+      theme_orange: "Orange",
+      theme_rainbow: "Rainbow",
+      theme_ocean: "Ocean",
+      theme_neon: "Neon",
+      theme_pastel: "Pastel",
+      theme_mono: "Mono",
+      theme_business: "Business",
+      theme_anime: "Anime",
+      theme_contrast: "High contrast",
       fontSizeDesc: "Font size.",
       font_small: "Small",
       font_default: "Default",
@@ -1609,6 +1865,20 @@
       theme_light: "Jasny",
       theme_dim: "Ciepły",
       theme_dark: "Ciemny",
+      theme_pink: "Różowy",
+      theme_blue: "Niebieski",
+      theme_green: "Zielony",
+      theme_red: "Czerwony",
+      theme_purple: "Fioletowy",
+      theme_orange: "Pomarańczowy",
+      theme_rainbow: "Tęczowy",
+      theme_ocean: "Ocean",
+      theme_neon: "Neon",
+      theme_pastel: "Pastelowy",
+      theme_mono: "Mono",
+      theme_business: "Biznesowy",
+      theme_anime: "Anime",
+      theme_contrast: "Wysoki kontrast",
       fontSizeDesc: "Rozmiar czcionki.",
       font_small: "Mała",
       font_default: "Domyślna",
