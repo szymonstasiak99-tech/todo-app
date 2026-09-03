@@ -1293,6 +1293,87 @@
   .list-form-row { display: flex; gap: 8px; margin-bottom: 12px; }
   .list-form-row input { margin-bottom: 0; }
 
+  .calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .calendar-nav button {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 12px;
+  }
+
+  .calendar-nav span { font-weight: 600; }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .calendar-weekdays {
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .calendar-day {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .calendar-day.empty { background: none; border: none; cursor: default; }
+  .calendar-day.today { border-color: var(--accent); font-weight: 600; }
+  .calendar-day.selected { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+  .calendar-day-dot {
+    position: absolute;
+    bottom: 4px;
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--danger);
+  }
+
+  .calendar-day.selected .calendar-day-dot { background: var(--accent-text); }
+
+  .calendar-day-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .calendar-day-list li {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.88rem;
+  }
+
   .overlay-card select {
     flex-shrink: 0;
     width: 56px;
@@ -1363,6 +1444,22 @@
     border-radius: 12px;
     width: 48px;
     font-size: 1.4rem;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .composer-icon-btn {
+    position: relative;
+    flex-shrink: 0;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 48px;
+    font-size: 1.2rem;
     font-family: inherit;
     cursor: pointer;
     display: flex;
@@ -1459,6 +1556,7 @@
         <button type="button" class="chip newlist" id="chipNewList">Edit</button>
       </div>
       <form id="form">
+        <button type="button" class="composer-icon-btn" id="openCalendarBtn" aria-label="Calendar">📅<span class="chip-badge-dot" id="calendarBtnBadgeDot" hidden></span></button>
         <input id="input" type="text" autocomplete="off" maxlength="200">
         <button type="submit" id="addTaskBtn" aria-label="Add task">+</button>
       </form>
@@ -1620,6 +1718,26 @@
   </div>
 </div>
 
+<div class="overlay" id="calendarOverlay" hidden>
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="calendarTitle">Calendar</h2>
+      <button type="button" class="overlay-close" id="closeCalendarOverlay" aria-label="Close">✕</button>
+    </div>
+    <div class="calendar-nav">
+      <button type="button" id="calendarPrevBtn" aria-label="Previous month">‹</button>
+      <span id="calendarMonthLabel">—</span>
+      <button type="button" id="calendarNextBtn" aria-label="Next month">›</button>
+    </div>
+    <div class="calendar-weekdays" id="calendarWeekdays"></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+    <div class="overlay-divider"></div>
+    <p id="calendarDayLabel">—</p>
+    <ul class="calendar-day-list" id="calendarDayList"></ul>
+    <p class="char-counter" id="calendarDayEmpty" hidden></p>
+  </div>
+</div>
+
 <div class="nudge" id="nudge" hidden></div>
 
 <script type="module">
@@ -1698,6 +1816,9 @@
   let composerSchedule = null;   // { type: "once"|"recurring", date, time, intervalUnit, intervalValue } or null
   let editingTaskId = null;      // id of the task being edited via the composer, or null when adding a new task
   let scheduleDraft = { type: "once", intervalUnit: "days" }; // working state while the schedule popup is open
+  let calendarViewYear = null;
+  let calendarViewMonth = null;   // 0-11
+  let calendarSelectedDate = null; // "YYYY-MM-DD"
 
   const signedOutGate = document.getElementById("signedOutGate");
   const registerGate = document.getElementById("registerGate");
@@ -1794,6 +1915,8 @@
   const pairTitleEl = document.getElementById("pairTitle");
   const chipScheduleEl = document.getElementById("chipSchedule");
   const scheduleBadgeDotEl = document.getElementById("scheduleBadgeDot");
+  const openCalendarBtnEl = document.getElementById("openCalendarBtn");
+  const calendarBtnBadgeDotEl = document.getElementById("calendarBtnBadgeDot");
   const scheduleOverlay = document.getElementById("scheduleOverlay");
   const scheduleTitleEl = document.getElementById("scheduleTitle");
   const closeScheduleOverlayBtn = document.getElementById("closeScheduleOverlay");
@@ -1809,6 +1932,17 @@
   const scheduleErrorEl = document.getElementById("scheduleError");
   const scheduleClearBtnEl = document.getElementById("scheduleClearBtn");
   const scheduleSaveBtnEl = document.getElementById("scheduleSaveBtn");
+  const calendarOverlay = document.getElementById("calendarOverlay");
+  const calendarTitleEl = document.getElementById("calendarTitle");
+  const closeCalendarOverlayBtn = document.getElementById("closeCalendarOverlay");
+  const calendarPrevBtnEl = document.getElementById("calendarPrevBtn");
+  const calendarNextBtnEl = document.getElementById("calendarNextBtn");
+  const calendarMonthLabelEl = document.getElementById("calendarMonthLabel");
+  const calendarWeekdaysEl = document.getElementById("calendarWeekdays");
+  const calendarGridEl = document.getElementById("calendarGrid");
+  const calendarDayLabelEl = document.getElementById("calendarDayLabel");
+  const calendarDayListEl = document.getElementById("calendarDayList");
+  const calendarDayEmptyEl = document.getElementById("calendarDayEmpty");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
@@ -1884,6 +2018,10 @@
       intervalHours: "Hours",
       scheduleClear: "No schedule",
       scheduleEvery: "every {n} {unit}",
+      calendarTitle: "Calendar",
+      calendarPrev: "Previous month",
+      calendarNext: "Next month",
+      calendarDayEmpty: "Nothing scheduled for this day.",
       errScheduleDate: "Pick a date first.",
       renewsIn: "Renews in {n} {unit}",
       dueToday: "Due today: {name}",
@@ -2045,6 +2183,10 @@
       intervalHours: "Godziny",
       scheduleClear: "Brak harmonogramu",
       scheduleEvery: "co {n} {unit}",
+      calendarTitle: "Kalendarz",
+      calendarPrev: "Poprzedni miesiąc",
+      calendarNext: "Następny miesiąc",
+      calendarDayEmpty: "Nic zaplanowanego na ten dzień.",
       errScheduleDate: "Najpierw wybierz datę.",
       renewsIn: "Odnowi się za {n} {unit}",
       dueToday: "Dziś: {name}",
@@ -2273,7 +2415,7 @@
       const unit = s.intervalUnit === "hours"
         ? pluralForm(value, { en: ["hour", "hours"], pl: ["godzinę", "godziny", "godzin"] })
         : pluralForm(value, { en: ["day", "days"], pl: ["dzień", "dni", "dni"] });
-      return "📅 " + t("scheduleEvery", { n: value, unit });
+      return "📅 " + t("scheduleEvery", { n: value, unit }) + (s.time ? ", " + s.time : "");
     }
     return "📅 " + formatScheduleDate(s.date, s.time);
   }
@@ -2285,6 +2427,28 @@
     if (!s) return false;
     if (s.type === "recurring") return !isDoneNow(task);
     return !task.done && s.date <= todayStr();
+  }
+
+  // The single calendar date a scheduled task is "plotted" on: its due date
+  // for one-time tasks; its next renewal date once checked off for
+  // recurring ones; otherwise today (it's due/overdue right now).
+  function scheduleRelevantDateStr(task) {
+    const s = task.schedule;
+    if (!s) return null;
+    if (s.type === "once") return s.date;
+    if (isDoneNow(task) && s.renewsAt) return todayStrFor(new Date(s.renewsAt));
+    return todayStr();
+  }
+
+  function scheduledTasksByDate() {
+    const map = {};
+    for (const t2 of tasks) {
+      if (t2.ownerEmail !== myEmail || !t2.schedule) continue;
+      const dateStr = scheduleRelevantDateStr(t2);
+      if (!dateStr) continue;
+      (map[dateStr] = map[dateStr] || []).push(t2);
+    }
+    return map;
   }
 
   function isRecurring(task) {
@@ -2406,6 +2570,12 @@
     }
     scheduleClearBtnEl.textContent = t("scheduleClear");
     scheduleSaveBtnEl.textContent = t("save");
+    openCalendarBtnEl.setAttribute("aria-label", t("calendarTitle"));
+    calendarTitleEl.textContent = t("calendarTitle");
+    closeCalendarOverlayBtn.setAttribute("aria-label", t("close"));
+    calendarPrevBtnEl.setAttribute("aria-label", t("calendarPrev"));
+    calendarNextBtnEl.setAttribute("aria-label", t("calendarNext"));
+    if (!calendarOverlay.hidden) renderCalendarOverlay();
     appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
     headerEditBtn.textContent = t("chipEdit");
@@ -2690,6 +2860,7 @@
   function updateScheduleBadgeDot() {
     const hasDueToday = tasks.some(t2 => t2.ownerEmail === myEmail && t2.schedule && isScheduleDueToday(t2));
     scheduleBadgeDotEl.hidden = !hasDueToday;
+    calendarBtnBadgeDotEl.hidden = !hasDueToday;
   }
 
   function maybeShowDueTodayBanner() {
@@ -2697,7 +2868,12 @@
     const due = tasks.filter(t2 => t2.ownerEmail === myEmail && t2.schedule && isScheduleDueToday(t2));
     if (due.length === 0) return;
     dueTodayBannerShown = true;
-    showNudge(due.length === 1 ? t("dueToday", { name: due[0].text }) : t("dueTodayN", { n: due.length }));
+    if (due.length === 1) {
+      const time = due[0].schedule.time;
+      showNudge(t("dueToday", { name: time ? time + " — " + due[0].text : due[0].text }));
+    } else {
+      showNudge(t("dueTodayN", { n: due.length }));
+    }
   }
 
   function taskGroupKey(task) {
@@ -4025,6 +4201,104 @@
     composerSchedule = schedule;
     updateScheduleChipState();
     closeScheduleOverlay();
+  });
+
+  function buildWeekdayLabels() {
+    const labels = [];
+    const base = new Date(Date.UTC(2023, 0, 2)); // a known Monday
+    const fmt = new Intl.DateTimeFormat(currentLang === "pl" ? "pl-PL" : "en-US", { weekday: "short", timeZone: "UTC" });
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setUTCDate(base.getUTCDate() + i);
+      labels.push(fmt.format(d));
+    }
+    return labels;
+  }
+
+  function renderCalendarOverlay() {
+    calendarMonthLabelEl.textContent = new Intl.DateTimeFormat(currentLang === "pl" ? "pl-PL" : "en-US", {
+      month: "long", year: "numeric", timeZone: "UTC"
+    }).format(new Date(Date.UTC(calendarViewYear, calendarViewMonth, 1)));
+
+    calendarWeekdaysEl.innerHTML = "";
+    for (const label of buildWeekdayLabels()) {
+      const span = document.createElement("span");
+      span.textContent = label;
+      calendarWeekdaysEl.appendChild(span);
+    }
+
+    const byDate = scheduledTasksByDate();
+    const todayD = todayStr();
+    const firstOfMonth = new Date(Date.UTC(calendarViewYear, calendarViewMonth, 1));
+    const firstWeekday = (firstOfMonth.getUTCDay() + 6) % 7; // Monday = 0
+    const daysInMonth = new Date(Date.UTC(calendarViewYear, calendarViewMonth + 1, 0)).getUTCDate();
+
+    calendarGridEl.innerHTML = "";
+    for (let i = 0; i < firstWeekday; i++) {
+      const pad = document.createElement("div");
+      pad.className = "calendar-day empty";
+      calendarGridEl.appendChild(pad);
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = calendarViewYear + "-" + String(calendarViewMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "calendar-day"
+        + (dateStr === todayD ? " today" : "")
+        + (dateStr === calendarSelectedDate ? " selected" : "");
+      cell.textContent = day;
+      if (byDate[dateStr] && byDate[dateStr].length) {
+        const dot = document.createElement("span");
+        dot.className = "calendar-day-dot";
+        cell.appendChild(dot);
+      }
+      cell.addEventListener("click", () => {
+        calendarSelectedDate = dateStr;
+        renderCalendarOverlay();
+      });
+      calendarGridEl.appendChild(cell);
+    }
+
+    const dayTasks = byDate[calendarSelectedDate] || [];
+    calendarDayLabelEl.textContent = formatScheduleDate(calendarSelectedDate, null);
+    calendarDayListEl.innerHTML = "";
+    for (const t2 of dayTasks) {
+      const li = document.createElement("li");
+      li.textContent = (t2.schedule.time ? t2.schedule.time + " — " : "") + t2.text;
+      calendarDayListEl.appendChild(li);
+    }
+    calendarDayEmptyEl.hidden = dayTasks.length > 0;
+    calendarDayEmptyEl.textContent = t("calendarDayEmpty");
+  }
+
+  function openCalendarOverlay() {
+    const today = todayStr();
+    const [y, m] = today.split("-").map(Number);
+    calendarViewYear = y;
+    calendarViewMonth = m - 1;
+    calendarSelectedDate = today;
+    renderCalendarOverlay();
+    calendarOverlay.hidden = false;
+  }
+
+  function closeCalendarOverlay() {
+    calendarOverlay.hidden = true;
+  }
+
+  openCalendarBtnEl.addEventListener("click", openCalendarOverlay);
+  closeCalendarOverlayBtn.addEventListener("click", closeCalendarOverlay);
+  calendarOverlay.addEventListener("click", (e) => { if (e.target === calendarOverlay) closeCalendarOverlay(); });
+
+  calendarPrevBtnEl.addEventListener("click", () => {
+    calendarViewMonth--;
+    if (calendarViewMonth < 0) { calendarViewMonth = 11; calendarViewYear--; }
+    renderCalendarOverlay();
+  });
+
+  calendarNextBtnEl.addEventListener("click", () => {
+    calendarViewMonth++;
+    if (calendarViewMonth > 11) { calendarViewMonth = 0; calendarViewYear++; }
+    renderCalendarOverlay();
   });
 
   function maybeInitAnalytics() {
