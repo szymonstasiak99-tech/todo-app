@@ -1745,7 +1745,7 @@
     <div class="overlay-divider"></div>
     <p id="appearanceDesc">App appearance.</p>
     <div class="theme-row" id="themeRow">
-      <button type="button" class="theme-btn" data-theme-choice="system">System</button>
+      <button type="button" class="theme-btn" data-theme-choice="mono">Mono</button>
       <button type="button" class="theme-btn" data-theme-choice="light">Light</button>
       <button type="button" class="theme-btn" data-theme-choice="dim">Warm</button>
       <button type="button" class="theme-btn" data-theme-choice="dark">Dark</button>
@@ -1759,7 +1759,6 @@
       <button type="button" class="theme-btn" data-theme-choice="rainbow">Rainbow</button>
       <button type="button" class="theme-btn" data-theme-choice="ocean">Ocean</button>
       <button type="button" class="theme-btn" data-theme-choice="neon">Neon</button>
-      <button type="button" class="theme-btn" data-theme-choice="mono">Mono</button>
       <button type="button" class="theme-btn" data-theme-choice="business">Business</button>
     </div>
     <div class="overlay-divider"></div>
@@ -2245,7 +2244,6 @@
       customTitlePlaceholder: "Type what motivates you!",
       saveCustomTitle: "Save headline",
       appearanceDesc: "App appearance.",
-      theme_system: "System",
       theme_light: "Light",
       theme_dim: "Warm",
       theme_dark: "Dark",
@@ -2460,7 +2458,6 @@
       customTitlePlaceholder: "Wpisz to, co Ciebie motywuje!",
       saveCustomTitle: "Zapisz napis",
       appearanceDesc: "Wygląd aplikacji.",
-      theme_system: "Systemowy",
       theme_light: "Jasny",
       theme_dim: "Ciepły",
       theme_dark: "Ciemny",
@@ -2760,11 +2757,7 @@
   const THEME_STORAGE_KEY = "todo-app-theme";
 
   function applyTheme(choice) {
-    if (choice === "system") {
-      delete document.documentElement.dataset.theme;
-    } else {
-      document.documentElement.dataset.theme = choice;
-    }
+    document.documentElement.dataset.theme = choice;
     try { localStorage.setItem(THEME_STORAGE_KEY, choice); } catch (e) {}
     for (const btn of themeButtons) {
       btn.classList.toggle("active", btn.dataset.themeChoice === choice);
@@ -2772,8 +2765,9 @@
   }
 
   function initTheme() {
-    let choice = "system";
-    try { choice = localStorage.getItem(THEME_STORAGE_KEY) || "system"; } catch (e) {}
+    let choice = "mono";
+    try { choice = localStorage.getItem(THEME_STORAGE_KEY) || "mono"; } catch (e) {}
+    if (choice === "system") choice = "mono";
     applyTheme(choice);
   }
 
