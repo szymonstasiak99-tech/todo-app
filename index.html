@@ -1630,6 +1630,8 @@
     shopping: { icon: "🛒", nameKey: "shoppingDefaultName", nameKeyN: "shoppingDefaultNameN", order: -0.5, allowHide: true }
   };
   const sharedSeedAttempted = { fridge: false, shopping: false };
+  const WORK_LIST_ORDER = -1.5; // sorts after the built-in Habit chip, before Fridge (-1) and Groceries (-0.5)
+  let workListSeedAttempted = false;
   let listsReady = false;  // true once the lists listener has delivered its first real snapshot
   let tasksReady = false;  // true once the tasks listener has delivered its first real snapshot
 
@@ -1834,6 +1836,8 @@
       sharedInfoLabel: "What is this?",
       fridgeInfo: "This is your virtual fridge door! 🧊 Stick notes here so nothing gets forgotten — no risk of someone eating the last egg before you see the note 🥚",
       shoppingInfo: "A shopping list everyone here can add to, tick off, and tidy up — including the surprise-gift item you'd rather hide from a certain someone 🎁",
+      workDefaultName: "Work",
+      workInfo: "Your little work corner 💼 — hidden from your partner by default, so it's just for deadlines, that one email, and other 9-to-5 chaos. Feeling generous? You can unhide it for them any time from the ⋯ menu.",
       manageMembers: "Members",
       removeMember: "Remove {name}",
       addMember: "Add a member",
@@ -1976,6 +1980,8 @@
       sharedInfoLabel: "Co to jest?",
       fridgeInfo: "To Wasza wirtualna lodówka! 🧊 Wklejacie tu karteczki, żeby o niczym nie zapomnieć — bez ryzyka, że ktoś zje ostatnie jajko, zanim zdążycie to zobaczyć 🥚",
       shoppingInfo: "Lista zakupów, na którą każdy tu może coś dodać, odhaczyć i posprzątać — nawet ten element z niespodzianką, który wolisz ukryć przed pewną osobą 🎁",
+      workDefaultName: "Praca",
+      workInfo: "Twój mały zawodowy kącik 💼 — domyślnie ukryty przed drugą osobą, więc tylko dla deadline'ów, tego jednego maila i reszty biurowego chaosu. Masz ochotę się podzielić? W każdej chwili możesz go odkryć dla partnera/partnerki z menu ⋯.",
       manageMembers: "Członkowie",
       removeMember: "Usuń {name}",
       addMember: "Dodaj osobę",
@@ -2560,10 +2566,42 @@
     }
   }
 
+  async function maybeSeedWorkList() {
+    if (workListSeedAttempted) return;
+    if (allLists.some(l => l.ownerEmail === myEmail && l.presetType === "work")) { workListSeedAttempted = true; return; }
+    workListSeedAttempted = true;
+    try {
+      await addDoc(collection(db, "custom_lists"), {
+        name: t("workDefaultName"),
+        icon: "💼",
+        hidden: true,
+        deleted: false,
+        order: WORK_LIST_ORDER,
+        presetType: "work",
+        members: myMembers(true),
+        ownerEmail: myEmail,
+        createdByEmail: myEmail,
+        createdAt: Date.now()
+      });
+    } catch (e) {}
+  }
+
+  async function cleanupDuplicateWorkLists() {
+    const matches = allLists.filter(l => l.ownerEmail === myEmail && l.presetType === "work").sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    for (let i = 1; i < matches.length; i++) {
+      const extra = matches[i];
+      const hasTasks = tasks.some(t2 => t2.customListId === extra.id);
+      if (hasTasks) continue;
+      try { await updateDoc(doc(db, "custom_lists", extra.id), { deleted: true, deletedAt: Date.now() }); } catch (e) {}
+    }
+  }
+
   function maybeRunSharedListMaintenance() {
     if (!myEmail || roster.length === 0 || !listsReady || !tasksReady) return;
     maybeSeedSharedLists();
     cleanupDuplicateSharedLists();
+    maybeSeedWorkList();
+    cleanupDuplicateWorkLists();
   }
 
   async function addSharedMember(list, email) {
@@ -2682,13 +2720,13 @@
         name.textContent = (section.canManage && effectiveHidden ? t("hiddenPrefix") : "") + displayTitle;
         li.appendChild(name);
 
-        if (section.kind === "shared") {
+        if (section.kind === "shared" || (list && list.presetType === "work")) {
           const info = document.createElement("button");
           info.type = "button";
           info.className = "info-btn";
           info.setAttribute("aria-label", t("sharedInfoLabel"));
           info.textContent = "ⓘ";
-          info.addEventListener("click", () => alert(t(list.sharedType + "Info")));
+          info.addEventListener("click", () => alert(t((list.sharedType || list.presetType) + "Info")));
           li.appendChild(info);
         }
 
@@ -3415,7 +3453,8 @@
       if (section.selfHidden) continue;
       const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
       const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
-      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, section.kind === "shared" ? section.list.sharedType : null);
+      const infoType = section.kind === "shared" ? section.list.sharedType : (section.list && section.list.presetType === "work" ? "work" : null);
+      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, infoType);
       if (g) groupsEl.appendChild(g);
     }
 
@@ -3748,6 +3787,7 @@
     if (unsubMyInvite) { unsubMyInvite(); unsubMyInvite = null; }
     sharedSeedAttempted.fridge = false;
     sharedSeedAttempted.shopping = false;
+    workListSeedAttempted = false;
     listsReady = false;
     tasksReady = false;
     myPartnerEmail = null;
