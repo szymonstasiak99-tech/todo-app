@@ -721,7 +721,12 @@
 
   .group { display: flex; flex-direction: column; gap: 6px; }
 
-  .group.muted { opacity: 0.72; }
+  .group.muted .group-title,
+  .group.muted .task-text,
+  .group.muted .task-tags,
+  .group.muted .task-menu-wrap {
+    opacity: 0.72;
+  }
 
   .group-title {
     font-size: calc(0.78rem * var(--font-scale));
