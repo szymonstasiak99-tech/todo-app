@@ -1515,6 +1515,10 @@
       <button type="button" class="theme-btn" data-theme-choice="business">Business</button>
     </div>
     <div class="overlay-divider"></div>
+    <p id="timeZoneDesc">Time zone — decides when a new day starts for habit streaks.</p>
+    <p class="char-counter" id="timeZoneValue">—</p>
+    <button type="button" class="reset-order-btn" id="refreshTimeZoneBtn">Use this device's time zone</button>
+    <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="modalSignOutBtn">Sign out</button>
@@ -1621,6 +1625,7 @@
   let openListMenuId = null;     // key of the category row (in Edytuj) whose "more actions" menu is expanded, if any
   let editingMembersId = null;   // id of the shared list whose member list is expanded for editing, if any
   let customTitle = "";          // my own optional headline, replacing the app name for me only
+  let myTimeZone = null;         // IANA time zone (e.g. "Europe/Warsaw"), synced via ui_state so every one of my devices agrees on "today" for habit streaks
   let myPendingInviteCode = null; // an invite code I generated that's still waiting to be redeemed, if any
   const CUSTOM_TITLE_MAX_LEN = 24;
   const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
@@ -1699,6 +1704,9 @@
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
+  const timeZoneDescEl = document.getElementById("timeZoneDesc");
+  const timeZoneValueEl = document.getElementById("timeZoneValue");
+  const refreshTimeZoneBtnEl = document.getElementById("refreshTimeZoneBtn");
   const themeButtons = document.querySelectorAll("[data-theme-choice]");
   const langButtons = document.querySelectorAll("[data-lang-choice]");
   const fontSizeButtons = document.querySelectorAll("[data-font-choice]");
@@ -1825,6 +1833,8 @@
       font_small: "Small",
       font_default: "Default",
       font_large: "Large",
+      timeZoneDesc: "Time zone — decides when a new day starts for habit streaks.",
+      refreshTimeZoneBtn: "Use this device's time zone",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
       deleteListConfirm: 'Delete list "{name}"? Its tasks will move back to the regular priority sections, and its stats will disappear.',
@@ -1969,6 +1979,8 @@
       font_small: "Mała",
       font_default: "Domyślna",
       font_large: "Duża",
+      timeZoneDesc: "Strefa czasowa — decyduje, kiedy zaczyna się nowy dzień dla serii nawyków.",
+      refreshTimeZoneBtn: "Użyj strefy czasowej tego urządzenia",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
       deleteListConfirm: 'Usunąć listę "{name}"? Zadania z niej wrócą do zwykłych kategorii ważności, a jej statystyki znikną.',
@@ -2053,9 +2065,24 @@
     return s;
   }
 
+  function detectTimeZone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { return "UTC"; }
+  }
+
+  // "Today" for a person is decided by their own synced time zone (myTimeZone),
+  // not by whatever this particular device's clock/zone happens to be set to —
+  // that way every device they use agrees on the same day for habit streaks.
+  function todayStrFor(d) {
+    const zone = myTimeZone || detectTimeZone();
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+    } catch (e) {
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+  }
+
   function todayStr() {
-    const d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    return todayStrFor(new Date());
   }
 
   function isDoneNow(task) {
@@ -2066,17 +2093,16 @@
   function computeStreak(dates) {
     const set = new Set(dates || []);
     const cursor = new Date();
-    if (!set.has(todayStrFor(cursor))) cursor.setDate(cursor.getDate() - 1);
+    // Step by whole UTC days (not local calendar days) so the walk stays
+    // correct no matter how this device's own local zone compares to
+    // myTimeZone, which is what todayStrFor actually formats against.
+    if (!set.has(todayStrFor(cursor))) cursor.setUTCDate(cursor.getUTCDate() - 1);
     let streak = 0;
     while (set.has(todayStrFor(cursor))) {
       streak++;
-      cursor.setDate(cursor.getDate() - 1);
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
     }
     return streak;
-  }
-
-  function todayStrFor(d) {
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
   function showStatus(message) {
@@ -2193,6 +2219,8 @@
     saveCustomTitleBtnEl.textContent = t("saveCustomTitle");
     appearanceDescEl.textContent = t("appearanceDesc");
     fontSizeDescEl.textContent = t("fontSizeDesc");
+    timeZoneDescEl.textContent = t("timeZoneDesc");
+    refreshTimeZoneBtnEl.textContent = t("refreshTimeZoneBtn");
     resetStatsBtnEl.textContent = t("resetStats");
     footerAboutEl.textContent = t("footerAbout");
     footerPrivacyEl.textContent = t("footerPrivacy");
@@ -3140,6 +3168,14 @@
       myHiddenCategories = (snap.exists() && snap.data().hiddenCategories) || {};
       customTitle = (snap.exists() && snap.data().customTitle) || "";
       myPendingInviteCode = (snap.exists() && snap.data().pendingInviteCode) || null;
+      const storedTimeZone = snap.exists() ? snap.data().timeZone : null;
+      if (storedTimeZone) {
+        myTimeZone = storedTimeZone;
+      } else if (!myTimeZone) {
+        myTimeZone = detectTimeZone();
+        setDoc(doc(db, "ui_state", myEmail), { timeZone: myTimeZone }, { merge: true }).catch(() => {});
+      }
+      updateTimeZoneDisplay();
       appTitleEl.textContent = customTitle || t("appTitle");
       if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
         customTitleInput.value = customTitle;
@@ -3153,6 +3189,24 @@
       watchMyInvite();
     });
   }
+
+  function updateTimeZoneDisplay() {
+    timeZoneValueEl.textContent = myTimeZone || "—";
+  }
+
+  async function refreshTimeZoneFromDevice() {
+    if (!myEmail) return;
+    myTimeZone = detectTimeZone();
+    updateTimeZoneDisplay();
+    renderList();
+    try {
+      await setDoc(doc(db, "ui_state", myEmail), { timeZone: myTimeZone }, { merge: true });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  refreshTimeZoneBtnEl.addEventListener("click", refreshTimeZoneFromDevice);
 
   async function toggleSelfHidden(key) {
     const newHidden = !(myHiddenCategories && myHiddenCategories[key]);
