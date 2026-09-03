@@ -1376,16 +1376,38 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: var(--surface-2);
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 0.88rem;
+    border-radius: 14px;
+    padding: 6px 10px;
+    box-shadow: var(--shadow);
   }
 
-  .calendar-day-list .check { width: 30px; height: 30px; }
-  .calendar-day-list .check svg { width: 14px; height: 14px; }
-  .calendar-day-list li.done span { text-decoration: line-through; color: var(--text-muted); }
+  .calendar-day-list .check { width: 34px; height: 34px; }
+  .calendar-day-list .check svg { width: 15px; height: 15px; }
+
+  .calendar-day-list .day-item-text {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 0;
+    font-size: calc(0.92rem * var(--font-scale));
+    line-height: 1.4;
+    word-break: break-word;
+    cursor: pointer;
+  }
+
+  .calendar-day-list li.done .day-item-text {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-muted);
+  }
+
+  .calendar-day-empty {
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 8px 0 0;
+  }
 
   .overlay-card select {
     flex-shrink: 0;
@@ -1747,7 +1769,7 @@
     <div class="overlay-divider"></div>
     <p id="calendarDayLabel">—</p>
     <ul class="calendar-day-list" id="calendarDayList"></ul>
-    <p class="char-counter" id="calendarDayEmpty" hidden></p>
+    <p class="calendar-day-empty" id="calendarDayEmpty" hidden></p>
   </div>
 </div>
 
@@ -4331,7 +4353,9 @@
       li.appendChild(check);
 
       const label = document.createElement("span");
+      label.className = "day-item-text";
       label.textContent = (t2.schedule.time ? t2.schedule.time + " — " : "") + t2.text;
+      label.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
       li.appendChild(label);
 
       calendarDayListEl.appendChild(li);
