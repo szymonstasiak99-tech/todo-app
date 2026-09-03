@@ -424,6 +424,23 @@
   .app-footer a { color: var(--text-muted); text-decoration: none; }
   .app-footer a:hover { color: var(--accent); text-decoration: underline; }
 
+  .footer-link-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: calc(0.72rem * var(--font-scale));
+    text-decoration: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 2px 0;
+  }
+
+  .footer-link-btn:hover { color: var(--accent); text-decoration: underline; }
+
   .empty {
     margin-top: 20vh;
     text-align: center;
@@ -1182,7 +1199,7 @@
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="modalSignOutBtn">Sign out</button>
     <div class="overlay-divider"></div>
-    <button type="button" class="reset-order-btn" id="manageConsentBtn">Manage analytics consent</button>
+    <button type="button" class="footer-link-btn" id="manageConsentBtn">Manage analytics consent</button>
     <div class="overlay-divider"></div>
     <footer class="app-footer">
       <a href="about.html" target="_blank" rel="noopener" id="footerAbout">About</a>
