@@ -452,6 +452,14 @@
   .gate-card form { text-align: left; }
   .gate-card form button { width: 100%; margin-top: 4px; }
 
+  .gate-hint {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    margin: -4px 0 12px;
+  }
+
   .tab.pair-tab {
     border-style: dashed;
   }
@@ -1560,7 +1568,8 @@
     <p id="registerDesc">Set up your account to get started. If a partner already invited you, enter their code below.</p>
     <form id="registerForm">
       <input id="registerNameInput" type="text" autocomplete="off" maxlength="40" placeholder="Your name">
-      <input id="registerCodeInput" type="text" autocomplete="off" maxlength="12" placeholder="Invite code (optional)">
+      <input id="registerCodeInput" type="text" autocomplete="off" maxlength="12" placeholder="Partner's pairing code (optional)">
+      <p id="registerCodeHint" class="gate-hint">Has your partner already sent you a code from this app? Enter it above to link your accounts. No code yet? Just leave it blank — you can pair up later.</p>
       <button type="submit" id="registerSubmitBtn">Get started</button>
     </form>
     <p class="error-text" id="registerError" hidden></p>
@@ -1877,6 +1886,7 @@
   const registerForm = document.getElementById("registerForm");
   const registerNameInput = document.getElementById("registerNameInput");
   const registerCodeInput = document.getElementById("registerCodeInput");
+  const registerCodeHintEl = document.getElementById("registerCodeHint");
   const registerSubmitBtnEl = document.getElementById("registerSubmitBtn");
   const registerErrorEl = document.getElementById("registerError");
   const signOutFromRegister = document.getElementById("signOutFromRegister");
@@ -2019,7 +2029,8 @@
       registerTitle: "Almost there",
       registerDesc: "Set up your account to get started. If a partner already invited you, enter their code below.",
       registerNamePlaceholder: "Your name",
-      registerCodePlaceholder: "Invite code (optional)",
+      registerCodePlaceholder: "Partner's pairing code (optional)",
+      registerCodeHint: "Has your partner already sent you a code from this app? Enter it above to link your accounts. No code yet? Just leave it blank — you can pair up later.",
       registerSubmit: "Get started",
       errRegister: "Couldn't set up your account ({msg}).",
       errInvalidCode: "That invite code isn't valid or has already been used.",
@@ -2188,7 +2199,8 @@
       registerTitle: "Jeszcze chwila",
       registerDesc: "Skonfiguruj swoje konto, żeby zacząć. Jeśli masz już kod od partnera/partnerki, wpisz go poniżej.",
       registerNamePlaceholder: "Twoje imię",
-      registerCodePlaceholder: "Kod zaproszenia (opcjonalnie)",
+      registerCodePlaceholder: "Kod parowania od partnera (opcjonalnie)",
+      registerCodeHint: "Twoja druga połówka przesłała Ci już kod z tej apki? Wpisz go powyżej, żeby połączyć wasze konta. Nie masz kodu? Zostaw puste — możecie się sparować później.",
       registerSubmit: "Zaczynajmy",
       errRegister: "Nie udało się skonfigurować konta ({msg}).",
       errInvalidCode: "Ten kod zaproszenia jest nieprawidłowy albo już użyty.",
@@ -2608,6 +2620,7 @@
     registerDescEl.textContent = t("registerDesc");
     registerNameInput.placeholder = t("registerNamePlaceholder");
     registerCodeInput.placeholder = t("registerCodePlaceholder");
+    registerCodeHintEl.textContent = t("registerCodeHint");
     registerSubmitBtnEl.textContent = t("registerSubmit");
     signOutFromRegister.textContent = t("signOut");
     pairTitleEl.textContent = t("pairTitle");
@@ -4565,7 +4578,9 @@
     if (!currentUser || !currentUser.email) return;
     registerErrorEl.hidden = true;
     registerSubmitBtnEl.disabled = true;
-    const name = registerNameInput.value.trim() || currentUser.displayName || currentUser.email;
+    const name = registerNameInput.value.trim()
+      || (currentUser.displayName ? currentUser.displayName.trim().split(/\s+/)[0] : "")
+      || currentUser.email;
     const codeRaw = registerCodeInput.value.trim().toUpperCase();
     try {
       let partnerEmail = null;
@@ -4708,7 +4723,7 @@
     }
 
     if (!allowedSnap.exists()) {
-      registerNameInput.value = user.displayName || "";
+      registerNameInput.value = user.displayName ? user.displayName.trim().split(/\s+/)[0] : "";
       registerCodeInput.value = "";
       registerErrorEl.hidden = true;
       registerSubmitBtnEl.disabled = false;
