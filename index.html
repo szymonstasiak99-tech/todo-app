@@ -862,11 +862,15 @@
 
   .task-tags {
     display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 6px;
     margin-top: 3px;
   }
 
   .tag {
+    flex-shrink: 0;
+    white-space: nowrap;
     font-size: 0.72rem;
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     color: var(--gold);
@@ -1704,7 +1708,7 @@
     </div>
     <div class="overlay-divider"></div>
     <p id="scheduleDateLabel">Date</p>
-    <div class="list-form-row">
+    <div class="list-form-row" id="scheduleDateRow">
       <input id="scheduleDateInput" type="date">
       <input id="scheduleTimeInput" type="time">
     </div>
@@ -1930,6 +1934,7 @@
   const closeScheduleOverlayBtn = document.getElementById("closeScheduleOverlay");
   const scheduleTypeButtons = document.querySelectorAll("[data-schedule-type]");
   const scheduleDateLabelEl = document.getElementById("scheduleDateLabel");
+  const scheduleDateRowEl = document.getElementById("scheduleDateRow");
   const scheduleDateInput = document.getElementById("scheduleDateInput");
   const scheduleTimeInput = document.getElementById("scheduleTimeInput");
   const scheduleAllDayHintEl = document.getElementById("scheduleAllDayHint");
@@ -2021,6 +2026,8 @@
       scheduleRecurring: "Recurring",
       scheduleDateLabel: "Date and time",
       scheduleAllDayHint: "Leave the time empty for an all-day reminder.",
+      scheduleTimeOfDayLabel: "Reminder time",
+      scheduleRecurringTimeHint: "Leave empty to renew at midnight instead of a specific time.",
       scheduleIntervalLabel: "Repeat every",
       intervalDays: "Days",
       intervalHours: "Hours",
@@ -2186,6 +2193,8 @@
       scheduleRecurring: "Powtarzalne",
       scheduleDateLabel: "Data i godzina",
       scheduleAllDayHint: "Zostaw godzinę pustą dla przypomnienia na cały dzień.",
+      scheduleTimeOfDayLabel: "Godzina przypomnienia",
+      scheduleRecurringTimeHint: "Zostaw puste, żeby odnawiało się o północy zamiast o konkretnej godzinie.",
       scheduleIntervalLabel: "Powtarzaj co",
       intervalDays: "Dni",
       intervalHours: "Godziny",
@@ -2378,7 +2387,7 @@
       return Date.now() + value * 3600000;
     }
     const targetDate = addDaysToDateStr(todayStr(), value);
-    return zonedTimeToUtcMs(targetDate, "00:00", myTimeZone || detectTimeZone());
+    return zonedTimeToUtcMs(targetDate, schedule.time || "00:00", myTimeZone || detectTimeZone());
   }
 
   function pluralForm(n, forms) {
@@ -2437,24 +2446,27 @@
     return !task.done && s.date <= todayStr();
   }
 
-  // The single calendar date a scheduled task is "plotted" on: its due date
-  // for one-time tasks; its next renewal date once checked off for
-  // recurring ones; otherwise today (it's due/overdue right now).
-  function scheduleRelevantDateStr(task) {
-    const s = task.schedule;
-    if (!s) return null;
-    if (s.type === "once") return s.date;
-    if (isDoneNow(task) && s.renewsAt) return todayStrFor(new Date(s.renewsAt));
-    return todayStr();
-  }
-
+  // A calendar day's entries: for one-time tasks, just their due date. For
+  // recurring ones, every day they were ever checked off (a permanent,
+  // struck-through record you can still undo) plus today if it's currently
+  // due/overdue and not yet done. A task can appear on several days at once.
   function scheduledTasksByDate() {
     const map = {};
+    const add = (dateStr, task, doneHere) => {
+      if (!dateStr) return;
+      (map[dateStr] = map[dateStr] || []).push({ task, doneHere });
+    };
     for (const t2 of tasks) {
       if (t2.ownerEmail !== myEmail || !t2.schedule) continue;
-      const dateStr = scheduleRelevantDateStr(t2);
-      if (!dateStr) continue;
-      (map[dateStr] = map[dateStr] || []).push(t2);
+      const s = t2.schedule;
+      if (s.type === "once") {
+        add(s.date, t2, !!t2.done);
+        continue;
+      }
+      for (const histDate of (s.history || [])) {
+        add(histDate, t2, true);
+      }
+      if (!isDoneNow(t2)) add(todayStr(), t2, false);
     }
     return map;
   }
@@ -2570,12 +2582,11 @@
     for (const btn of scheduleTypeButtons) {
       btn.textContent = t(btn.dataset.scheduleType === "recurring" ? "scheduleRecurring" : "scheduleOnce");
     }
-    scheduleDateLabelEl.textContent = t("scheduleDateLabel");
-    scheduleAllDayHintEl.textContent = t("scheduleAllDayHint");
     scheduleIntervalLabelEl.textContent = t("scheduleIntervalLabel");
     for (const btn of scheduleIntervalUnitButtons) {
       btn.textContent = t(btn.dataset.intervalUnit === "hours" ? "intervalHours" : "intervalDays");
     }
+    if (!scheduleOverlay.hidden) renderScheduleOverlay();
     scheduleClearBtnEl.textContent = t("scheduleClear");
     scheduleSaveBtnEl.textContent = t("save");
     openCalendarBtnEl.setAttribute("aria-label", t("calendarTitle"));
@@ -3980,16 +3991,31 @@
   }
 
   async function toggleRecurringTask(task, wasDone) {
-    const newRenewsAt = wasDone ? null : computeRenewsAt(task.schedule);
+    return toggleRecurringOccurrence(task, todayStr(), wasDone);
+  }
+
+  // Toggles one day's completion record for a recurring task. For today,
+  // this also flips the task's active cycle (renewsAt), exactly like the
+  // main list's checkbox. For a past day shown in the calendar's history,
+  // it only edits that record — the current cycle is left alone.
+  async function toggleRecurringOccurrence(task, dateStr, wasDoneOverride) {
+    const isToday = dateStr === todayStr();
+    const wasDone = wasDoneOverride !== undefined ? wasDoneOverride : isToday && isDoneNow(task);
+    const updates = {
+      "schedule.history": wasDone ? arrayRemove(dateStr) : arrayUnion(dateStr)
+    };
+    if (isToday) {
+      updates["schedule.renewsAt"] = wasDone ? null : computeRenewsAt(task.schedule);
+    }
     try {
-      await updateDoc(doc(db, "tasks", task.id), { "schedule.renewsAt": newRenewsAt });
+      await updateDoc(doc(db, "tasks", task.id), updates);
       bumpStats(task, wasDone ? -1 : 1);
-      if (!wasDone) {
+      if (!wasDone && isToday) {
         if (task.important && task.urgent) {
           const stillOpenQ2 = tasks.some(t2 => t2.ownerEmail === myEmail && t2.important && !t2.urgent && !isDoneNow(t2));
           if (stillOpenQ2) showNudge(t("nudgeMessage"));
         }
-        const remaining = formatTimeRemaining(newRenewsAt);
+        const remaining = formatTimeRemaining(updates["schedule.renewsAt"]);
         if (remaining) showStatus(remaining);
       }
     } catch (e) {
@@ -4144,18 +4170,34 @@
     for (const btn of scheduleTypeButtons) {
       btn.classList.toggle("active", btn.dataset.scheduleType === scheduleDraft.type);
     }
-    scheduleIntervalWrap.hidden = scheduleDraft.type !== "recurring";
+    const isRecurringType = scheduleDraft.type === "recurring";
+    const unit = scheduleDraft.intervalUnit || "days";
+    scheduleIntervalWrap.hidden = !isRecurringType;
+
+    // Hour-based recurrence is a pure duration from the moment you check it
+    // off — no date or time-of-day is actually used, so hide those fields
+    // entirely rather than showing inputs that silently do nothing.
+    const hideDateTimeRow = isRecurringType && unit === "hours";
+    scheduleDateLabelEl.hidden = hideDateTimeRow;
+    scheduleDateRowEl.hidden = hideDateTimeRow;
+    scheduleAllDayHintEl.hidden = hideDateTimeRow;
+    scheduleDateInput.hidden = isRecurringType; // recurring never needs a start date, only "once" does
+    scheduleDateLabelEl.textContent = isRecurringType ? t("scheduleTimeOfDayLabel") : t("scheduleDateLabel");
+    scheduleAllDayHintEl.textContent = isRecurringType ? t("scheduleRecurringTimeHint") : t("scheduleAllDayHint");
+
     scheduleDateInput.value = scheduleDraft.date || "";
     scheduleTimeInput.value = scheduleDraft.time || "";
     scheduleIntervalValueInput.value = scheduleDraft.intervalValue || 1;
     for (const btn of scheduleIntervalUnitButtons) {
-      btn.classList.toggle("active", btn.dataset.intervalUnit === (scheduleDraft.intervalUnit || "days"));
+      btn.classList.toggle("active", btn.dataset.intervalUnit === unit);
     }
   }
 
   function openScheduleOverlay() {
     scheduleErrorEl.hidden = true;
-    scheduleDraft = composerSchedule ? { ...composerSchedule } : { type: "once", date: todayStr(), intervalUnit: "days", intervalValue: 1 };
+    scheduleDraft = composerSchedule
+      ? { ...composerSchedule }
+      : { type: "once", date: todayStr(), time: "08:00", intervalUnit: "days", intervalValue: 1 };
     renderScheduleOverlay();
     scheduleOverlay.hidden = false;
   }
@@ -4191,20 +4233,25 @@
 
   scheduleSaveBtnEl.addEventListener("click", () => {
     scheduleErrorEl.hidden = true;
-    const date = scheduleDateInput.value;
-    if (!date) {
+    const isRecurringType = scheduleDraft.type === "recurring";
+
+    if (!isRecurringType && !scheduleDateInput.value) {
       scheduleErrorEl.textContent = t("errScheduleDate");
       scheduleErrorEl.hidden = false;
       return;
     }
-    const schedule = {
-      type: scheduleDraft.type === "recurring" ? "recurring" : "once",
-      date,
-      time: scheduleTimeInput.value || null
-    };
-    if (schedule.type === "recurring") {
-      schedule.intervalUnit = scheduleDraft.intervalUnit === "hours" ? "hours" : "days";
+
+    const schedule = { type: isRecurringType ? "recurring" : "once" };
+    if (isRecurringType) {
+      const unit = scheduleDraft.intervalUnit === "hours" ? "hours" : "days";
+      schedule.intervalUnit = unit;
       schedule.intervalValue = Math.max(1, parseInt(scheduleIntervalValueInput.value, 10) || 1);
+      // Only day-based recurrence has a meaningful time-of-day; hour-based is
+      // a plain duration from the moment you check it off.
+      if (unit === "days") schedule.time = scheduleTimeInput.value || null;
+    } else {
+      schedule.date = scheduleDateInput.value;
+      schedule.time = scheduleTimeInput.value || null;
     }
     composerSchedule = schedule;
     updateScheduleChipState();
@@ -4267,20 +4314,20 @@
       calendarGridEl.appendChild(cell);
     }
 
-    const dayTasks = byDate[calendarSelectedDate] || [];
+    const dayEntries = byDate[calendarSelectedDate] || [];
     calendarDayLabelEl.textContent = formatScheduleDate(calendarSelectedDate, null);
     calendarDayListEl.innerHTML = "";
-    for (const t2 of dayTasks) {
-      const doneNow = isDoneNow(t2);
+    for (const entry of dayEntries) {
+      const t2 = entry.task;
       const li = document.createElement("li");
-      li.className = doneNow ? "done" : "";
+      li.className = entry.doneHere ? "done" : "";
 
       const check = document.createElement("button");
       check.type = "button";
       check.className = "check";
-      check.setAttribute("aria-label", doneNow ? t("undo") : t("markDone"));
+      check.setAttribute("aria-label", entry.doneHere ? t("undo") : t("markDone"));
       check.innerHTML = checkIcon;
-      check.addEventListener("click", () => handleTaskToggle(t2, doneNow));
+      check.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
       li.appendChild(check);
 
       const label = document.createElement("span");
@@ -4289,8 +4336,15 @@
 
       calendarDayListEl.appendChild(li);
     }
-    calendarDayEmptyEl.hidden = dayTasks.length > 0;
+    calendarDayEmptyEl.hidden = dayEntries.length > 0;
     calendarDayEmptyEl.textContent = t("calendarDayEmpty");
+  }
+
+  function handleCalendarToggle(entry, dateStr) {
+    const task = entry.task;
+    if (task.isHabit) return toggleHabitToday(task, isDoneNow(task));
+    if (isRecurring(task)) return toggleRecurringOccurrence(task, dateStr, entry.doneHere);
+    return toggleTask(task, !!task.done);
   }
 
   function openCalendarOverlay() {
