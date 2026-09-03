@@ -4355,7 +4355,13 @@
       calendarGridEl.appendChild(cell);
     }
 
-    const dayEntries = byDate[calendarSelectedDate] || [];
+    const dayEntries = (byDate[calendarSelectedDate] || []).slice().sort((a, b) => {
+      const timeA = a.task.schedule.time, timeB = b.task.schedule.time;
+      if (!timeA && !timeB) return 0;
+      if (!timeA) return -1; // all-day items first
+      if (!timeB) return 1;
+      return timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
+    });
     calendarDayLabelEl.textContent = formatScheduleDate(calendarSelectedDate, null);
     calendarDayListEl.innerHTML = "";
     for (const entry of dayEntries) {
