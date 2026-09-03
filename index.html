@@ -272,26 +272,6 @@
     --habit-check-color: #FFCB3D;
   }
 
-  :root[data-theme="anime"] {
-    --bg: #FEF1F8;
-    --surface: #FFFFFF;
-    --surface-2: #FDE0F0;
-    --text: #2B1830;
-    --text-muted: #8A5A8C;
-    --border: #F7CDE8;
-    --accent: #FF3D9A;
-    --accent-text: #FFFFFF;
-    --accent-soft: #FFE0F0;
-    --danger: #C0503A;
-    --danger-soft: #F3DED7;
-    --warn: #9A7B2F;
-    --warn-soft: #F1E9D3;
-    --gold: #A6791F;
-    --gold-soft: #F2E6C9;
-    --shadow: 0 1px 2px rgba(23, 36, 32, 0.06), 0 8px 24px -12px rgba(23, 36, 32, 0.18);
-    --habit-check-color: #FFCB3D;
-  }
-
   :root[data-theme="contrast"] {
     --bg: #FFFFFF;
     --surface: #FFFFFF;
@@ -350,26 +330,6 @@
     --gold-soft: #3A2E12;
     --habit-check-color: var(--gold);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.65);
-  }
-
-  :root[data-theme="pastel"] {
-    --bg: #FBF7FB;
-    --surface: #FFFFFF;
-    --surface-2: #F3ECF7;
-    --text: #3A3040;
-    --text-muted: #8A7E96;
-    --border: #E9DEEF;
-    --accent: #B79CE0;
-    --accent-text: #2A1F3A;
-    --accent-soft: #F0E7F7;
-    --danger: #D98A7A;
-    --danger-soft: #F7E4DE;
-    --warn: #9A7B2F;
-    --warn-soft: #F1E9D3;
-    --gold: #A6791F;
-    --gold-soft: #F2E6C9;
-    --shadow: 0 1px 2px rgba(23, 36, 32, 0.06), 0 8px 24px -12px rgba(23, 36, 32, 0.18);
-    --habit-check-color: #FFCB3D;
   }
 
   :root[data-theme="mono"] {
@@ -1530,6 +1490,7 @@
       <button type="button" class="theme-btn" data-theme-choice="light">Light</button>
       <button type="button" class="theme-btn" data-theme-choice="dim">Warm</button>
       <button type="button" class="theme-btn" data-theme-choice="dark">Dark</button>
+      <button type="button" class="theme-btn" data-theme-choice="contrast">Contrast</button>
       <button type="button" class="theme-btn" data-theme-choice="pink">Pink</button>
       <button type="button" class="theme-btn" data-theme-choice="blue">Blue</button>
       <button type="button" class="theme-btn" data-theme-choice="green">Green</button>
@@ -1539,11 +1500,8 @@
       <button type="button" class="theme-btn" data-theme-choice="rainbow">Rainbow</button>
       <button type="button" class="theme-btn" data-theme-choice="ocean">Ocean</button>
       <button type="button" class="theme-btn" data-theme-choice="neon">Neon</button>
-      <button type="button" class="theme-btn" data-theme-choice="pastel">Pastel</button>
       <button type="button" class="theme-btn" data-theme-choice="mono">Mono</button>
       <button type="button" class="theme-btn" data-theme-choice="business">Business</button>
-      <button type="button" class="theme-btn" data-theme-choice="anime">Anime</button>
-      <button type="button" class="theme-btn" data-theme-choice="contrast">Contrast</button>
     </div>
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="resetStatsBtn">Reset stats</button>
@@ -1847,10 +1805,8 @@
       theme_rainbow: "Rainbow",
       theme_ocean: "Ocean",
       theme_neon: "Neon",
-      theme_pastel: "Pastel",
       theme_mono: "Mono",
       theme_business: "Business",
-      theme_anime: "Anime",
       theme_contrast: "High contrast",
       fontSizeDesc: "Font size.",
       font_small: "Small",
@@ -1991,10 +1947,8 @@
       theme_rainbow: "Tęczowy",
       theme_ocean: "Ocean",
       theme_neon: "Neon",
-      theme_pastel: "Pastelowy",
       theme_mono: "Mono",
       theme_business: "Biznesowy",
-      theme_anime: "Anime",
       theme_contrast: "Wysoki kontrast",
       fontSizeDesc: "Rozmiar czcionki.",
       font_small: "Mała",
