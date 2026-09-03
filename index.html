@@ -1388,14 +1388,26 @@
   .calendar-day-list .check { width: 34px; height: 34px; }
   .calendar-day-list .check svg { width: 15px; height: 15px; }
 
-  .calendar-day-list .day-item-text {
+  .calendar-day-list .day-item-content {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 4px 0;
+    cursor: pointer;
+  }
+
+  .calendar-day-list .day-item-time {
+    flex-shrink: 0;
+  }
+
+  .calendar-day-list .day-item-text {
+    min-width: 0;
     font-size: calc(0.92rem * var(--font-scale));
     line-height: 1.4;
     word-break: break-word;
-    cursor: pointer;
   }
 
   .calendar-day-list li.done .day-item-text {
@@ -1403,6 +1415,8 @@
     text-decoration: line-through;
     text-decoration-color: var(--text-muted);
   }
+
+  .calendar-day-list li.done .day-item-time { opacity: 0.6; }
 
   .calendar-day-empty {
     text-align: left;
@@ -4358,12 +4372,23 @@
       check.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
       li.appendChild(check);
 
+      const content = document.createElement("div");
+      content.className = "day-item-content";
+      content.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
+
+      if (t2.schedule.time) {
+        const timeBadge = document.createElement("span");
+        timeBadge.className = "tag day-item-time";
+        timeBadge.textContent = t2.schedule.time;
+        content.appendChild(timeBadge);
+      }
+
       const label = document.createElement("span");
       label.className = "day-item-text";
-      label.textContent = (t2.schedule.time ? t2.schedule.time + " — " : "") + t2.text;
-      label.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
-      li.appendChild(label);
+      label.textContent = t2.text;
+      content.appendChild(label);
 
+      li.appendChild(content);
       calendarDayListEl.appendChild(li);
     }
     calendarDayEmptyEl.hidden = dayEntries.length > 0;
