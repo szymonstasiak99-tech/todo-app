@@ -173,6 +173,53 @@
     margin-top: 14px;
   }
 
+  .gate-card input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: inherit;
+    margin-bottom: 10px;
+  }
+
+  .gate-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .gate-card form { text-align: left; }
+  .gate-card form button { width: 100%; margin-top: 4px; }
+
+  .tab.pair-tab {
+    border-style: dashed;
+  }
+
+  .invite-code-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .invite-code-box {
+    flex: 1;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .invite-code-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .invite-code-actions .secondary-btn, .invite-code-actions .primary-btn { flex: 1; }
+
   header {
     position: sticky;
     top: 0;
@@ -1003,11 +1050,17 @@
   </div>
 </div>
 
-<div class="gate" id="notAllowedGate" hidden>
+<div class="gate" id="registerGate" hidden>
   <div class="gate-card">
-    <h1 id="notAllowedTitle">No access</h1>
-    <p id="notAllowedDesc"><span id="notAllowedBefore"></span><span id="deniedEmail"></span><span id="notAllowedAfter"></span></p>
-    <button type="button" class="signout" id="signOutFromDenied">Sign out</button>
+    <h1 id="registerTitle">Almost there</h1>
+    <p id="registerDesc">Set up your account to get started. If a partner already invited you, enter their code below.</p>
+    <form id="registerForm">
+      <input id="registerNameInput" type="text" autocomplete="off" maxlength="40" placeholder="Your name">
+      <input id="registerCodeInput" type="text" autocomplete="off" maxlength="12" placeholder="Invite code (optional)">
+      <button type="submit" id="registerSubmitBtn">Get started</button>
+    </form>
+    <p class="error-text" id="registerError" hidden></p>
+    <button type="button" class="signout" id="signOutFromRegister">Sign out</button>
   </div>
 </div>
 
@@ -1130,6 +1183,30 @@
   </div>
 </div>
 
+<div class="overlay" id="pairOverlay" hidden>
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="pairTitle">Pair up</h2>
+      <button type="button" class="overlay-close" id="closePairOverlay" aria-label="Close">✕</button>
+    </div>
+    <p class="error-text" id="pairError" hidden></p>
+    <p id="pairYourCodeDesc">Share this code with your partner.</p>
+    <div class="invite-code-row">
+      <div class="invite-code-box" id="pairCodeBox">——————</div>
+    </div>
+    <div class="invite-code-actions">
+      <button type="button" class="secondary-btn" id="pairCopyCodeBtn">Copy code</button>
+      <a id="pairEmailLink" class="primary-btn" href="#" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">Send by email</a>
+    </div>
+    <div class="overlay-divider"></div>
+    <p id="pairRedeemDesc">Already have a code from your partner?</p>
+    <form id="pairRedeemForm">
+      <input id="pairRedeemInput" type="text" autocomplete="off" maxlength="12" placeholder="Enter their code">
+      <button type="submit" class="primary-btn" id="pairRedeemBtn">Pair up</button>
+    </form>
+  </div>
+</div>
+
 <div class="nudge" id="nudge" hidden></div>
 
 <script type="module">
@@ -1138,7 +1215,7 @@
     getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, updateDoc, doc, getDoc, setDoc,
+    getFirestore, collection, addDoc, updateDoc, doc, getDoc, getDocs, setDoc,
     onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
@@ -1160,24 +1237,22 @@
 
   let currentUser = null;
   let myEmail = null;
-  let roster = [];              // [{email, name}]
-  let tasks = [];                 // merged view: my own tasks + the active tab's visible tasks
-  let myTasks = [];               // always my own tasks (hidden included, I'm the owner)
-  let viewedTasks = [];           // the other person's tasks, only when their tab is active (hidden excluded at query level)
+  let myPartnerEmail = null;    // the one person I'm paired with, or null if unpaired
+  let roster = [];              // [{email, name}] — just me, or me + my partner once paired
+  let myProfile = { name: "" };
+  let partnerProfile = null;    // { name } once the partner's profile doc has loaded, else null
+  let tasks = [];                 // every task I'm allowed to read (mine, partner's visible-to-me, shared) — single source of truth
   let activeTab = null;          // email of tab being viewed
-  let unsubMyTasks = null;
-  let unsubViewedTasks = null;
+  let unsubTasks = null;
   let unsubRoster = null;
-  let unsubCustomLists = null;
+  let unsubPartnerProfile = null;
+  let unsubLists = null;
   let unsubStats = null;
   let unsubUiState = null;
   let unsubActiveUiState = null;
-  let unsubSharedLists = null;
-  let unsubSharedTasks = null;
-  let rawCustomLists = [];       // lists owned by whichever tab is currently active
-  let sharedLists = [];          // shared lists (fridge/shopping) I'm a member of, regardless of tab
-  let sharedTasks = [];          // tasks inside those shared lists, visible on every tab
-  let customLists = [];          // rawCustomLists + sharedLists, merged and sorted
+  let unsubMyInvite = null;
+  let allLists = [];             // every custom_list I'm allowed to read — single source of truth
+  let customLists = [];          // allLists, filtered to the active tab's own lists + shared, sorted
   let viewedStats = {};          // lifetime completion stats of whichever tab is active
   let collapsedSections = {};    // my own section-collapse preferences, synced across devices
   let myHiddenCategories = {};   // any category (builtin section, own list, or shared list) I've personally hidden from my own view — never affects what anyone else sees
@@ -1187,6 +1262,7 @@
   let openListMenuId = null;     // key of the category row (in Edytuj) whose "more actions" menu is expanded, if any
   let editingMembersId = null;   // id of the shared list whose member list is expanded for editing, if any
   let customTitle = "";          // my own optional headline, replacing the app name for me only
+  let myPendingInviteCode = null; // an invite code I generated that's still waiting to be redeemed, if any
   const CUSTOM_TITLE_MAX_LEN = 24;
   const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
   const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, other: Number.MAX_SAFE_INTEGER };
@@ -1195,8 +1271,8 @@
     shopping: { icon: "🛒", nameKey: "shoppingDefaultName", nameKeyN: "shoppingDefaultNameN", order: -0.5, allowHide: true }
   };
   const sharedSeedAttempted = { fridge: false, shopping: false };
-  let sharedListsReady = false;  // true once subscribeSharedLists has delivered its first real snapshot
-  let sharedTasksReady = false;  // true once subscribeSharedTasks has delivered its first real snapshot
+  let listsReady = false;  // true once the lists listener has delivered its first real snapshot
+  let tasksReady = false;  // true once the tasks listener has delivered its first real snapshot
 
   let composerImportant = false;
   let composerUrgent = false;
@@ -1205,17 +1281,20 @@
   let selectedCustomListId = null;
 
   const signedOutGate = document.getElementById("signedOutGate");
-  const notAllowedGate = document.getElementById("notAllowedGate");
-  const deniedEmailEl = document.getElementById("deniedEmail");
-  const notAllowedBeforeEl = document.getElementById("notAllowedBefore");
-  const notAllowedAfterEl = document.getElementById("notAllowedAfter");
-  const notAllowedTitleEl = document.getElementById("notAllowedTitle");
+  const registerGate = document.getElementById("registerGate");
+  const registerTitleEl = document.getElementById("registerTitle");
+  const registerDescEl = document.getElementById("registerDesc");
+  const registerForm = document.getElementById("registerForm");
+  const registerNameInput = document.getElementById("registerNameInput");
+  const registerCodeInput = document.getElementById("registerCodeInput");
+  const registerSubmitBtnEl = document.getElementById("registerSubmitBtn");
+  const registerErrorEl = document.getElementById("registerError");
+  const signOutFromRegister = document.getElementById("signOutFromRegister");
   const appRoot = document.getElementById("appRoot");
   const signInBtn = document.getElementById("signInBtn");
   const signInTitleEl = document.getElementById("signInTitle");
   const signInDescEl = document.getElementById("signInDesc");
   const authErrorEl = document.getElementById("authError");
-  const signOutFromDenied = document.getElementById("signOutFromDenied");
   const headerEditBtn = document.getElementById("headerEditBtn");
   const modalSignOutBtnEl = document.getElementById("modalSignOutBtn");
   const whoamiNameEl = document.getElementById("whoamiName");
@@ -1276,6 +1355,18 @@
   const saveCustomTitleBtnEl = document.getElementById("saveCustomTitleBtn");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
+  const pairOverlay = document.getElementById("pairOverlay");
+  const pairErrorEl = document.getElementById("pairError");
+  const pairCodeBoxEl = document.getElementById("pairCodeBox");
+  const pairCopyCodeBtnEl = document.getElementById("pairCopyCodeBtn");
+  const pairEmailLinkEl = document.getElementById("pairEmailLink");
+  const closePairOverlayBtn = document.getElementById("closePairOverlay");
+  const pairRedeemForm = document.getElementById("pairRedeemForm");
+  const pairRedeemInput = document.getElementById("pairRedeemInput");
+  const pairRedeemBtnEl = document.getElementById("pairRedeemBtn");
+  const pairYourCodeDescEl = document.getElementById("pairYourCodeDesc");
+  const pairRedeemDescEl = document.getElementById("pairRedeemDesc");
+  const pairTitleEl = document.getElementById("pairTitle");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
@@ -1288,14 +1379,36 @@
     return task.urgent ? "importantUrgent" : "mostImportant";
   }
 
+  // Who's allowed to see a personal (non-shared) task/list of mine: just me while it's
+  // hidden-from-partner, or me + my partner once it's visible to them too.
+  function myMembers(hidden) {
+    return (hidden || !myPartnerEmail) ? [myEmail] : [myEmail, myPartnerEmail];
+  }
+
   const STRINGS = {
     en: {
       appTitle: "To do :)",
       signInDesc: "Shared to-do list. Sign in with your Google account to see your tasks and tasks shared with you.",
       signInBtn: "Sign in with Google",
-      notAllowedTitle: "No access",
-      notAllowedBefore: "This account (",
-      notAllowedAfter: ") doesn't have access to this list. Ask the person who manages it to add you.",
+      registerTitle: "Almost there",
+      registerDesc: "Set up your account to get started. If a partner already invited you, enter their code below.",
+      registerNamePlaceholder: "Your name",
+      registerCodePlaceholder: "Invite code (optional)",
+      registerSubmit: "Get started",
+      errRegister: "Couldn't set up your account ({msg}).",
+      errInvalidCode: "That invite code isn't valid or has already been used.",
+      pairTitle: "Pair up",
+      pairYourCodeDesc: "Share this code with your partner — they'll enter it to link your accounts.",
+      pairCopyCode: "Copy code",
+      pairCopied: "Copied!",
+      pairSendEmail: "Send by email",
+      pairEmailSubject: "Join me on To do :)",
+      pairEmailBody: "Hey! Use this code to pair up with me in the app: {code}",
+      pairRedeemDesc: "Already have a code from your partner?",
+      pairRedeemPlaceholder: "Enter their code",
+      pairRedeemBtn: "Pair up",
+      pairTabLabel: "+",
+      errPairRedeem: "Couldn't redeem that code ({msg}).",
       signOut: "Sign out",
       greetingHello: "Hey",
       emptyGlyph: "Empty",
@@ -1403,9 +1516,25 @@
       appTitle: "Do zrobienia",
       signInDesc: "Wspólna lista zadań. Zaloguj się swoim kontem Google, żeby zobaczyć swoje zadania i zadania osób, którym udostępniono dostęp.",
       signInBtn: "Zaloguj się przez Google",
-      notAllowedTitle: "Brak dostępu",
-      notAllowedBefore: "To konto (",
-      notAllowedAfter: ") nie ma dostępu do tej listy. Poproś osobę, która ją prowadzi, o dodanie Cię.",
+      registerTitle: "Jeszcze chwila",
+      registerDesc: "Skonfiguruj swoje konto, żeby zacząć. Jeśli masz już kod od partnera/partnerki, wpisz go poniżej.",
+      registerNamePlaceholder: "Twoje imię",
+      registerCodePlaceholder: "Kod zaproszenia (opcjonalnie)",
+      registerSubmit: "Zaczynajmy",
+      errRegister: "Nie udało się skonfigurować konta ({msg}).",
+      errInvalidCode: "Ten kod zaproszenia jest nieprawidłowy albo już użyty.",
+      pairTitle: "Połącz się w parę",
+      pairYourCodeDesc: "Podaj ten kod swojej drugiej połówce — wpisze go u siebie, żeby połączyć wasze konta.",
+      pairCopyCode: "Kopiuj kod",
+      pairCopied: "Skopiowano!",
+      pairSendEmail: "Wyślij mailem",
+      pairEmailSubject: "Dołącz do mnie w To do :)",
+      pairEmailBody: "Cześć! Wpisz ten kod, żeby połączyć się ze mną w aplikacji: {code}",
+      pairRedeemDesc: "Masz już kod od swojej drugiej połówki?",
+      pairRedeemPlaceholder: "Wpisz jej/jego kod",
+      pairRedeemBtn: "Połącz się",
+      pairTabLabel: "+",
+      errPairRedeem: "Nie udało się użyć tego kodu ({msg}).",
       signOut: "Wyloguj",
       greetingHello: "Cześć",
       emptyGlyph: "Pusto",
@@ -1616,10 +1745,19 @@
     signInTitleEl.textContent = t("appTitle");
     signInDescEl.textContent = t("signInDesc");
     signInBtn.textContent = t("signInBtn");
-    notAllowedTitleEl.textContent = t("notAllowedTitle");
-    notAllowedBeforeEl.textContent = t("notAllowedBefore");
-    notAllowedAfterEl.textContent = t("notAllowedAfter");
-    signOutFromDenied.textContent = t("signOut");
+    registerTitleEl.textContent = t("registerTitle");
+    registerDescEl.textContent = t("registerDesc");
+    registerNameInput.placeholder = t("registerNamePlaceholder");
+    registerCodeInput.placeholder = t("registerCodePlaceholder");
+    registerSubmitBtnEl.textContent = t("registerSubmit");
+    signOutFromRegister.textContent = t("signOut");
+    pairTitleEl.textContent = t("pairTitle");
+    pairYourCodeDescEl.textContent = t("pairYourCodeDesc");
+    pairCopyCodeBtnEl.textContent = t("pairCopyCode");
+    pairEmailLinkEl.textContent = t("pairSendEmail");
+    pairRedeemDescEl.textContent = t("pairRedeemDesc");
+    pairRedeemInput.placeholder = t("pairRedeemPlaceholder");
+    pairRedeemBtnEl.textContent = t("pairRedeemBtn");
     appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
     headerEditBtn.textContent = t("chipEdit");
@@ -1810,13 +1948,20 @@
     });
   }
 
+  function membersEqual(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    const sa = [...a].sort(), sb = [...b].sort();
+    return sa.every((v, i) => v === sb[i]);
+  }
+
   async function backfillHidden(collectionName, docs) {
     // Old documents created before "hidden" existed don't have the field at
     // all. A query filter like where("hidden","==",false) can't match a
     // missing field, so we backfill it once we see it (only ever run against
-    // our OWN documents, which we always receive unfiltered).
+    // our OWN documents — docs is now a mixed collection that may include
+    // the partner's or a shared list's items too).
     for (const item of docs) {
-      if (item.hidden === undefined) {
+      if (item.ownerEmail === myEmail && item.hidden === undefined) {
         try { await updateDoc(doc(db, collectionName, item.id), { hidden: false }); } catch (e) {}
       }
     }
@@ -1827,9 +1972,41 @@
     // Use their createdAt as a stable initial order so they keep the same
     // relative position they already had.
     for (const item of docs) {
-      if (item.order === undefined) {
+      if (item.ownerEmail === myEmail && item.order === undefined) {
         try { await updateDoc(doc(db, collectionName, item.id), { order: item.createdAt || 0 }); } catch (e) {}
       }
+    }
+  }
+
+  async function syncOwnMembers(collectionName, docs) {
+    // Every document I own must carry members = myMembers(hidden), since that's
+    // what the security rules use to decide who can read it going forward. The
+    // correct value changes the moment I pair up or hide/unhide something —
+    // reconciling it here on every snapshot keeps it correct with no manual step.
+    for (const item of docs) {
+      if (item.ownerEmail !== myEmail) continue;
+      const desired = myMembers(!!item.hidden);
+      if (!membersEqual(item.members || [], desired)) {
+        try { await updateDoc(doc(db, collectionName, item.id), { members: desired }); } catch (e) {}
+      }
+    }
+  }
+
+  async function runLegacyMembersBackfill() {
+    // Documents created before "members" existed have no such field at all —
+    // and a members array-contains query can structurally never match a
+    // missing field, so the live listeners below would never discover them.
+    // This one-shot query (allowed by the rules' legacy fallback, scoped to
+    // my own docs) finds and backfills them once; from then on the live
+    // members-based listeners and syncOwnMembers keep them correct.
+    for (const collectionName of ["tasks", "custom_lists"]) {
+      try {
+        const snap = await getDocs(query(collection(db, collectionName), where("ownerEmail", "==", myEmail)));
+        const legacy = snap.docs.filter(d => !d.data().deleted && d.data().members === undefined);
+        for (const d of legacy) {
+          try { await updateDoc(doc(db, collectionName, d.id), { members: myMembers(!!d.data().hidden) }); } catch (e) {}
+        }
+      } catch (e) {}
     }
   }
 
@@ -1837,37 +2014,17 @@
     return (a.order ?? a.createdAt ?? 0) - (b.order ?? b.createdAt ?? 0);
   }
 
-  function recombineTasks() {
-    const base = activeTab === myEmail ? myTasks : myTasks.concat(viewedTasks);
-    tasks = base.concat(sharedTasks);
-  }
-
-  function subscribeMyTasks(email) {
-    if (unsubMyTasks) unsubMyTasks();
-    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email));
-    unsubMyTasks = onSnapshot(q, (snap) => {
-      myTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
-      backfillHidden("tasks", myTasks);
-      backfillOrder("tasks", myTasks);
-      recombineTasks();
-      renderList();
-    }, (err) => {
-      showStatus(t("errSync", { msg: err.message }));
-    });
-  }
-
-  function subscribeViewedTasks(email) {
-    if (unsubViewedTasks) { unsubViewedTasks(); unsubViewedTasks = null; }
-    if (email === myEmail) {
-      viewedTasks = [];
-      recombineTasks();
-      renderList();
-      return;
-    }
-    const q = query(collection(db, "tasks"), where("ownerEmail", "==", email), where("hidden", "==", false));
-    unsubViewedTasks = onSnapshot(q, (snap) => {
-      viewedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
-      recombineTasks();
+  function subscribeTasks() {
+    if (unsubTasks) unsubTasks();
+    tasksReady = false;
+    const q = query(collection(db, "tasks"), where("members", "array-contains", myEmail));
+    unsubTasks = onSnapshot(q, (snap) => {
+      tasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
+      tasksReady = true;
+      backfillHidden("tasks", tasks);
+      backfillOrder("tasks", tasks);
+      syncOwnMembers("tasks", tasks);
+      maybeRunSharedListMaintenance();
       renderList();
     }, (err) => {
       showStatus(t("errSync", { msg: err.message }));
@@ -1934,29 +2091,30 @@
     if (openListMenuId && !e.target.closest(".task-menu-wrap")) closeListMenu();
   });
 
-  function recombineLists() {
-    const sharedIds = new Set(sharedLists.map(l => l.id));
-    customLists = rawCustomLists.filter(l => !sharedIds.has(l.id)).concat(sharedLists);
-    customLists.sort(byOrder);
+  function refreshCustomListsView() {
+    // customLists is the tab-scoped view rendering code expects: the active
+    // tab owner's own lists, plus every shared list regardless of tab.
+    customLists = allLists.filter(l => l.ownerEmail === activeTab || l.sharedType).sort(byOrder);
   }
 
-  function subscribeCustomLists(email) {
-    if (unsubCustomLists) unsubCustomLists();
-    const isMine = email === myEmail;
-    const constraints = [where("ownerEmail", "==", email)];
-    if (!isMine) constraints.push(where("hidden", "==", false));
-    const customListsQuery = query(collection(db, "custom_lists"), ...constraints);
-    unsubCustomLists = onSnapshot(customListsQuery, (snap) => {
-      rawCustomLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted);
-      if (isMine) {
-        backfillHidden("custom_lists", rawCustomLists);
-        backfillOrder("custom_lists", rawCustomLists);
-      }
-      recombineLists();
+  function subscribeLists() {
+    if (unsubLists) unsubLists();
+    listsReady = false;
+    const q = query(collection(db, "custom_lists"), where("members", "array-contains", myEmail));
+    unsubLists = onSnapshot(q, (snap) => {
+      allLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted);
+      listsReady = true;
+      backfillHidden("custom_lists", allLists);
+      backfillOrder("custom_lists", allLists);
+      syncOwnMembers("custom_lists", allLists);
+      maybeRunSharedListMaintenance();
+      refreshCustomListsView();
       renderCustomChips();
       renderList();
       renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
+    }, (err) => {
+      showStatus(t("errSync", { msg: err.message }));
     });
   }
 
@@ -1987,7 +2145,7 @@
   async function maybeSeedSharedLists() {
     for (const type of Object.keys(SHARED_LIST_TYPES)) {
       if (sharedSeedAttempted[type]) continue;
-      if (sharedLists.some(l => l.sharedType === type)) { sharedSeedAttempted[type] = true; continue; }
+      if (allLists.some(l => l.sharedType === type)) { sharedSeedAttempted[type] = true; continue; }
       sharedSeedAttempted[type] = true;
       await createSharedList(type, false);
     }
@@ -1995,10 +2153,10 @@
 
   async function cleanupDuplicateSharedLists() {
     for (const type of Object.keys(SHARED_LIST_TYPES)) {
-      const matches = sharedLists.filter(l => l.sharedType === type).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const matches = allLists.filter(l => l.sharedType === type).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       for (let i = 1; i < matches.length; i++) {
         const extra = matches[i];
-        const hasTasks = sharedTasks.some(t2 => t2.customListId === extra.id);
+        const hasTasks = tasks.some(t2 => t2.customListId === extra.id);
         if (hasTasks) continue;
         try { await updateDoc(doc(db, "custom_lists", extra.id), { deleted: true, deletedAt: Date.now() }); } catch (e) {}
       }
@@ -2006,42 +2164,9 @@
   }
 
   function maybeRunSharedListMaintenance() {
-    if (!myEmail || roster.length === 0 || !sharedListsReady || !sharedTasksReady) return;
+    if (!myEmail || roster.length === 0 || !listsReady || !tasksReady) return;
     maybeSeedSharedLists();
     cleanupDuplicateSharedLists();
-  }
-
-  function subscribeSharedLists() {
-    if (unsubSharedLists) unsubSharedLists();
-    sharedListsReady = false;
-    const q = query(collection(db, "custom_lists"), where("members", "array-contains", myEmail));
-    unsubSharedLists = onSnapshot(q, (snap) => {
-      sharedLists = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => !l.deleted);
-      sharedListsReady = true;
-      maybeRunSharedListMaintenance();
-      recombineLists();
-      renderCustomChips();
-      renderList();
-      renderStats();
-      if (!newListOverlay.hidden) renderExistingLists();
-    }, (err) => {
-      showStatus(t("errSync", { msg: err.message }));
-    });
-  }
-
-  function subscribeSharedTasks() {
-    if (unsubSharedTasks) unsubSharedTasks();
-    sharedTasksReady = false;
-    const q = query(collection(db, "tasks"), where("members", "array-contains", myEmail));
-    unsubSharedTasks = onSnapshot(q, (snap) => {
-      sharedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t2 => !t2.deleted).sort(byOrder);
-      sharedTasksReady = true;
-      maybeRunSharedListMaintenance();
-      recombineTasks();
-      renderList();
-    }, (err) => {
-      showStatus(t("errSync", { msg: err.message }));
-    });
   }
 
   async function addSharedMember(list, email) {
@@ -2358,14 +2483,14 @@
     const newHidden = !list.hidden;
     if (!newHidden && !confirm(t("unhideListConfirm"))) return;
     try {
-      await updateDoc(doc(db, "custom_lists", list.id), { hidden: newHidden });
+      await updateDoc(doc(db, "custom_lists", list.id), { hidden: newHidden, members: myMembers(newHidden) });
     } catch (e) {
       showModalError(e);
       return;
     }
     const affected = tasks.filter(t2 => t2.customListId === list.id && t2.ownerEmail === myEmail);
     for (const t2 of affected) {
-      try { await updateDoc(doc(db, "tasks", t2.id), { hidden: newHidden }); } catch (e) {}
+      try { await updateDoc(doc(db, "tasks", t2.id), { hidden: newHidden, members: myMembers(newHidden) }); } catch (e) {}
     }
     renderExistingLists();
   }
@@ -2412,16 +2537,24 @@
       btn.textContent = nameFor(email);
       btn.addEventListener("click", () => {
         activeTab = email;
-        recombineTasks();
+        refreshCustomListsView();
         renderTabs();
         renderList();
+        renderStats();
         updateComposerPlaceholder();
         subscribeStats(email);
-        subscribeCustomLists(email);
-        subscribeViewedTasks(email);
         subscribeActiveUiState(email);
       });
       tabsEl.appendChild(btn);
+    }
+    if (!myPartnerEmail) {
+      const plusBtn = document.createElement("button");
+      plusBtn.type = "button";
+      plusBtn.className = "tab pair-tab";
+      plusBtn.textContent = t("pairTabLabel");
+      plusBtn.setAttribute("aria-label", t("pairTitle"));
+      plusBtn.addEventListener("click", openPairOverlay);
+      tabsEl.appendChild(plusBtn);
     }
   }
 
@@ -2536,8 +2669,9 @@
 
   async function toggleTaskHidden(task) {
     if (task.hidden && !confirm(t("unhideTaskConfirm"))) return;
+    const newHidden = !task.hidden;
     try {
-      await updateDoc(doc(db, "tasks", task.id), { hidden: !task.hidden });
+      await updateDoc(doc(db, "tasks", task.id), { hidden: newHidden, members: myMembers(newHidden) });
     } catch (e) {
       showStatus(t("errSaveChange"));
     }
@@ -2553,6 +2687,7 @@
       collapsedSections = (snap.exists() && snap.data().collapsedSections) || {};
       myHiddenCategories = (snap.exists() && snap.data().hiddenCategories) || {};
       customTitle = (snap.exists() && snap.data().customTitle) || "";
+      myPendingInviteCode = (snap.exists() && snap.data().pendingInviteCode) || null;
       appTitleEl.textContent = customTitle || t("appTitle");
       if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
         customTitleInput.value = customTitle;
@@ -2562,6 +2697,8 @@
       renderList();
       renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
+      if (!pairOverlay.hidden) renderPairSection();
+      watchMyInvite();
     });
   }
 
@@ -2573,6 +2710,100 @@
       showModalError(e);
     }
   }
+
+  function generateInviteCode() {
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O/1/I/L — easy to read aloud or type
+    let code = "";
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
+  function renderPairSection() {
+    if (myPendingInviteCode) {
+      pairCodeBoxEl.textContent = myPendingInviteCode;
+      pairCopyCodeBtnEl.disabled = false;
+      pairEmailLinkEl.href = "mailto:?subject=" + encodeURIComponent(t("pairEmailSubject"))
+        + "&body=" + encodeURIComponent(t("pairEmailBody", { code: myPendingInviteCode }));
+    } else {
+      pairCodeBoxEl.textContent = "······";
+      pairCopyCodeBtnEl.disabled = true;
+      pairEmailLinkEl.href = "#";
+    }
+  }
+
+  async function ensureMyInviteCode() {
+    if (myPendingInviteCode || myPartnerEmail || !myEmail) return;
+    const code = generateInviteCode();
+    try {
+      await setDoc(doc(db, "pair_invites", code), { fromEmail: myEmail, createdAt: Date.now(), consumedBy: null });
+      await setDoc(doc(db, "ui_state", myEmail), { pendingInviteCode: code }, { merge: true });
+    } catch (e) {}
+  }
+
+  function watchMyInvite() {
+    if (unsubMyInvite) { unsubMyInvite(); unsubMyInvite = null; }
+    if (!myPendingInviteCode || myPartnerEmail) return;
+    unsubMyInvite = onSnapshot(doc(db, "pair_invites", myPendingInviteCode), async (snap) => {
+      if (!snap.exists() || myPartnerEmail) return;
+      const data = snap.data();
+      if (data.consumedBy) {
+        try {
+          await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: data.consumedBy });
+          await setDoc(doc(db, "ui_state", myEmail), { pendingInviteCode: deleteField() }, { merge: true });
+        } catch (e) {}
+      }
+    });
+  }
+
+  async function openPairOverlay() {
+    pairErrorEl.hidden = true;
+    pairRedeemInput.value = "";
+    await ensureMyInviteCode();
+    renderPairSection();
+    pairOverlay.hidden = false;
+  }
+
+  function closePairOverlay() {
+    pairOverlay.hidden = true;
+  }
+
+  closePairOverlayBtn.addEventListener("click", closePairOverlay);
+  pairOverlay.addEventListener("click", (e) => { if (e.target === pairOverlay) closePairOverlay(); });
+
+  pairCopyCodeBtnEl.addEventListener("click", async () => {
+    if (!myPendingInviteCode) return;
+    try {
+      await navigator.clipboard.writeText(myPendingInviteCode);
+      const original = t("pairCopyCode");
+      pairCopyCodeBtnEl.textContent = t("pairCopied");
+      setTimeout(() => { pairCopyCodeBtnEl.textContent = original; }, 1500);
+    } catch (e) {}
+  });
+
+  pairRedeemForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = pairRedeemInput.value.trim().toUpperCase();
+    if (!code || !myEmail) return;
+    pairErrorEl.hidden = true;
+    try {
+      const inviteRef = doc(db, "pair_invites", code);
+      const inviteSnap = await getDoc(inviteRef);
+      if (!inviteSnap.exists() || inviteSnap.data().consumedBy || inviteSnap.data().fromEmail === myEmail) {
+        pairErrorEl.textContent = t("errInvalidCode");
+        pairErrorEl.hidden = false;
+        return;
+      }
+      await updateDoc(inviteRef, { consumedBy: myEmail });
+      await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: inviteSnap.data().fromEmail });
+      if (myPendingInviteCode) {
+        try { await setDoc(doc(db, "ui_state", myEmail), { pendingInviteCode: deleteField() }, { merge: true }); } catch (e2) {}
+      }
+      closePairOverlay();
+    } catch (e) {
+      pairErrorEl.textContent = t("errPairRedeem", { msg: e.message });
+      pairErrorEl.hidden = false;
+    }
+  });
 
   function subscribeActiveUiState(email) {
     if (unsubActiveUiState) unsubActiveUiState();
@@ -2596,7 +2827,7 @@
     }
     const affected = tasks.filter(t2 => t2.ownerEmail === myEmail && !t2.customListId && bucketKeyOf(t2) === key);
     for (const t2 of affected) {
-      try { await updateDoc(doc(db, "tasks", t2.id), { hidden: newHidden }); } catch (e) {}
+      try { await updateDoc(doc(db, "tasks", t2.id), { hidden: newHidden, members: myMembers(newHidden) }); } catch (e) {}
     }
     renderExistingLists();
   }
@@ -2762,7 +2993,7 @@
     const isMine = isMyTab();
     clearDoneEl.hidden = true;
 
-    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab || (t2.customListId && sharedLists.some(l => l.id === t2.customListId)));
+    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab || (t2.customListId && allLists.some(l => l.id === t2.customListId && l.sharedType)));
     emptyEl.hidden = tabTasks.length > 0;
 
     const sections = getSections(tabTasks, isMine);
@@ -2845,7 +3076,7 @@
       createdByEmail: myEmail,
       createdAt: Date.now()
     };
-    if (isSharedTask) taskData.members = selectedList.members;
+    taskData.members = isSharedTask ? selectedList.members : myMembers(defaultHidden);
     try {
       await addDoc(collection(db, "tasks"), taskData);
     } catch (e) {
@@ -2965,6 +3196,7 @@
         hidden: false,
         order: Date.now(),
         ownerEmail: activeTab,
+        members: myMembers(false),
         createdByEmail: myEmail,
         createdAt: Date.now()
       });
@@ -2985,30 +3217,132 @@
       authErrorEl.hidden = false;
     }
   });
-  signOutFromDenied.addEventListener("click", () => signOut(auth));
+  signOutFromRegister.addEventListener("click", () => signOut(auth));
   headerEditBtn.addEventListener("click", openListOverlay);
   modalSignOutBtnEl.addEventListener("click", () => signOut(auth));
 
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!currentUser || !currentUser.email) return;
+    registerErrorEl.hidden = true;
+    registerSubmitBtnEl.disabled = true;
+    const name = registerNameInput.value.trim() || currentUser.displayName || currentUser.email;
+    const codeRaw = registerCodeInput.value.trim().toUpperCase();
+    try {
+      let partnerEmail = null;
+      if (codeRaw) {
+        const inviteRef = doc(db, "pair_invites", codeRaw);
+        const inviteSnap = await getDoc(inviteRef);
+        if (!inviteSnap.exists() || inviteSnap.data().consumedBy || inviteSnap.data().fromEmail === currentUser.email) {
+          registerErrorEl.textContent = t("errInvalidCode");
+          registerErrorEl.hidden = false;
+          registerSubmitBtnEl.disabled = false;
+          return;
+        }
+        await updateDoc(inviteRef, { consumedBy: currentUser.email });
+        partnerEmail = inviteSnap.data().fromEmail;
+        await setDoc(doc(db, "allowed_users", currentUser.email), {
+          name, partnerEmail, pairedViaCode: codeRaw, createdAt: Date.now()
+        });
+      } else {
+        await setDoc(doc(db, "allowed_users", currentUser.email), {
+          name, partnerEmail: null, createdAt: Date.now()
+        });
+      }
+      enterApp({ name, partnerEmail });
+      if (!partnerEmail) await ensureMyInviteCode();
+    } catch (err) {
+      registerErrorEl.textContent = t("errRegister", { msg: err.message });
+      registerErrorEl.hidden = false;
+      registerSubmitBtnEl.disabled = false;
+    }
+  });
+
   function teardownSubscriptions() {
-    if (unsubMyTasks) { unsubMyTasks(); unsubMyTasks = null; }
-    if (unsubViewedTasks) { unsubViewedTasks(); unsubViewedTasks = null; }
+    if (unsubTasks) { unsubTasks(); unsubTasks = null; }
     if (unsubRoster) { unsubRoster(); unsubRoster = null; }
-    if (unsubCustomLists) { unsubCustomLists(); unsubCustomLists = null; }
+    if (unsubPartnerProfile) { unsubPartnerProfile(); unsubPartnerProfile = null; }
+    if (unsubLists) { unsubLists(); unsubLists = null; }
     if (unsubStats) { unsubStats(); unsubStats = null; }
     if (unsubUiState) { unsubUiState(); unsubUiState = null; }
     if (unsubActiveUiState) { unsubActiveUiState(); unsubActiveUiState = null; }
-    if (unsubSharedLists) { unsubSharedLists(); unsubSharedLists = null; }
-    if (unsubSharedTasks) { unsubSharedTasks(); unsubSharedTasks = null; }
+    if (unsubMyInvite) { unsubMyInvite(); unsubMyInvite = null; }
     sharedSeedAttempted.fridge = false;
     sharedSeedAttempted.shopping = false;
-    sharedListsReady = false;
-    sharedTasksReady = false;
+    listsReady = false;
+    tasksReady = false;
+    myPartnerEmail = null;
+    partnerProfile = null;
+    roster = [];
   }
 
   function showGate(which) {
     signedOutGate.hidden = which !== "signedOut";
-    notAllowedGate.hidden = which !== "notAllowed";
+    registerGate.hidden = which !== "register";
     appRoot.hidden = which !== "app";
+  }
+
+  function rebuildRoster() {
+    roster = [{ email: myEmail, name: myProfile.name || myEmail }];
+    if (myPartnerEmail) roster.push({ email: myPartnerEmail, name: (partnerProfile && partnerProfile.name) || myPartnerEmail });
+    whoamiNameEl.textContent = nameFor(myEmail);
+    renderTabs();
+    renderList();
+    renderStats();
+    if (!newListOverlay.hidden) renderRenameFields();
+    maybeRunSharedListMaintenance();
+  }
+
+  function subscribePartnerProfile() {
+    if (unsubPartnerProfile) { unsubPartnerProfile(); unsubPartnerProfile = null; }
+    partnerProfile = null;
+    if (!myPartnerEmail) { rebuildRoster(); return; }
+    unsubPartnerProfile = onSnapshot(doc(db, "allowed_users", myPartnerEmail), (snap) => {
+      partnerProfile = { name: snap.exists() ? (snap.data().name || myPartnerEmail) : myPartnerEmail };
+      rebuildRoster();
+    });
+  }
+
+  function subscribeMyProfile() {
+    if (unsubRoster) unsubRoster();
+    unsubRoster = onSnapshot(doc(db, "allowed_users", myEmail), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      myProfile = { name: data.name || myEmail };
+      const newPartnerEmail = data.partnerEmail || null;
+      const justPaired = !myPartnerEmail && !!newPartnerEmail;
+      if (newPartnerEmail !== myPartnerEmail) {
+        myPartnerEmail = newPartnerEmail;
+        subscribePartnerProfile();
+      } else {
+        rebuildRoster();
+      }
+      if (justPaired) {
+        syncOwnMembers("tasks", tasks);
+        syncOwnMembers("custom_lists", allLists);
+      }
+    });
+  }
+
+  function enterApp(myData) {
+    myProfile = { name: myData.name || myEmail };
+    myPartnerEmail = myData.partnerEmail || null;
+    roster = [{ email: myEmail, name: myProfile.name }];
+    partnerProfile = null;
+    activeTab = myEmail;
+    whoamiNameEl.textContent = myProfile.name;
+    updateComposerPlaceholder();
+    showGate("app");
+    checkAnalyticsConsent();
+
+    subscribeMyProfile();
+    if (myPartnerEmail) subscribePartnerProfile();
+    runLegacyMembersBackfill();
+    subscribeLists();
+    subscribeTasks();
+    subscribeStats(myEmail);
+    subscribeUiState(myEmail);
+    subscribeActiveUiState(myEmail);
   }
 
   onAuthStateChanged(auth, async (user) => {
@@ -3033,34 +3367,15 @@
     }
 
     if (!allowedSnap.exists()) {
-      deniedEmailEl.textContent = myEmail;
-      showGate("notAllowed");
+      registerNameInput.value = user.displayName || "";
+      registerCodeInput.value = "";
+      registerErrorEl.hidden = true;
+      registerSubmitBtnEl.disabled = false;
+      showGate("register");
       return;
     }
 
-    activeTab = myEmail;
-    whoamiNameEl.textContent = allowedSnap.data().name || myEmail;
-    updateComposerPlaceholder();
-    showGate("app");
-    checkAnalyticsConsent();
-
-    unsubRoster = onSnapshot(collection(db, "allowed_users"), (snap) => {
-      roster = snap.docs.map(d => ({ email: d.id, name: d.data().name || d.id }));
-      whoamiNameEl.textContent = nameFor(myEmail);
-      renderTabs();
-      renderList();
-      if (!newListOverlay.hidden) renderRenameFields();
-      maybeRunSharedListMaintenance();
-    });
-
-    subscribeCustomLists(myEmail);
-    subscribeSharedLists();
-    subscribeSharedTasks();
-    subscribeStats(myEmail);
-    subscribeUiState(myEmail);
-    subscribeActiveUiState(myEmail);
-    subscribeMyTasks(myEmail);
-    subscribeViewedTasks(myEmail);
+    enterApp(allowedSnap.data());
   });
 </script>
 </body>

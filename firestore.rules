@@ -5,10 +5,48 @@ service cloud.firestore {
       return request.auth != null && exists(/databases/$(database)/documents/allowed_users/$(request.auth.token.email));
     }
 
+    function myPartner() {
+      return get(/databases/$(database)/documents/allowed_users/$(request.auth.token.email)).data.partnerEmail;
+    }
+
     match /allowed_users/{email} {
-      allow read: if isAllowed();
-      allow create: if false;
-      allow update: if isAllowed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name"]);
+      allow get: if request.auth != null && (
+        email == request.auth.token.email ||
+        (isAllowed() && email == myPartner())
+      );
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.token.email == email
+        && request.resource.data.keys().hasOnly(["name", "partnerEmail", "pairedViaCode", "createdAt"])
+        && (
+          (!("partnerEmail" in request.resource.data) || request.resource.data.partnerEmail == null)
+          ||
+          (
+            "pairedViaCode" in request.resource.data
+            && exists(/databases/$(database)/documents/pair_invites/$(request.resource.data.pairedViaCode))
+            && get(/databases/$(database)/documents/pair_invites/$(request.resource.data.pairedViaCode)).data.consumedBy == request.auth.token.email
+            && request.resource.data.partnerEmail == get(/databases/$(database)/documents/pair_invites/$(request.resource.data.pairedViaCode)).data.fromEmail
+          )
+        );
+      allow update: if request.auth != null && (
+        (isAllowed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name"]) && (email == request.auth.token.email || email == myPartner()))
+        || (request.auth.token.email == email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["partnerEmail"]))
+      );
+      allow delete: if false;
+    }
+
+    match /pair_invites/{code} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if isAllowed()
+        && request.resource.data.fromEmail == request.auth.token.email
+        && request.resource.data.consumedBy == null
+        && request.resource.data.keys().hasOnly(["fromEmail", "createdAt", "consumedBy"]);
+      allow update: if request.auth != null
+        && resource.data.consumedBy == null
+        && request.auth.token.email != resource.data.fromEmail
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["consumedBy"])
+        && request.resource.data.consumedBy == request.auth.token.email;
       allow delete: if false;
     }
 
@@ -16,7 +54,8 @@ service cloud.firestore {
       allow read: if isAllowed() && (
         ("members" in resource.data)
           ? request.auth.token.email in resource.data.members
-          : (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true)
+          : (resource.data.ownerEmail == request.auth.token.email
+              || (resource.data.ownerEmail == myPartner() && (!("hidden" in resource.data) || resource.data.hidden != true)))
       );
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
       allow update: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
@@ -27,7 +66,8 @@ service cloud.firestore {
       allow read: if isAllowed() && (
         ("members" in resource.data)
           ? request.auth.token.email in resource.data.members
-          : (resource.data.ownerEmail == request.auth.token.email || !("hidden" in resource.data) || resource.data.hidden != true)
+          : (resource.data.ownerEmail == request.auth.token.email
+              || (resource.data.ownerEmail == myPartner() && (!("hidden" in resource.data) || resource.data.hidden != true)))
       );
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
       allow update: if isAllowed()
@@ -38,12 +78,12 @@ service cloud.firestore {
     }
 
     match /stats/{email} {
-      allow read: if isAllowed();
+      allow read: if isAllowed() && (email == request.auth.token.email || email == myPartner());
       allow write: if isAllowed() && email == request.auth.token.email;
     }
 
     match /ui_state/{email} {
-      allow read: if isAllowed();
+      allow read: if isAllowed() && (email == request.auth.token.email || email == myPartner());
       allow write: if isAllowed() && email == request.auth.token.email;
     }
   }
