@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#F5F5F5">
+<meta name="theme-color" id="themeColorMeta" content="#F5F5F5">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -2039,6 +2039,7 @@
   const timeZoneValueEl = document.getElementById("timeZoneValue");
   const refreshTimeZoneBtnEl = document.getElementById("refreshTimeZoneBtn");
   const themeButtons = document.querySelectorAll("[data-theme-choice]");
+  const themeColorMetaEl = document.getElementById("themeColorMeta");
   const langButtons = document.querySelectorAll("[data-lang-choice]");
   const fontSizeButtons = document.querySelectorAll("[data-font-choice]");
   const fontSizeDescEl = document.getElementById("fontSizeDesc");
@@ -2127,7 +2128,7 @@
 
   const STRINGS = {
     en: {
-      appTitle: "Tandem",
+      appTitle: "To do :)",
       signInDesc: "The all-in-one to-do list with habit tracking and shared lists. Sign in with your Google account to get started.",
       signInBtn: "Sign in with Google",
       registerTitle: "Almost there",
@@ -2341,7 +2342,7 @@
       errGeneric: "Error ({code}): {msg}"
     },
     pl: {
-      appTitle: "Tandem",
+      appTitle: "Do zrobienia",
       signInDesc: "Wszystko w jednym: lista zadań, śledzenie nawyków i wspólne listy. Zaloguj się swoim kontem Google, żeby zacząć.",
       signInBtn: "Zaloguj się przez Google",
       registerTitle: "Jeszcze chwila",
@@ -2765,6 +2766,8 @@
     for (const btn of themeButtons) {
       btn.classList.toggle("active", btn.dataset.themeChoice === choice);
     }
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    if (bg) themeColorMetaEl.setAttribute("content", bg);
   }
 
   function initTheme() {
