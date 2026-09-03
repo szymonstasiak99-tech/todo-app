@@ -2078,6 +2078,7 @@
       errScheduleDate: "Pick a date first.",
       renewsIn: "Renews in {n} {unit}",
       dueToday: "Due today: {name}",
+      dueTodayAt: "Due today at {time}: {name}",
       dueTodayN: "You have {n} things due today",
       tabNamesDesc: "Tab names — any nickname, either of you can change both.",
       yourTab: "Your tab",
@@ -2246,6 +2247,7 @@
       errScheduleDate: "Najpierw wybierz datę.",
       renewsIn: "Odnowi się za {n} {unit}",
       dueToday: "Dziś: {name}",
+      dueTodayAt: "Dziś o {time}: {name}",
       dueTodayN: "Masz dziś {n} zaplanowanych rzeczy",
       tabNamesDesc: "Nazwy zakładek — dowolne nicki, każde z Was może zmienić oba.",
       yourTab: "Twoja zakładka",
@@ -2928,7 +2930,7 @@
     dueTodayBannerShown = true;
     if (due.length === 1) {
       const time = due[0].schedule.time;
-      showNudge(t("dueToday", { name: time ? time + " — " + due[0].text : due[0].text }));
+      showNudge(time ? t("dueTodayAt", { time, name: due[0].text }) : t("dueToday", { name: due[0].text }));
     } else {
       showNudge(t("dueTodayN", { n: due.length }));
     }
