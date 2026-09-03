@@ -1,11 +1,16 @@
 {
   "name": "tandem-functions",
   "description": "Push notification triggers for the Tandem to-do app",
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "main": "index.js",
   "dependencies": {
     "firebase-admin": "^12.3.1",
     "firebase-functions": "^5.0.1"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "firebase-functions-test": "^3.5.0"
+  }
 }

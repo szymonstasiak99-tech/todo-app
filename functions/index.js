@@ -47,15 +47,29 @@ function todayStrFor(date, zone) {
   }
 }
 
-function currentHourMinuteFor(date, zone) {
-  try {
-    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: zone, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(date);
-    const h = parts.find((p) => p.type === "hour").value;
-    const m = parts.find((p) => p.type === "minute").value;
-    return (h === "24" ? "00" : h) + ":" + m;
-  } catch (e) {
-    return "00:00";
+// Converts a wall-clock date+time as seen in a given IANA zone into the
+// matching UTC timestamp. Ported from index.html's zonedTimeToUtcMs so the
+// two never drift apart; verified against DST transitions in both directions.
+function zonedTimeToUtcMs(dateStr, timeStr, zone) {
+  const [y, mo, da] = dateStr.split("-").map(Number);
+  const [h, mi] = (timeStr || "00:00").split(":").map(Number);
+  const target = Date.UTC(y, mo - 1, da, h, mi, 0);
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: zone, hour12: false,
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+      }).formatToParts(new Date(guess));
+      const map = {};
+      for (const p of parts) map[p.type] = p.value;
+      const hour = map.hour === "24" ? 0 : Number(map.hour);
+      const shown = Date.UTC(Number(map.year), Number(map.month) - 1, Number(map.day), hour, Number(map.minute), Number(map.second));
+      guess -= (shown - target);
+    } catch (e) { break; }
   }
+  return guess;
 }
 
 // A task's ownerEmail is the literal string "shared" for tasks living in a
@@ -161,12 +175,14 @@ exports.remindHabits = onSchedule("every 15 minutes", async () => {
     if (!notif.enabled || notif.habitReminder === false) continue;
 
     const tz = data.timeZone || "UTC";
-    const hhmm = currentHourMinuteFor(now, tz);
-    const target = notif.habitReminderTime || "09:00";
-    if (hhmm !== target) continue;
-
     const today = todayStrFor(now, tz);
     if (notif.lastHabitReminderDate === today) continue;
+
+    // A 15-minute window matching the schedule's own cadence, rather than an
+    // exact "HH:MM === HH:MM" string match - the scheduler tick essentially
+    // never lands on the exact same minute as the person's chosen time.
+    const targetMs = zonedTimeToUtcMs(today, notif.habitReminderTime || "09:00", tz);
+    if (now.getTime() < targetMs || now.getTime() >= targetMs + 15 * 60 * 1000) continue;
 
     const habitsSnap = await db.collection("tasks")
       .where("ownerEmail", "==", email)
