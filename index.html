@@ -193,6 +193,27 @@
     border-style: dashed;
   }
 
+  .tab-group {
+    display: flex;
+    direction: ltr;
+    flex-shrink: 0;
+  }
+
+  .tab-group .tab {
+    border-radius: 0;
+  }
+
+  .tab-group .tab:first-child {
+    border-top-left-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-right: none;
+  }
+
+  .tab-group .tab:last-child {
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+  }
+
   .invite-code-row {
     display: flex;
     gap: 8px;
@@ -2529,17 +2550,10 @@
 
   function renderTabs() {
     tabsEl.innerHTML = "";
-    if (!myPartnerEmail) {
-      const plusBtn = document.createElement("button");
-      plusBtn.type = "button";
-      plusBtn.className = "tab pair-tab";
-      plusBtn.textContent = t("pairTabLabel");
-      plusBtn.setAttribute("aria-label", t("pairTitle"));
-      plusBtn.addEventListener("click", openPairOverlay);
-      tabsEl.appendChild(plusBtn);
-    }
     const emails = [...roster.map(p => p.email).filter(e => e !== myEmail), myEmail];
-    for (const email of emails) {
+    const showPairTile = !myPartnerEmail;
+
+    function makeTabBtn(email) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
@@ -2554,7 +2568,24 @@
         subscribeStats(email);
         subscribeActiveUiState(email);
       });
-      tabsEl.appendChild(btn);
+      return btn;
+    }
+
+    for (const email of emails) {
+      if (showPairTile && email === myEmail) {
+        const group = document.createElement("div");
+        group.className = "tab-group";
+        const plusBtn = document.createElement("button");
+        plusBtn.type = "button";
+        plusBtn.className = "tab pair-tab";
+        plusBtn.textContent = t("pairTabLabel");
+        plusBtn.setAttribute("aria-label", t("pairTitle"));
+        plusBtn.addEventListener("click", openPairOverlay);
+        group.append(makeTabBtn(email), plusBtn);
+        tabsEl.appendChild(group);
+      } else {
+        tabsEl.appendChild(makeTabBtn(email));
+      }
     }
   }
 
