@@ -907,6 +907,28 @@
 
   .composer-inner { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
 
+  .editing-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 6px 6px 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .editing-banner button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+  }
+
   .chip-row {
     display: flex;
     direction: rtl;
@@ -1355,6 +1377,10 @@
   </main>
   <div class="composer-wrap" id="composerWrap">
     <div class="composer-inner">
+      <div class="editing-banner" id="editingBanner" hidden>
+        <span id="editingBannerText">Editing task</span>
+        <button type="button" id="cancelEditBtn" aria-label="Cancel">✕</button>
+      </div>
       <div class="chip-row" id="chipRow">
         <button type="button" class="chip hidden" id="chipHidden" aria-label="Add as hidden">🙈</button>
         <button type="button" class="chip important" id="chipImportant">Important</button>
@@ -1560,6 +1586,7 @@
   let composerHabit = false;
   let composerHidden = false;
   let selectedCustomListId = null;
+  let editingTaskId = null;      // id of the task being edited via the composer, or null when adding a new task
 
   const signedOutGate = document.getElementById("signedOutGate");
   const registerGate = document.getElementById("registerGate");
@@ -1636,6 +1663,9 @@
   const saveCustomTitleBtnEl = document.getElementById("saveCustomTitleBtn");
   const statsStripEl = document.getElementById("statsStrip");
   const nudgeEl = document.getElementById("nudge");
+  const editingBannerEl = document.getElementById("editingBanner");
+  const editingBannerTextEl = document.getElementById("editingBannerText");
+  const cancelEditBtnEl = document.getElementById("cancelEditBtn");
   const pairOverlay = document.getElementById("pairOverlay");
   const pairErrorEl = document.getElementById("pairError");
   const pairCodeBoxEl = document.getElementById("pairCodeBox");
@@ -1774,6 +1804,10 @@
       newTaskPlaceholderFor: "New task for: {name}…",
       undo: "Undo",
       markDone: "Mark as done",
+      editTask: "Edit task",
+      editingTaskBanner: "Editing task",
+      cancelEdit: "Cancel",
+      saveTaskEdit: "Save changes",
       deleteTask: "Delete task",
       hideTask: "Hide task",
       unhideTask: "Unhide task",
@@ -1914,6 +1948,10 @@
       newTaskPlaceholderFor: "Nowe zadanie dla: {name}…",
       undo: "Cofnij",
       markDone: "Oznacz jako zrobione",
+      editTask: "Edytuj zadanie",
+      editingTaskBanner: "Edytujesz zadanie",
+      cancelEdit: "Anuluj",
+      saveTaskEdit: "Zapisz zmiany",
       deleteTask: "Usuń zadanie",
       hideTask: "Ukryj zadanie",
       unhideTask: "Odkryj zadanie",
@@ -2079,7 +2117,9 @@
     chipUrgent.textContent = t("chipUrgent");
     chipHabit.textContent = t("chipHabit");
     chipNewList.textContent = t("chipEdit");
-    addTaskBtnEl.setAttribute("aria-label", t("addTask"));
+    addTaskBtnEl.setAttribute("aria-label", editingTaskId ? t("saveTaskEdit") : t("addTask"));
+    editingBannerTextEl.textContent = t("editingTaskBanner");
+    cancelEditBtnEl.setAttribute("aria-label", t("cancelEdit"));
     modalTitleEl.textContent = t("modalTitle");
     closeListOverlayBtn.setAttribute("aria-label", t("close"));
     newListInput.placeholder = t("newCategoryPlaceholder");
@@ -2847,6 +2887,7 @@
       btn.className = "tab" + (email === activeTab ? " active" : "");
       btn.textContent = nameFor(email);
       btn.addEventListener("click", () => {
+        if (editingTaskId) cancelEditingTask();
         activeTab = email;
         refreshCustomListsView();
         renderTabs();
@@ -2944,6 +2985,12 @@
       if (openTaskMenuId === task.id) {
         const menu = document.createElement("div");
         menu.className = "task-menu";
+
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.innerHTML = "<span class=\"glyph\">✎</span><span>" + t("editTask") + "</span>";
+        edit.addEventListener("click", () => { closeTaskMenu(); startEditingTask(task); });
+        menu.appendChild(edit);
 
         const top = document.createElement("button");
         top.type = "button";
@@ -3366,13 +3413,78 @@
     }
   }
 
+  function updateEditingBanner() {
+    editingBannerEl.hidden = !editingTaskId;
+    addTaskBtnEl.textContent = editingTaskId ? "✔" : "+";
+    addTaskBtnEl.setAttribute("aria-label", editingTaskId ? t("saveTaskEdit") : t("addTask"));
+  }
+
+  function startEditingTask(task) {
+    editingTaskId = task.id;
+    inputEl.value = task.text;
+    composerImportant = !!task.important;
+    composerUrgent = !!task.urgent;
+    composerHabit = !!task.isHabit;
+    composerHidden = !!task.hidden;
+    selectedCustomListId = task.customListId || null;
+    chipImportant.classList.toggle("on", composerImportant);
+    chipUrgent.classList.toggle("on", composerUrgent);
+    chipHabit.classList.toggle("on", composerHabit);
+    chipHidden.classList.toggle("on", composerHidden);
+    renderCustomChips();
+    updateEditingBanner();
+    inputEl.focus();
+    inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+  }
+
+  function cancelEditingTask() {
+    editingTaskId = null;
+    inputEl.value = "";
+    composerImportant = false;
+    composerUrgent = false;
+    composerHabit = false;
+    composerHidden = false;
+    selectedCustomListId = null;
+    chipImportant.classList.remove("on");
+    chipUrgent.classList.remove("on");
+    chipHabit.classList.remove("on");
+    chipHidden.classList.remove("on");
+    renderCustomChips();
+    updateEditingBanner();
+  }
+
+  cancelEditBtnEl.addEventListener("click", cancelEditingTask);
+
   formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = inputEl.value.trim();
     if (!text || !myEmail || !activeTab) return;
-    inputEl.value = "";
     const selectedList = customLists.find(l => l.id === selectedCustomListId);
     const isSharedTask = !!(selectedList && selectedList.sharedType);
+
+    if (editingTaskId) {
+      const taskId = editingTaskId;
+      const updates = {
+        text,
+        important: composerImportant,
+        urgent: composerUrgent,
+        isHabit: composerHabit,
+        customListId: selectedCustomListId,
+        hidden: composerHidden,
+        order: Date.now(),
+        ownerEmail: isSharedTask ? "shared" : activeTab
+      };
+      updates.members = isSharedTask ? selectedList.members : myMembers(composerHidden);
+      try {
+        await updateDoc(doc(db, "tasks", taskId), updates);
+        cancelEditingTask();
+      } catch (e2) {
+        showStatus(t("errSaveChange"));
+      }
+      return;
+    }
+
+    inputEl.value = "";
     const bucketKey = !composerImportant ? "other" : (composerUrgent ? "importantUrgent" : "mostImportant");
     const defaultHidden = !selectedListAllowsHide()
       ? false
