@@ -1794,6 +1794,7 @@
     <p id="calendarDayLabel">—</p>
     <ul class="calendar-day-list" id="calendarDayList"></ul>
     <p class="calendar-day-empty" id="calendarDayEmpty" hidden></p>
+    <button type="button" class="reset-order-btn" id="calendarAddForDayBtn">+ Add for this day</button>
   </div>
 </div>
 
@@ -2003,6 +2004,7 @@
   const calendarDayLabelEl = document.getElementById("calendarDayLabel");
   const calendarDayListEl = document.getElementById("calendarDayList");
   const calendarDayEmptyEl = document.getElementById("calendarDayEmpty");
+  const calendarAddForDayBtnEl = document.getElementById("calendarAddForDayBtn");
 
   const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
@@ -2086,6 +2088,7 @@
       calendarPrev: "Previous month",
       calendarNext: "Next month",
       calendarDayEmpty: "Nothing scheduled for this day.",
+      calendarAddForDay: "+ Add for this day",
       errScheduleDate: "Pick a date first.",
       errScheduleTimePast: "That time has already passed today — pick a later time, or a different day.",
       renewsIn: "Renews in {n} {unit}",
@@ -2257,6 +2260,7 @@
       calendarPrev: "Poprzedni miesiąc",
       calendarNext: "Następny miesiąc",
       calendarDayEmpty: "Nic zaplanowanego na ten dzień.",
+      calendarAddForDay: "+ Dodaj na ten dzień",
       errScheduleDate: "Najpierw wybierz datę.",
       errScheduleTimePast: "Ta godzina już dziś minęła — wybierz późniejszą godzinę albo inny dzień.",
       renewsIn: "Odnowi się za {n} {unit}",
@@ -2650,6 +2654,7 @@
     closeCalendarOverlayBtn.setAttribute("aria-label", t("close"));
     calendarPrevBtnEl.setAttribute("aria-label", t("calendarPrev"));
     calendarNextBtnEl.setAttribute("aria-label", t("calendarNext"));
+    calendarAddForDayBtnEl.textContent = t("calendarAddForDay");
     if (!calendarOverlay.hidden) renderCalendarOverlay();
     appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
@@ -3481,6 +3486,18 @@
     }
   }
 
+  function switchToTab(email) {
+    if (editingTaskId) cancelEditingTask();
+    activeTab = email;
+    refreshCustomListsView();
+    renderTabs();
+    renderList();
+    renderStats();
+    updateComposerPlaceholder();
+    subscribeStats(email);
+    subscribeActiveUiState(email);
+  }
+
   function renderTabs() {
     tabsEl.innerHTML = "";
     const emails = [...roster.map(p => p.email).filter(e => e !== myEmail), myEmail];
@@ -3491,17 +3508,7 @@
       btn.type = "button";
       btn.className = "tab" + (email === activeTab ? " active" : "");
       btn.textContent = nameFor(email);
-      btn.addEventListener("click", () => {
-        if (editingTaskId) cancelEditingTask();
-        activeTab = email;
-        refreshCustomListsView();
-        renderTabs();
-        renderList();
-        renderStats();
-        updateComposerPlaceholder();
-        subscribeStats(email);
-        subscribeActiveUiState(email);
-      });
+      btn.addEventListener("click", () => switchToTab(email));
       return btn;
     }
 
@@ -4474,6 +4481,17 @@
     calendarViewMonth++;
     if (calendarViewMonth > 11) { calendarViewMonth = 0; calendarViewYear++; }
     renderCalendarOverlay();
+  });
+
+  calendarAddForDayBtnEl.addEventListener("click", () => {
+    // The calendar only ever shows my own schedule, so adding from here
+    // should always land on my own tab — even if a partner's tab happened
+    // to be active when the calendar was opened.
+    switchToTab(myEmail);
+    composerSchedule = { type: "once", date: calendarSelectedDate, time: null };
+    updateScheduleChipState();
+    closeCalendarOverlay();
+    inputEl.focus();
   });
 
   function maybeInitAnalytics() {
