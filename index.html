@@ -2097,6 +2097,7 @@
       scheduleClear: "No schedule",
       scheduleEvery: "every {n} {unit}",
       calendarTitle: "Calendar",
+      calendarTitleFor: "{name}'s calendar",
       calendarPrev: "Previous month",
       calendarNext: "Next month",
       calendarDayEmpty: "Nothing scheduled for this day.",
@@ -2270,6 +2271,7 @@
       scheduleClear: "Brak harmonogramu",
       scheduleEvery: "co {n} {unit}",
       calendarTitle: "Kalendarz",
+      calendarTitleFor: "Kalendarz: {name}",
       calendarPrev: "Poprzedni miesiąc",
       calendarNext: "Następny miesiąc",
       calendarDayEmpty: "Nic zaplanowanego na ten dzień.",
@@ -2519,10 +2521,13 @@
     return !task.done && s.date <= todayStr();
   }
 
-  // A calendar day's entries: for one-time tasks, just their due date. For
-  // recurring ones, every day they were ever checked off (a permanent,
-  // struck-through record you can still undo) plus today if it's currently
-  // due/overdue and not yet done. A task can appear on several days at once.
+  // A calendar day's entries for the currently active tab (mine, or my
+  // partner's when I'm viewing their tab — their hidden tasks never even
+  // reach this client, so nothing extra needs filtering here). For
+  // one-time tasks, just their due date. For recurring ones, every day
+  // they were ever checked off (a permanent, struck-through record you can
+  // still undo) plus today if it's currently due/overdue and not yet done.
+  // A task can appear on several days at once.
   function scheduledTasksByDate() {
     const map = {};
     const add = (dateStr, task, doneHere) => {
@@ -2530,7 +2535,7 @@
       (map[dateStr] = map[dateStr] || []).push({ task, doneHere });
     };
     for (const t2 of tasks) {
-      if (t2.ownerEmail !== myEmail || !t2.schedule) continue;
+      if (t2.ownerEmail !== activeTab || !t2.schedule) continue;
       const s = t2.schedule;
       if (s.type === "once") {
         add(s.date, t2, !!t2.done);
@@ -2664,7 +2669,6 @@
     scheduleClearBtnEl.textContent = t("scheduleClear");
     scheduleSaveBtnEl.textContent = t("save");
     openCalendarBtnEl.setAttribute("aria-label", t("calendarTitle"));
-    calendarTitleEl.textContent = t("calendarTitle");
     closeCalendarOverlayBtn.setAttribute("aria-label", t("close"));
     calendarPrevBtnEl.setAttribute("aria-label", t("calendarPrev"));
     calendarNextBtnEl.setAttribute("aria-label", t("calendarNext"));
@@ -4377,6 +4381,7 @@
   }
 
   function renderCalendarOverlay() {
+    calendarTitleEl.textContent = isMyTab() ? t("calendarTitle") : t("calendarTitleFor", { name: nameFor(activeTab) });
     calendarMonthLabelEl.textContent = new Intl.DateTimeFormat(currentLang === "pl" ? "pl-PL" : "en-US", {
       month: "long", year: "numeric", timeZone: "UTC"
     }).format(new Date(Date.UTC(calendarViewYear, calendarViewMonth, 1)));
@@ -4428,23 +4433,34 @@
       return timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
     });
     calendarDayLabelEl.textContent = formatScheduleDate(calendarSelectedDate, null);
+    const canEditDay = isMyTab();
     calendarDayListEl.innerHTML = "";
     for (const entry of dayEntries) {
       const t2 = entry.task;
       const li = document.createElement("li");
       li.className = entry.doneHere ? "done" : "";
 
-      const check = document.createElement("button");
-      check.type = "button";
-      check.className = "check";
-      check.setAttribute("aria-label", entry.doneHere ? t("undo") : t("markDone"));
-      check.innerHTML = checkIcon;
-      check.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
-      li.appendChild(check);
+      if (canEditDay) {
+        const check = document.createElement("button");
+        check.type = "button";
+        check.className = "check";
+        check.setAttribute("aria-label", entry.doneHere ? t("undo") : t("markDone"));
+        check.innerHTML = checkIcon;
+        check.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
+        li.appendChild(check);
+      } else {
+        const dot = document.createElement("span");
+        dot.className = "readonly-dot";
+        li.appendChild(dot);
+      }
 
       const content = document.createElement("div");
       content.className = "day-item-content";
-      content.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
+      if (canEditDay) {
+        content.addEventListener("click", () => handleCalendarToggle(entry, calendarSelectedDate));
+      } else {
+        content.style.cursor = "default";
+      }
 
       if (t2.schedule.time) {
         const timeBadge = document.createElement("span");
@@ -4503,10 +4519,11 @@
   });
 
   calendarAddForDayBtnEl.addEventListener("click", () => {
-    // The calendar only ever shows my own schedule, so adding from here
-    // should always land on my own tab — even if a partner's tab happened
-    // to be active when the calendar was opened.
-    switchToTab(myEmail);
+    // The calendar now shows whichever tab is active — mine, or my
+    // partner's when I'm looking at their tab — and adding follows the
+    // same rule the composer already uses: it lands on whoever's tab is
+    // currently open, exactly like typing a new task there directly would.
+    if (editingTaskId) cancelEditingTask();
     composerSchedule = { type: "once", date: calendarSelectedDate, time: null };
     updateScheduleChipState();
     closeCalendarOverlay();
