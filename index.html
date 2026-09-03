@@ -3782,8 +3782,8 @@
     const rest = untagged.filter(t2 => !t2.important);
 
     const builtinDefs = [
-      { key: "mostImportant", titleKey: "sectionMostImportant", tasks: q2, featured: true, muted: false, collapseKey: undefined },
-      { key: "importantUrgent", titleKey: "sectionImportantUrgent", tasks: q1, featured: false, muted: false, collapseKey: undefined },
+      { key: "mostImportant", titleKey: "sectionMostImportant", tasks: q2, featured: true, muted: false, collapseKey: "mostImportant" },
+      { key: "importantUrgent", titleKey: "sectionImportantUrgent", tasks: q1, featured: false, muted: false, collapseKey: "importantUrgent" },
       { key: "other", titleKey: "sectionOther", tasks: rest, featured: false, muted: true, collapseKey: "rest" }
     ];
 
