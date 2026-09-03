@@ -1330,15 +1330,17 @@
   .calendar-day {
     position: relative;
     aspect-ratio: 1;
+    width: 78%;
+    margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 6px;
     color: var(--text);
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.74rem;
     cursor: pointer;
   }
 
@@ -1548,7 +1550,7 @@
       </div>
       <div class="chip-row" id="chipRow">
         <button type="button" class="chip hidden" id="chipHidden" aria-label="Add as hidden">🙈</button>
-        <button type="button" class="chip schedule" id="chipSchedule" aria-label="Schedule">📅<span class="chip-badge-dot" id="scheduleBadgeDot" hidden></span></button>
+        <button type="button" class="chip schedule" id="chipSchedule" aria-label="Schedule">📅</button>
         <button type="button" class="chip important" id="chipImportant">Important</button>
         <button type="button" class="chip urgent" id="chipUrgent">Urgent</button>
         <button type="button" class="chip habit" id="chipHabit">🔁 Habit</button>
@@ -1914,7 +1916,6 @@
   const pairRedeemDescEl = document.getElementById("pairRedeemDesc");
   const pairTitleEl = document.getElementById("pairTitle");
   const chipScheduleEl = document.getElementById("chipSchedule");
-  const scheduleBadgeDotEl = document.getElementById("scheduleBadgeDot");
   const openCalendarBtnEl = document.getElementById("openCalendarBtn");
   const calendarBtnBadgeDotEl = document.getElementById("calendarBtnBadgeDot");
   const scheduleOverlay = document.getElementById("scheduleOverlay");
@@ -2859,7 +2860,6 @@
 
   function updateScheduleBadgeDot() {
     const hasDueToday = tasks.some(t2 => t2.ownerEmail === myEmail && t2.schedule && isScheduleDueToday(t2));
-    scheduleBadgeDotEl.hidden = !hasDueToday;
     calendarBtnBadgeDotEl.hidden = !hasDueToday;
   }
 
