@@ -675,6 +675,29 @@
     animation: rise 0.2s ease-out;
   }
 
+  .confirm-sheet {
+    position: fixed;
+    left: 50%;
+    bottom: 96px;
+    transform: translateX(-50%);
+    max-width: 420px;
+    width: calc(100% - 40px);
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    box-shadow: var(--shadow);
+    z-index: 60;
+    animation: rise 0.2s ease-out;
+  }
+
+  .confirm-sheet p { margin: 0 0 12px; }
+
+  .confirm-sheet-actions { display: flex; gap: 10px; }
+  .confirm-sheet-actions button { flex: 1; }
+
   main {
     flex: 1;
     padding: 16px 20px 150px;
@@ -737,8 +760,7 @@
 
   .group.muted .group-title,
   .group.muted .task-text,
-  .group.muted .task-tags,
-  .group.muted .task-menu-wrap {
+  .group.muted .task-tags {
     opacity: 0.72;
   }
 
@@ -772,6 +794,7 @@
     font-size: 0.95em;
     padding: 0 2px;
     line-height: 1;
+    margin-right: 14px;
   }
 
   .info-btn:hover { color: var(--accent); }
@@ -1698,7 +1721,7 @@
       </div>
       <form id="form">
         <button type="button" class="composer-icon-btn" id="openCalendarBtn" aria-label="Calendar">📅<span class="chip-badge-dot" id="calendarBtnBadgeDot" hidden></span></button>
-        <input id="input" type="text" autocomplete="off" maxlength="200">
+        <input id="input" type="text" autocomplete="off" maxlength="300">
         <button type="submit" id="addTaskBtn" aria-label="Add task">+</button>
       </form>
     </div>
@@ -1716,6 +1739,7 @@
     <ul class="existing-lists" id="existingLists"></ul>
     <button type="button" class="reset-order-btn" id="resetOrderBtn">Reset default order</button>
     <form id="newListForm">
+      <p id="newListFormLabel" class="gate-hint">Choose emoji and category name</p>
       <div class="list-form-row">
         <select id="newListIcon" aria-label="Category icon"></select>
         <input id="newListInput" type="text" placeholder="New category name" autocomplete="off" maxlength="40">
@@ -1919,6 +1943,22 @@
 
 <div class="nudge" id="nudge" hidden></div>
 
+<div class="confirm-sheet" id="noCategoryConfirm" hidden>
+  <p id="noCategoryConfirmText">Add this without a category? It'll go to "Other".</p>
+  <div class="confirm-sheet-actions">
+    <button type="button" class="secondary-btn" id="noCategoryConfirmCancel">Cancel</button>
+    <button type="button" class="primary-btn" id="noCategoryConfirmOk">Add anyway</button>
+  </div>
+</div>
+
+<div class="confirm-sheet" id="partnerConfirm" hidden>
+  <p id="partnerConfirmText">Add this for your partner too?</p>
+  <div class="confirm-sheet-actions">
+    <button type="button" class="secondary-btn" id="partnerConfirmCancel">Cancel</button>
+    <button type="button" class="primary-btn" id="partnerConfirmOk">Yes, add it</button>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
@@ -2056,6 +2096,7 @@
   const newListForm = document.getElementById("newListForm");
   const newListInput = document.getElementById("newListInput");
   const newListIconEl = document.getElementById("newListIcon");
+  const newListFormLabelEl = document.getElementById("newListFormLabel");
   const modalErrorEl = document.getElementById("modalError");
   const modalTitleEl = document.getElementById("modalTitle");
   const existingListsEl = document.getElementById("existingLists");
@@ -2106,6 +2147,14 @@
   const editingBannerEl = document.getElementById("editingBanner");
   const editingBannerTextEl = document.getElementById("editingBannerText");
   const cancelEditBtnEl = document.getElementById("cancelEditBtn");
+  const noCategoryConfirmEl = document.getElementById("noCategoryConfirm");
+  const noCategoryConfirmTextEl = document.getElementById("noCategoryConfirmText");
+  const noCategoryConfirmOkEl = document.getElementById("noCategoryConfirmOk");
+  const noCategoryConfirmCancelEl = document.getElementById("noCategoryConfirmCancel");
+  const partnerConfirmEl = document.getElementById("partnerConfirm");
+  const partnerConfirmTextEl = document.getElementById("partnerConfirmText");
+  const partnerConfirmOkEl = document.getElementById("partnerConfirmOk");
+  const partnerConfirmCancelEl = document.getElementById("partnerConfirmCancel");
   const pairOverlay = document.getElementById("pairOverlay");
   const pairErrorEl = document.getElementById("pairError");
   const pairCodeBoxEl = document.getElementById("pairCodeBox");
@@ -2206,10 +2255,18 @@
       chipUrgent: "Urgent",
       chipHabit: "🔁 Habit",
       chipHidden: "Add as hidden",
+      hiddenNoPartnerInfo: "You don't need to hide anything - you're not connected to a partner account yet.",
+      noCategoryConfirmText: "Add this without a category? It'll go into \"Other\".",
+      noCategoryConfirmOk: "Add anyway",
+      noCategoryConfirmCancel: "Cancel",
+      partnerConfirmText: "You're adding this for {name}, not for yourself - continue?",
+      partnerConfirmOk: "Yes, add it",
+      partnerConfirmCancel: "Cancel",
       chipEdit: "Edit",
       addTask: "Add task",
       modalTitle: "Settings",
       close: "Close",
+      newListFormLabel: "Choose emoji and category name",
       newCategoryPlaceholder: "New category name",
       categoryIcon: "Category icon",
       add: "Add",
@@ -2363,6 +2420,7 @@
       cancelEdit: "Cancel",
       saveTaskEdit: "Save changes",
       deleteTask: "Delete task",
+      addedForPartnerInfo: "Added for {name}. Made a mistake? You can remove it within the next hour.",
       hideTask: "Hide task",
       unhideTask: "Unhide task",
       moveTaskDown: "Move task down",
@@ -2379,7 +2437,7 @@
       day: "day",
       days: "days",
       habitPlain: "🔁 habit",
-      sectionMostImportant: "🎯 Most important (important, not urgent)",
+      sectionMostImportant: "🎯 Important (not urgent)",
       sectionImportantUrgent: "Important & urgent",
       sectionUrgentNotImportant: "Urgent (not important)",
       sectionOther: "Other",
@@ -2429,10 +2487,18 @@
       chipUrgent: "Pilne",
       chipHabit: "🔁 Nawyk",
       chipHidden: "Dodaj jako ukryte",
+      hiddenNoPartnerInfo: "Nie musisz nic ukrywać - nie jesteś jeszcze połączony/a z kontem partnera.",
+      noCategoryConfirmText: "Dodać to bez kategorii? Trafi do „Pozostałe”.",
+      noCategoryConfirmOk: "Dodaj mimo to",
+      noCategoryConfirmCancel: "Anuluj",
+      partnerConfirmText: "Dodajesz to dla {name}, nie dla siebie - kontynuować?",
+      partnerConfirmOk: "Tak, dodaj",
+      partnerConfirmCancel: "Anuluj",
       chipEdit: "Edytuj",
       addTask: "Dodaj zadanie",
       modalTitle: "Ustawienia",
       close: "Zamknij",
+      newListFormLabel: "Wybierz emoji i nazwę kategorii",
       newCategoryPlaceholder: "Nazwa nowej kategorii",
       categoryIcon: "Ikonka kategorii",
       add: "Dodaj",
@@ -2586,6 +2652,7 @@
       cancelEdit: "Anuluj",
       saveTaskEdit: "Zapisz zmiany",
       deleteTask: "Usuń zadanie",
+      addedForPartnerInfo: "Dodano dla {name}. Pomyłka? Możesz to usunąć w ciągu godziny.",
       hideTask: "Ukryj zadanie",
       unhideTask: "Odkryj zadanie",
       moveTaskDown: "Przenieś zadanie niżej",
@@ -2602,7 +2669,7 @@
       day: "dzień",
       days: "dni",
       habitPlain: "🔁 nawyk",
-      sectionMostImportant: "🎯 Najważniejsze (ważne, niepilne)",
+      sectionMostImportant: "🎯 Ważne (niepilne)",
       sectionImportantUrgent: "Ważne i pilne",
       sectionUrgentNotImportant: "Pilne (niekonieczne ważne)",
       sectionOther: "Pozostałe",
@@ -2920,11 +2987,17 @@
     chipNewList.textContent = t("chipEdit");
     addTaskBtnEl.setAttribute("aria-label", editingTaskId ? t("saveTaskEdit") : t("addTask"));
     editingBannerTextEl.textContent = t("editingTaskBanner");
+    noCategoryConfirmTextEl.textContent = t("noCategoryConfirmText");
+    noCategoryConfirmOkEl.textContent = t("noCategoryConfirmOk");
+    noCategoryConfirmCancelEl.textContent = t("noCategoryConfirmCancel");
+    partnerConfirmOkEl.textContent = t("partnerConfirmOk");
+    partnerConfirmCancelEl.textContent = t("partnerConfirmCancel");
     cancelEditBtnEl.setAttribute("aria-label", t("cancelEdit"));
     modalTitleEl.textContent = t("modalTitle");
     closeListOverlayBtn.setAttribute("aria-label", t("close"));
     newListInput.placeholder = t("newCategoryPlaceholder");
     newListIconEl.setAttribute("aria-label", t("categoryIcon"));
+    newListFormLabelEl.textContent = t("newListFormLabel");
     addListBtnEl.textContent = t("add");
     resetOrderBtnEl.textContent = t("resetOrder");
     manageConsentBtnEl.textContent = t("manageConsent");
@@ -3032,6 +3105,10 @@
     "🧠", "💊", "🚿", "🧺", "👶",
     "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟", "🔢"
   ];
+
+  function randomCategoryIcon() {
+    return CATEGORY_ICONS[Math.floor(Math.random() * CATEGORY_ICONS.length)];
+  }
 
   function populateIconSelect(selectEl, selected) {
     selectEl.innerHTML = "";
@@ -3916,6 +3993,17 @@
       }
 
       li.appendChild(menuWrap);
+    } else if (task.createdByEmail === myEmail && task.createdAt && (Date.now() - task.createdAt) < 3600000) {
+      // Something I added to my partner's list, still within the 1-hour
+      // "undo a mistake" window - a direct trash icon since there's no ⋯
+      // menu at all on someone else's tab.
+      const undoDelete = document.createElement("button");
+      undoDelete.className = "delete";
+      undoDelete.type = "button";
+      undoDelete.setAttribute("aria-label", t("deleteTask"));
+      undoDelete.innerHTML = trashIcon;
+      undoDelete.addEventListener("click", (e) => { e.stopPropagation(); deleteTask(task.id); });
+      li.appendChild(undoDelete);
     }
 
     return li;
@@ -4543,6 +4631,30 @@
       return;
     }
 
+    const addingForPartner = !isSharedTask && !isMyTab();
+    if (addingForPartner) {
+      partnerConfirmTextEl.textContent = t("partnerConfirmText", { name: nameFor(activeTab) });
+      partnerConfirmEl.hidden = false;
+      pendingSubmitAfterPartnerConfirm = () => afterPartnerConfirm(text, selectedList, isSharedTask);
+      return;
+    }
+    afterPartnerConfirm(text, selectedList, isSharedTask);
+  });
+
+  let pendingSubmitAfterPartnerConfirm = null;
+  let pendingSubmitAfterCategoryConfirm = null;
+
+  function afterPartnerConfirm(text, selectedList, isSharedTask) {
+    const noCategory = !selectedCustomListId && !composerImportant && !composerUrgent;
+    if (noCategory) {
+      noCategoryConfirmEl.hidden = false;
+      pendingSubmitAfterCategoryConfirm = () => proceedAddTask(text, selectedList, isSharedTask);
+      return;
+    }
+    proceedAddTask(text, selectedList, isSharedTask);
+  }
+
+  async function proceedAddTask(text, selectedList, isSharedTask) {
     inputEl.value = "";
     const bucketKey = composerImportant
       ? (composerUrgent ? "importantUrgent" : "mostImportant")
@@ -4574,9 +4686,27 @@
       await addDoc(collection(db, "tasks"), taskData);
       composerSchedule = null;
       updateScheduleChipState();
+      if (!isSharedTask && !isMyTab()) showStatus(t("addedForPartnerInfo", { name: nameFor(activeTab) }));
     } catch (e) {
       showStatus(t("errAddTask"));
     }
+  }
+
+  partnerConfirmOkEl.addEventListener("click", () => {
+    partnerConfirmEl.hidden = true;
+    if (pendingSubmitAfterPartnerConfirm) { const fn = pendingSubmitAfterPartnerConfirm; pendingSubmitAfterPartnerConfirm = null; fn(); }
+  });
+  partnerConfirmCancelEl.addEventListener("click", () => {
+    partnerConfirmEl.hidden = true;
+    pendingSubmitAfterPartnerConfirm = null;
+  });
+  noCategoryConfirmOkEl.addEventListener("click", () => {
+    noCategoryConfirmEl.hidden = true;
+    if (pendingSubmitAfterCategoryConfirm) { const fn = pendingSubmitAfterCategoryConfirm; pendingSubmitAfterCategoryConfirm = null; fn(); }
+  });
+  noCategoryConfirmCancelEl.addEventListener("click", () => {
+    noCategoryConfirmEl.hidden = true;
+    pendingSubmitAfterCategoryConfirm = null;
   });
 
   clearDoneEl.addEventListener("click", async () => {
@@ -4590,7 +4720,10 @@
       if (key === "important") composerImportant = !composerImportant;
       if (key === "urgent") composerUrgent = !composerUrgent;
       if (key === "habit") composerHabit = !composerHabit;
-      if (key === "hidden") composerHidden = !composerHidden;
+      if (key === "hidden") {
+        composerHidden = !composerHidden;
+        if (!myPartnerEmail) showStatus(t("hiddenNoPartnerInfo"));
+      }
       chipEl.classList.toggle("on");
     });
   }
@@ -4959,7 +5092,7 @@
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = t("onbFirstTaskPlaceholder");
-    input.maxLength = 200;
+    input.maxLength = 300;
     input.style.marginBottom = "10px";
     onboardingBodyEl.appendChild(input);
 
@@ -5213,7 +5346,7 @@
 
   function openListOverlay() {
     newListInput.value = "";
-    populateIconSelect(newListIconEl, "");
+    populateIconSelect(newListIconEl, randomCategoryIcon());
     modalErrorEl.hidden = true;
     editingListId = null;
     renderExistingLists();
@@ -5279,7 +5412,7 @@
         createdAt: Date.now()
       });
       newListInput.value = "";
-      populateIconSelect(newListIconEl, "");
+      populateIconSelect(newListIconEl, randomCategoryIcon());
     } catch (e) {
       showModalError(e);
     }
