@@ -30,7 +30,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(clients.openWindow(link));
 });
 
-const CACHE_NAME = "dodaily-shell-v1";
+const CACHE_NAME = "dodaily-shell-v2";
 const APP_SHELL = [
   "./index.html",
   "./icons/icon-192.png",
@@ -64,21 +64,16 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req).catch(() => caches.match("./index.html"))
-    );
-    return;
-  }
-
+  // Network-first for everything, not just navigation: icons and manifest.json
+  // change on their own release cadence, separate from CACHE_NAME - a
+  // cache-first strategy here silently pins whatever version happened to be
+  // live the first time each file was fetched, until CACHE_NAME is bumped
+  // again. Only the offline fallback reaches into the cache.
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((res) => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-        return res;
-      });
-    })
+    fetch(req).then((res) => {
+      const resClone = res.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+      return res;
+    }).catch(() => caches.match(req).then((cached) => cached || (req.mode === "navigate" ? caches.match("./index.html") : Response.error())))
   );
 });
