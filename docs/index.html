@@ -613,6 +613,24 @@
     padding: 2px;
   }
 
+  #headerEditBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  #headerEditBtn svg { width: 14px; height: 14px; }
+
+  #headerEditBtn:hover { background: var(--surface-2); color: var(--accent); }
+
   .tabs {
     display: flex;
     direction: rtl;
@@ -1865,8 +1883,8 @@
     </div>
     <div class="stats-row">
       <div class="greeting">
+        <button type="button" id="headerEditBtn" aria-label="Edit"></button>
         <span id="greetingHello">Hey</span> <strong id="whoamiName">—</strong>!
-        <button type="button" id="headerEditBtn">Edit</button>
       </div>
       <div class="stats-strip-wrap">
         <div class="stats-strip" id="statsStrip"></div>
@@ -2503,6 +2521,7 @@
   const trashIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
   const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
   const eyeOffIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.6 18.6 0 0 1 4.22-5.06M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+  const menuIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
   const moreIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="2.4"></circle><circle cx="12" cy="12" r="2.4"></circle><circle cx="18.5" cy="12" r="2.4"></circle></svg>';
   const TIP_KEYS = ["tip1", "tip2", "tip3", "tip4", "tip5", "tip6"];
 
@@ -3403,7 +3422,8 @@
     if (!calendarOverlay.hidden) renderCalendarOverlay();
     appTitleEl.textContent = customTitle || t("appTitle");
     greetingHelloEl.textContent = t("greetingHello");
-    headerEditBtn.textContent = t("chipEdit");
+    headerEditBtn.setAttribute("aria-label", t("chipEdit"));
+    headerEditBtn.innerHTML = menuIcon;
     modalSignOutBtnEl.textContent = t("signOut");
     emptyGlyphEl.textContent = t("emptyGlyph");
     emptyTextEl.textContent = t("emptyText");
