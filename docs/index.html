@@ -788,21 +788,22 @@
     align-items: center;
     gap: 12px;
     width: 100%;
-    border: none;
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 14px 16px;
     cursor: pointer;
     font-family: inherit;
     text-align: left;
-    background: linear-gradient(120deg, #7B5CFA, #B45CFA 55%, #FA5C9E);
-    color: #FFFFFF;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
-  .pro-tile-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .pro-tile-icon { flex-shrink: 0; border-radius: 8px; }
+  span.pro-tile-icon { font-size: 1.4rem; }
   .pro-tile-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .pro-tile-text strong { font-size: 0.95rem; }
-  .pro-tile-text span { font-size: 0.78rem; opacity: 0.9; }
-  .pro-tile-arrow { font-size: 1.2rem; opacity: 0.85; flex-shrink: 0; }
+  .pro-tile-text span { font-size: 0.78rem; color: var(--text-muted); }
+  .pro-tile-arrow { font-size: 1.2rem; color: var(--text-muted); flex-shrink: 0; }
 
   .tip-tile {
     display: flex;
@@ -820,7 +821,6 @@
     color: var(--text);
   }
 
-  .tip-tile .pro-tile-text span { opacity: 0.75; color: var(--text-muted); }
 
   .pro-benefits { margin: 0 0 14px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .pro-benefits li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.88rem; line-height: 1.4; }
@@ -1849,7 +1849,7 @@
       <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Close">✕</button>
     </div>
     <button type="button" class="pro-tile" id="openProBtn">
-      <span class="pro-tile-icon">✨</span>
+      <img class="pro-tile-icon" src="icons/logo.svg" alt="" width="28" height="28">
       <span class="pro-tile-text">
         <strong id="proTileTitle">Tandem Pro</strong>
         <span id="proTileSubtitle">See what's coming</span>
