@@ -835,7 +835,9 @@
   .invite-item .invite-actions { display: flex; gap: 8px; }
   .invite-item .invite-actions button { flex: 1; }
   .invite-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .invite-row input { flex: 1; min-width: 90px; }
+  .invite-row input { flex: 1 1 100%; min-width: 90px; }
+  .invite-row select { flex: 1; min-width: 100px; }
+  .invite-row button { flex-shrink: 0; }
 
   .members-settings-link {
     align-self: flex-start;
@@ -2687,6 +2689,9 @@
       errInviteAlreadyMember: "This person already has access.",
       errInviteAlreadyPending: "You already invited this person - they haven't responded yet.",
       editMembersInSettings: "Edit in Settings",
+      leaveListConfirm: 'Leave "{name}"? You\'ll lose access unless someone invites you back.',
+      removeMemberConfirm: 'Remove {name} from "{list}"? They\'ll lose access right away.',
+      cancelInviteConfirm: "Cancel the invite to {email}?",
       sharedBadge: "Shared",
       notifDesc: "Push notifications.",
       notifEnableBtn: "Enable notifications",
@@ -2982,6 +2987,9 @@
       errInviteAlreadyMember: "Ta osoba już ma dostęp.",
       errInviteAlreadyPending: "Już zaprosiłeś/aś tę osobę - jeszcze nie odpowiedziała.",
       editMembersInSettings: "Edytuj w Ustawieniach",
+      leaveListConfirm: 'Opuścić "{name}"? Stracisz dostęp, chyba że ktoś zaprosi Cię ponownie.',
+      removeMemberConfirm: 'Usunąć {name} z "{list}"? Straci dostęp od razu.',
+      cancelInviteConfirm: "Anulować zaproszenie dla {email}?",
       sharedBadge: "Współdzielone",
       notifDesc: "Powiadomienia push.",
       notifEnableBtn: "Włącz powiadomienia",
@@ -4090,6 +4098,8 @@
 
   async function removeSharedMember(list, email) {
     if ((list.anchors || []).includes(email)) return;
+    const confirmMsg = email === myEmail ? t("leaveListConfirm", { name: list.name }) : t("removeMemberConfirm", { name: officialNameFor(email), list: list.name });
+    if (!confirm(confirmMsg)) return;
     try {
       await updateDoc(doc(db, "custom_lists", list.id), { members: list.members.filter(m => m !== email) });
     } catch (e) {
@@ -4920,6 +4930,7 @@
   }
 
   async function cancelInvite(invite) {
+    if (!confirm(t("cancelInviteConfirm", { email: invite.email }))) return;
     try {
       await deleteDoc(doc(db, "list_invites", invite.id));
     } catch (e) {
