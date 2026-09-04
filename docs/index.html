@@ -476,8 +476,8 @@
     border: 1px dashed var(--border);
     color: var(--text-muted);
     border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 0.72rem;
+    padding: 3px 9px;
+    font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     font-family: inherit;
@@ -646,6 +646,14 @@
     background: var(--accent);
     border-color: var(--accent);
     color: var(--accent-text);
+  }
+
+  .stats-strip-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
   }
 
   .stats-strip {
@@ -1810,8 +1818,10 @@
         <span id="greetingHello">Hey</span> <strong id="whoamiName">—</strong>!
         <button type="button" id="headerEditBtn">Edit</button>
       </div>
-      <div class="stats-strip" id="statsStrip"></div>
-      <button type="button" class="pro-badge" id="proBadgeBtn" aria-label="Tandem Pro">PRO</button>
+      <div class="stats-strip-wrap">
+        <div class="stats-strip" id="statsStrip"></div>
+        <button type="button" class="pro-badge" id="proBadgeBtn" aria-label="Tandem Pro">PRO</button>
+      </div>
     </div>
     <div class="status-note" id="statusNote"></div>
   </header>
