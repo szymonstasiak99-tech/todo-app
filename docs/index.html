@@ -830,6 +830,13 @@
   .tip-item strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
   .tip-item p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
 
+  .invite-item { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--surface-2); border-radius: 12px; }
+  .invite-item p { margin: 0; font-size: 0.88rem; }
+  .invite-item .invite-actions { display: flex; gap: 8px; }
+  .invite-item .invite-actions button { flex: 1; }
+  .invite-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .invite-row input { flex: 1; min-width: 90px; }
+
 
   .selection-summary {
     display: flex;
@@ -908,6 +915,22 @@
   }
 
   .info-btn:hover { color: var(--accent); }
+
+  .shared-badge {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.78em;
+    font-weight: 600;
+    padding: 0 4px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .shared-badge:hover { text-decoration: underline; }
 
   .group-title.collapsible:hover { background: var(--surface-2); }
 
@@ -1270,11 +1293,17 @@
   .existing-lists li > span:first-child { padding-top: 3px; }
   .existing-lists .task-menu-wrap, .existing-lists .del-list, .existing-lists .info-btn { flex-shrink: 0; }
 
-  .existing-lists li.members-panel {
+  .members-panel {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 4px 0;
     gap: 6px;
+    font-size: 0.92rem;
   }
 
   .member-row {
@@ -1925,6 +1954,9 @@
     <p id="timeZoneRow"><span id="timeZoneLabel">Time zone</span>: <strong id="timeZoneValue">—</strong></p>
     <button type="button" class="reset-order-btn" id="refreshTimeZoneBtn">Use this device's time zone</button>
     <div class="overlay-divider"></div>
+    <p id="myInviteCodeRow"><span id="myInviteCodeLabel">Your invite code</span>: <strong id="myInviteCodeValue">—</strong></p>
+    <p class="gate-hint" id="myInviteCodeHint">Share this with anyone you want to invite into a category - it never changes.</p>
+    <div class="overlay-divider"></div>
     <p id="notifDesc">Push notifications.</p>
     <div class="theme-row" id="notifMasterRow">
       <button type="button" class="theme-btn" id="notifEnableBtn">Enable notifications</button>
@@ -2012,6 +2044,14 @@
       <button type="button" class="primary-btn" id="notifPromptAccept">Enable notifications</button>
       <button type="button" class="secondary-btn" id="notifPromptDecline">Not now</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="listInviteOverlay" hidden>
+  <div class="overlay-card">
+    <h2 id="listInviteOverlayTitle">👋 You've been invited</h2>
+    <ul class="pro-benefits" id="listInviteListEl"></ul>
+    <button type="button" class="footer-link-btn" id="listInviteCloseBtn">Close</button>
   </div>
 </div>
 
@@ -2132,7 +2172,7 @@
     getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, updateDoc, doc, getDoc, getDocs, setDoc,
+    getFirestore, collection, addDoc, updateDoc, doc, getDoc, getDocs, setDoc, deleteDoc,
     onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
@@ -2187,6 +2227,11 @@
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   let myTimeZone = null;         // IANA time zone (e.g. "Europe/Warsaw"), synced via ui_state so every one of my devices agrees on "today" for habit streaks
   let myPendingInviteCode = null; // an invite code I generated that's still waiting to be redeemed, if any
+  let myPermanentInviteCode = null; // my own reusable code for inviting people to a shared category
+  let myIncomingInvites = [];   // list_invites where email === myEmail, any status (accepted ones drive self-join)
+  let mySentInvites = [];       // list_invites where invitedByEmail === myEmail (pending rows in my own lists' member panels)
+  let unsubIncomingInvites = null;
+  let unsubSentInvites = null;
   const DEFAULT_NOTIF = { enabled: false, taskReminders: true, habitReminder: true, partnerActivity: true, tokens: [] };
   let myNotif = { ...DEFAULT_NOTIF }; // push notification prefs, synced via ui_state.notif
   let messaging = null; // lazily created once the person opts in, see ensureMessaging()
@@ -2306,6 +2351,13 @@
   const replayTutorialBtnEl = document.getElementById("replayTutorialBtn");
   const timeZoneLabelEl = document.getElementById("timeZoneLabel");
   const timeZoneValueEl = document.getElementById("timeZoneValue");
+  const myInviteCodeLabelEl = document.getElementById("myInviteCodeLabel");
+  const myInviteCodeValueEl = document.getElementById("myInviteCodeValue");
+  const myInviteCodeHintEl = document.getElementById("myInviteCodeHint");
+  const listInviteOverlayEl = document.getElementById("listInviteOverlay");
+  const listInviteOverlayTitleEl = document.getElementById("listInviteOverlayTitle");
+  const listInviteListEl = document.getElementById("listInviteListEl");
+  const listInviteCloseBtnEl = document.getElementById("listInviteCloseBtn");
   const refreshTimeZoneBtnEl = document.getElementById("refreshTimeZoneBtn");
   const notifDescEl = document.getElementById("notifDesc");
   const notifEnableBtnEl = document.getElementById("notifEnableBtn");
@@ -2565,6 +2617,23 @@
       font_large: "Large",
       timeZoneDesc: "Time zone",
       refreshTimeZoneBtn: "Use this device's time zone",
+      myInviteCodeLabel: "Your invite code",
+      myInviteCodeHint: "Share this with anyone you want to invite into a category - it never changes.",
+      roleEditor: "Editor",
+      roleViewer: "Viewer",
+      invitePending: "Pending",
+      inviteByEmailOrCode: "Email or invite code",
+      inviteSend: "Send invite",
+      cancelInvite: "Cancel invite",
+      listInviteOverlayTitle: "👋 You've been invited",
+      listInviteAccept: "Accept",
+      listInviteDecline: "Decline",
+      listInviteBody: "{name} invited you to \"{listName}\" as {role}",
+      listInviteClose: "Close",
+      errInviteNotFound: "No account found with that email or code.",
+      errInviteSelf: "You can't invite yourself.",
+      errInviteAlreadyMember: "This person already has access.",
+      sharedBadge: "· Shared",
       notifDesc: "Push notifications.",
       notifEnableBtn: "Enable notifications",
       notifEnabled: "Notifications enabled",
@@ -2593,7 +2662,6 @@
       workInfo: "Your little work corner 💼 — hidden from your partner by default, so it's just for deadlines, that one email, and other 9-to-5 chaos. Feeling generous? You can unhide it for them any time from the ⋯ menu.",
       manageMembers: "Members",
       removeMember: "Remove {name}",
-      addMember: "Add a member",
       addAnotherFridge: "+ Add another fridge",
       addAnotherShopping: "+ Add another shopping list",
       listsForLabelMine: "Manage your task categories.",
@@ -2838,6 +2906,23 @@
       font_large: "Duża",
       timeZoneDesc: "Strefa czasowa",
       refreshTimeZoneBtn: "Użyj strefy czasowej tego urządzenia",
+      myInviteCodeLabel: "Twój kod zaproszenia",
+      myInviteCodeHint: "Podaj go osobie, którą chcesz zaprosić do kategorii - nigdy się nie zmienia.",
+      roleEditor: "Edytuje",
+      roleViewer: "Tylko podgląd",
+      invitePending: "Oczekuje",
+      inviteByEmailOrCode: "Mail albo kod zaproszenia",
+      inviteSend: "Wyślij zaproszenie",
+      cancelInvite: "Anuluj zaproszenie",
+      listInviteOverlayTitle: "👋 Zostałeś/aś zaproszony/a",
+      listInviteAccept: "Akceptuj",
+      listInviteDecline: "Odrzuć",
+      listInviteBody: "{name} zaprosił(a) Cię do „{listName}” z rolą: {role}",
+      listInviteClose: "Zamknij",
+      errInviteNotFound: "Nie znaleziono konta o tym mailu albo kodzie.",
+      errInviteSelf: "Nie możesz zaprosić samego/samej siebie.",
+      errInviteAlreadyMember: "Ta osoba już ma dostęp.",
+      sharedBadge: "· Współdzielone",
       notifDesc: "Powiadomienia push.",
       notifEnableBtn: "Włącz powiadomienia",
       notifEnabled: "Powiadomienia włączone",
@@ -2866,7 +2951,6 @@
       workInfo: "Twój mały zawodowy kącik 💼 — domyślnie ukryty przed drugą osobą, więc tylko dla deadline'ów, tego jednego maila i reszty biurowego chaosu. Masz ochotę się podzielić? W każdej chwili możesz go odkryć dla partnera/partnerki z menu ⋯.",
       manageMembers: "Członkowie",
       removeMember: "Usuń {name}",
-      addMember: "Dodaj osobę",
       addAnotherFridge: "+ Dodaj kolejną lodówkę",
       addAnotherShopping: "+ Dodaj kolejną listę zakupów",
       listsForLabelMine: "Zarządzaj kategoriami zadań.",
@@ -3306,6 +3390,13 @@
     fontSizeDescEl.textContent = t("fontSizeDesc");
     timeZoneLabelEl.textContent = t("timeZoneDesc");
     refreshTimeZoneBtnEl.textContent = t("refreshTimeZoneBtn");
+    myInviteCodeLabelEl.textContent = t("myInviteCodeLabel");
+    myInviteCodeHintEl.textContent = t("myInviteCodeHint");
+    listInviteOverlayTitleEl.textContent = t("listInviteOverlayTitle");
+    listInviteCloseBtnEl.textContent = t("listInviteClose");
+    renderInviteCode();
+    if (!newListOverlay.hidden) renderExistingLists();
+    renderInvitePrompt();
     notifDescEl.textContent = t("notifDesc");
     notifTaskRemindersLabelEl.textContent = t("notifTaskRemindersLabel");
     notifHabitReminderLabelEl.textContent = t("notifHabitReminderLabel");
@@ -3370,6 +3461,31 @@
   function nameFor(email) {
     const person = roster.find(p => p.email === email);
     return person ? person.name : email;
+  }
+
+  // For people outside the roster (invited to a single category, not a
+  // partner) we show their real Google/Apple name rather than a nickname
+  // either of them could have set - fetched on demand and cached, since
+  // rendering elsewhere in the app is synchronous.
+  const profileCache = {};
+  const pendingProfileFetches = new Set();
+
+  function officialNameFor(email) {
+    if (email === myEmail) return myProfile.name || email;
+    const person = roster.find(p => p.email === email);
+    if (person) return person.name;
+    const cached = profileCache[email];
+    if (cached) return cached.authDisplayName || cached.name || email;
+    if (!pendingProfileFetches.has(email)) {
+      pendingProfileFetches.add(email);
+      getDoc(doc(db, "allowed_users", email)).then((snap) => {
+        profileCache[email] = snap.exists() ? snap.data() : { name: email };
+        pendingProfileFetches.delete(email);
+        if (!newListOverlay.hidden) renderExistingLists();
+        renderList();
+      }).catch(() => { pendingProfileFetches.delete(email); });
+    }
+    return email;
   }
 
   // Single source of truth: is the currently viewed tab my own?
@@ -3647,8 +3763,14 @@
 
   function refreshCustomListsView() {
     // customLists is the tab-scoped view rendering code expects: the active
-    // tab owner's own lists, plus every shared list regardless of tab.
-    customLists = allLists.filter(l => l.ownerEmail === activeTab || l.sharedType).sort(byOrder);
+    // tab owner's own lists, every shared (fridge/shopping) list regardless
+    // of tab, and - only on my own tab - any category someone else invited
+    // me into individually (not owned by me, not a preset shared type).
+    customLists = allLists.filter(l =>
+      l.ownerEmail === activeTab
+      || l.sharedType
+      || (activeTab === myEmail && l.members && l.members.includes(myEmail))
+    ).sort(byOrder);
   }
 
   function subscribeLists() {
@@ -3755,17 +3877,85 @@
     cleanupDuplicateWorkLists();
   }
 
-  async function addSharedMember(list, email) {
-    if (!email || list.members.includes(email)) return;
-    try {
-      await updateDoc(doc(db, "custom_lists", list.id), { members: [...list.members, email] });
-    } catch (e) {
-      showModalError(e);
+  // Shared between the Settings category-editing panel and the main list's
+  // "Shared" badge popup, so both surfaces show the exact same thing.
+  function renderMembersPanel(list, canManage) {
+    const panel = document.createElement("div");
+    panel.className = "members-panel";
+    const anchors = list.anchors || [];
+    const roles = list.roles || {};
+
+    for (const email of list.members) {
+      const row = document.createElement("div");
+      row.className = "member-row";
+      const memberName = document.createElement("span");
+      let label = officialNameFor(email);
+      if (email === list.ownerEmail) label += " ★";
+      else label += " · " + (roles[email] === "viewer" ? t("roleViewer") : t("roleEditor"));
+      memberName.textContent = label;
+      row.appendChild(memberName);
+      if (!anchors.includes(email) && email !== list.ownerEmail && (canManage || email === myEmail)) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "del-list";
+        remove.setAttribute("aria-label", t("removeMember", { name: nameFor(email) }));
+        remove.textContent = "✕";
+        remove.addEventListener("click", () => removeSharedMember(list, email));
+        row.appendChild(remove);
+      }
+      panel.appendChild(row);
     }
+
+    for (const invite of mySentInvites) {
+      if (invite.listId !== list.id || invite.status !== "pending") continue;
+      const row = document.createElement("div");
+      row.className = "member-row";
+      const label = document.createElement("span");
+      label.textContent = invite.email + " · " + t("invitePending") + " · " + (invite.role === "viewer" ? t("roleViewer") : t("roleEditor"));
+      row.appendChild(label);
+      if (canManage) {
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "del-list";
+        cancel.setAttribute("aria-label", t("cancelInvite"));
+        cancel.textContent = "✕";
+        cancel.addEventListener("click", () => cancelInvite(invite));
+        row.appendChild(cancel);
+      }
+      panel.appendChild(row);
+    }
+
+    if (canManage) {
+      const addRow = document.createElement("div");
+      addRow.className = "invite-row";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = t("inviteByEmailOrCode");
+      input.maxLength = 60;
+      const roleSelect = document.createElement("select");
+      roleSelect.setAttribute("aria-label", t("roleEditor"));
+      const editorOpt = document.createElement("option");
+      editorOpt.value = "editor";
+      editorOpt.textContent = t("roleEditor");
+      const viewerOpt = document.createElement("option");
+      viewerOpt.value = "viewer";
+      viewerOpt.textContent = t("roleViewer");
+      roleSelect.append(editorOpt, viewerOpt);
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "del-list";
+      add.setAttribute("aria-label", t("inviteSend"));
+      add.textContent = "＋";
+      add.addEventListener("click", () => { inviteToList(list, input.value, roleSelect.value); input.value = ""; });
+      addRow.append(input, roleSelect, add);
+      panel.appendChild(addRow);
+    }
+
+    return panel;
   }
 
   async function removeSharedMember(list, email) {
-    if (list.anchors.includes(email)) return;
+    if ((list.anchors || []).includes(email)) return;
     try {
       await updateDoc(doc(db, "custom_lists", list.id), { members: list.members.filter(m => m !== email) });
     } catch (e) {
@@ -3966,7 +4156,7 @@
               menu.appendChild(edit);
             }
 
-            if (section.canManageMembers) {
+            if (section.canViewMembers) {
               const members = document.createElement("button");
               members.type = "button";
               members.innerHTML = "<span class=\"glyph\">👥</span><span>" + t("manageMembers") + "</span>";
@@ -3995,51 +4185,8 @@
       }
       existingListsEl.appendChild(li);
 
-      if (section.canManageMembers && editingMembersId === section.key) {
-        const panel = document.createElement("li");
-        panel.className = "members-panel";
-
-        for (const email of list.members) {
-          const row = document.createElement("div");
-          row.className = "member-row";
-          const memberName = document.createElement("span");
-          memberName.textContent = nameFor(email) + (list.anchors.includes(email) ? " ★" : "");
-          row.appendChild(memberName);
-          if (!list.anchors.includes(email)) {
-            const remove = document.createElement("button");
-            remove.type = "button";
-            remove.className = "del-list";
-            remove.setAttribute("aria-label", t("removeMember", { name: nameFor(email) }));
-            remove.textContent = "✕";
-            remove.addEventListener("click", () => removeSharedMember(list, email));
-            row.appendChild(remove);
-          }
-          panel.appendChild(row);
-        }
-
-        const addableEmails = roster.map(p => p.email).filter(e => !list.members.includes(e));
-        if (addableEmails.length > 0) {
-          const addRow = document.createElement("div");
-          addRow.className = "member-row";
-          const select = document.createElement("select");
-          select.setAttribute("aria-label", t("addMember"));
-          for (const email of addableEmails) {
-            const opt = document.createElement("option");
-            opt.value = email;
-            opt.textContent = nameFor(email);
-            select.appendChild(opt);
-          }
-          const add = document.createElement("button");
-          add.type = "button";
-          add.className = "del-list";
-          add.setAttribute("aria-label", t("addMember"));
-          add.textContent = "＋";
-          add.addEventListener("click", () => addSharedMember(list, select.value));
-          addRow.append(select, add);
-          panel.appendChild(addRow);
-        }
-
-        existingListsEl.appendChild(panel);
+      if (section.canViewMembers && editingMembersId === section.key) {
+        existingListsEl.appendChild(renderMembersPanel(list, section.canManageMembers));
       }
     });
 
@@ -4488,6 +4635,146 @@
     }
   }
 
+  function renderInviteCode() {
+    myInviteCodeValueEl.textContent = myPermanentInviteCode || "—";
+  }
+
+  // A single permanent code per person (unlike the one-time pair_invites
+  // code), so they can hand it out once and reuse it whenever someone wants
+  // to invite them into a category without needing to know their email.
+  async function ensureMyPermanentInviteCode() {
+    if (myPermanentInviteCode || !myEmail) return myPermanentInviteCode;
+    try {
+      const mine = await getDoc(doc(db, "allowed_users", myEmail));
+      if (mine.exists() && mine.data().inviteCode) {
+        myPermanentInviteCode = mine.data().inviteCode;
+        renderInviteCode();
+        return myPermanentInviteCode;
+      }
+    } catch (e) {}
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = generateInviteCode();
+      try {
+        await setDoc(doc(db, "invite_codes", code), { email: myEmail });
+        await updateDoc(doc(db, "allowed_users", myEmail), { inviteCode: code });
+        myPermanentInviteCode = code;
+        renderInviteCode();
+        return code;
+      } catch (e) {
+        // code collision (rare) - loop and try a fresh random code
+      }
+    }
+    return null;
+  }
+
+  function subscribeListInvites() {
+    if (unsubIncomingInvites) unsubIncomingInvites();
+    if (unsubSentInvites) unsubSentInvites();
+    unsubIncomingInvites = onSnapshot(query(collection(db, "list_invites"), where("email", "==", myEmail)), (snap) => {
+      myIncomingInvites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      processAcceptedInvitesSelfHeal();
+      renderInvitePrompt();
+    });
+    unsubSentInvites = onSnapshot(query(collection(db, "list_invites"), where("invitedByEmail", "==", myEmail)), (snap) => {
+      mySentInvites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!newListOverlay.hidden) renderExistingLists();
+    });
+  }
+
+  // If I've accepted an invite but the client got interrupted before the
+  // follow-up "add myself to members" write landed, this quietly finishes
+  // the job the next time invites are loaded.
+  async function processAcceptedInvitesSelfHeal() {
+    for (const invite of myIncomingInvites) {
+      if (invite.status !== "accepted") continue;
+      try {
+        const listSnap = await getDoc(doc(db, "custom_lists", invite.listId));
+        if (!listSnap.exists()) continue;
+        const listData = listSnap.data();
+        if (listData.members && listData.members.includes(myEmail)) continue;
+        await updateDoc(doc(db, "custom_lists", invite.listId), {
+          members: [...(listData.members || []), myEmail],
+          roles: { ...(listData.roles || {}), [myEmail]: invite.role }
+        });
+      } catch (e) {}
+    }
+  }
+
+  function renderInvitePrompt() {
+    const pending = myIncomingInvites.filter(i => i.status === "pending");
+    listInviteListEl.innerHTML = "";
+    for (const invite of pending) {
+      const li = document.createElement("li");
+      li.className = "invite-item";
+      const p = document.createElement("p");
+      p.textContent = t("listInviteBody", {
+        name: invite.invitedByName || invite.invitedByEmail,
+        listName: (invite.listIcon ? invite.listIcon + " " : "") + invite.listName,
+        role: invite.role === "viewer" ? t("roleViewer") : t("roleEditor")
+      });
+      const actions = document.createElement("div");
+      actions.className = "invite-actions";
+      const accept = document.createElement("button");
+      accept.type = "button";
+      accept.className = "primary-btn";
+      accept.textContent = t("listInviteAccept");
+      accept.addEventListener("click", () => respondToInvite(invite, true));
+      const decline = document.createElement("button");
+      decline.type = "button";
+      decline.className = "secondary-btn";
+      decline.textContent = t("listInviteDecline");
+      decline.addEventListener("click", () => respondToInvite(invite, false));
+      actions.append(accept, decline);
+      li.append(p, actions);
+      listInviteListEl.appendChild(li);
+    }
+    listInviteOverlayEl.hidden = pending.length === 0;
+  }
+
+  async function respondToInvite(invite, accept) {
+    try {
+      await updateDoc(doc(db, "list_invites", invite.id), { status: accept ? "accepted" : "declined" });
+      if (accept) await processAcceptedInvitesSelfHeal();
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  listInviteCloseBtnEl.addEventListener("click", () => { listInviteOverlayEl.hidden = true; });
+
+  async function inviteToList(list, emailOrCode, role) {
+    const raw = emailOrCode.trim();
+    if (!raw) return;
+    try {
+      let targetEmail = raw.includes("@") ? raw.toLowerCase() : null;
+      if (!targetEmail) {
+        const codeSnap = await getDoc(doc(db, "invite_codes", raw.toUpperCase()));
+        if (!codeSnap.exists()) { showModalError({ code: "not-found", message: t("errInviteNotFound") }); return; }
+        targetEmail = codeSnap.data().email;
+      }
+      if (targetEmail === myEmail) { showModalError({ code: "self", message: t("errInviteSelf") }); return; }
+      if (list.members.includes(targetEmail)) { showModalError({ code: "already-member", message: t("errInviteAlreadyMember") }); return; }
+      const targetSnap = await getDoc(doc(db, "allowed_users", targetEmail));
+      if (!targetSnap.exists()) { showModalError({ code: "not-found", message: t("errInviteNotFound") }); return; }
+      const inviteId = list.id + "_" + targetEmail;
+      await setDoc(doc(db, "list_invites", inviteId), {
+        listId: list.id, listName: list.name, listIcon: list.icon || "",
+        email: targetEmail, invitedByEmail: myEmail, invitedByName: myProfile.name,
+        role, status: "pending", createdAt: Date.now()
+      });
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
+  async function cancelInvite(invite) {
+    try {
+      await deleteDoc(doc(db, "list_invites", invite.id));
+    } catch (e) {
+      showModalError(e);
+    }
+  }
+
   function generateInviteCode() {
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O/1/I/L — easy to read aloud or type
     let code = "";
@@ -4669,11 +4956,12 @@
         collapseKey: list.id,
         hidden: !!list.hidden,
         selfHidden: !!(myHiddenCategories && myHiddenCategories[list.id]),
-        canManage: isShared ? true : isMine,
+        canManage: isMine,
         canHideOthers: !isShared,
-        canEditNameIcon: true,
-        canDelete: true,
-        canManageMembers: isShared
+        canEditNameIcon: list.ownerEmail === myEmail,
+        canDelete: list.ownerEmail === myEmail,
+        canManageMembers: list.ownerEmail === myEmail,
+        canViewMembers: list.ownerEmail === myEmail || (list.members && list.members.length > 1)
       };
     });
 
@@ -4721,7 +5009,7 @@
     }
   }
 
-  function renderGroup(title, list, isMine, muted, featured, collapseKey, infoType) {
+  function renderGroup(title, list, isMine, muted, featured, collapseKey, infoType, listObj, canManageMembers) {
     if (list.length === 0) return null;
     const group = document.createElement("div");
     group.className = "group" + (muted ? " muted" : "");
@@ -4731,6 +5019,19 @@
     const label = document.createElement("span");
     label.textContent = title;
     titleEl.appendChild(label);
+
+    if (listObj && listObj.members && listObj.members.length > 1) {
+      const sharedBtn = document.createElement("button");
+      sharedBtn.type = "button";
+      sharedBtn.className = "shared-badge";
+      sharedBtn.textContent = t("sharedBadge");
+      sharedBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        editingMembersId = editingMembersId === listObj.id ? null : listObj.id;
+        renderList();
+      });
+      titleEl.appendChild(sharedBtn);
+    }
 
     if (infoType) {
       const info = document.createElement("button");
@@ -4746,6 +5047,9 @@
       const ul = document.createElement("ul");
       list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
       group.append(titleEl, ul);
+      if (listObj && editingMembersId === listObj.id) {
+        group.appendChild(renderMembersPanel(listObj, canManageMembers));
+      }
       return group;
     }
 
@@ -4773,6 +5077,9 @@
       list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
       group.appendChild(ul);
     }
+    if (listObj && editingMembersId === listObj.id) {
+      group.appendChild(renderMembersPanel(listObj, canManageMembers));
+    }
     return group;
   }
 
@@ -4782,7 +5089,9 @@
     const isMine = isMyTab();
     clearDoneEl.hidden = true;
 
-    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab || (t2.customListId && allLists.some(l => l.id === t2.customListId && l.sharedType)));
+    const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab || (t2.customListId && allLists.some(l =>
+      l.id === t2.customListId && (l.sharedType || (activeTab === myEmail && l.members && l.members.includes(myEmail)))
+    )));
     emptyEl.hidden = tabTasks.length > 0;
 
     const sections = getSections(tabTasks, isMine);
@@ -4791,7 +5100,7 @@
       const displayTitle = section.displayTitle;
       const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
       const infoType = section.kind === "shared" ? section.list.sharedType : (section.list && section.list.presetType === "work" ? "work" : null);
-      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, infoType);
+      const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, infoType, section.list, section.canManageMembers);
       if (g) groupsEl.appendChild(g);
     }
 
@@ -5872,11 +6181,11 @@
         await updateDoc(inviteRef, { consumedBy: currentUser.email });
         partnerEmail = inviteSnap.data().fromEmail;
         await setDoc(doc(db, "allowed_users", currentUser.email), {
-          name, partnerEmail, pairedViaCode: codeRaw, createdAt: Date.now()
+          name, partnerEmail, pairedViaCode: codeRaw, createdAt: Date.now(), authDisplayName: currentUser.displayName || name
         });
       } else {
         await setDoc(doc(db, "allowed_users", currentUser.email), {
-          name, partnerEmail: null, createdAt: Date.now()
+          name, partnerEmail: null, createdAt: Date.now(), authDisplayName: currentUser.displayName || name
         });
       }
       enterApp({ name, partnerEmail });
@@ -5942,6 +6251,9 @@
       if (!snap.exists()) return;
       const data = snap.data();
       myProfile = { name: data.name || myEmail };
+      if (!data.authDisplayName && currentUser && currentUser.displayName) {
+        updateDoc(doc(db, "allowed_users", myEmail), { authDisplayName: currentUser.displayName }).catch(() => {});
+      }
       const newPartnerEmail = data.partnerEmail || null;
       const justPaired = !myPartnerEmail && !!newPartnerEmail;
       if (newPartnerEmail !== myPartnerEmail) {
@@ -5976,6 +6288,8 @@
     subscribeStats(myEmail);
     subscribeUiState(myEmail);
     subscribeActiveUiState(myEmail);
+    ensureMyPermanentInviteCode();
+    subscribeListInvites();
   }
 
   onAuthStateChanged(auth, async (user) => {
