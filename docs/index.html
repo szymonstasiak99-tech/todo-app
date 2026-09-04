@@ -830,22 +830,6 @@
   .tip-item strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
   .tip-item p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
 
-  .matrix-explainer { margin: 4px 0 12px; }
-  .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .matrix-cell {
-    background: var(--surface-2);
-    border-radius: 10px;
-    padding: 10px 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-    font-size: 0.74rem;
-    color: var(--text-muted);
-    line-height: 1.3;
-  }
-  .matrix-emoji { font-size: 1.3rem; }
 
   .selection-summary {
     display: flex;
@@ -1883,31 +1867,9 @@
     <div class="overlay-divider"></div>
     <p class="error-text" id="modalError" hidden></p>
     <p id="listsForLabel">Your task categories.</p>
-    <button type="button" class="footer-link-btn" id="showMatrixBtn">How are tasks sorted into these?</button>
-    <div class="matrix-explainer" id="matrixExplainer" hidden>
-      <div class="matrix-grid">
-        <div class="matrix-cell">
-          <span class="matrix-emoji">🎯</span>
-          <span id="matrixMI">Tap Important, leave Urgent off</span>
-        </div>
-        <div class="matrix-cell">
-          <span class="matrix-emoji">🔥</span>
-          <span id="matrixIU">Tap both Important and Urgent</span>
-        </div>
-        <div class="matrix-cell">
-          <span class="matrix-emoji">⏰</span>
-          <span id="matrixUN">Tap Urgent, leave Important off</span>
-        </div>
-        <div class="matrix-cell">
-          <span class="matrix-emoji">📦</span>
-          <span id="matrixOT">Leave both off</span>
-        </div>
-      </div>
-    </div>
     <ul class="existing-lists" id="existingLists"></ul>
     <button type="button" class="reset-order-btn" id="resetOrderBtn">Reset default order</button>
     <form id="newListForm">
-      <p id="newListFormLabel" class="gate-hint">Choose emoji and category name</p>
       <div class="list-form-row">
         <select id="newListIcon" aria-label="Category icon"></select>
         <input id="newListInput" type="text" placeholder="New category name" autocomplete="off" maxlength="40">
@@ -2290,17 +2252,10 @@
   const newListForm = document.getElementById("newListForm");
   const newListInput = document.getElementById("newListInput");
   const newListIconEl = document.getElementById("newListIcon");
-  const newListFormLabelEl = document.getElementById("newListFormLabel");
   const modalErrorEl = document.getElementById("modalError");
   const modalTitleEl = document.getElementById("modalTitle");
   const existingListsEl = document.getElementById("existingLists");
   const resetOrderBtnEl = document.getElementById("resetOrderBtn");
-  const showMatrixBtnEl = document.getElementById("showMatrixBtn");
-  const matrixExplainerEl = document.getElementById("matrixExplainer");
-  const matrixMIEl = document.getElementById("matrixMI");
-  const matrixIUEl = document.getElementById("matrixIU");
-  const matrixUNEl = document.getElementById("matrixUN");
-  const matrixOTEl = document.getElementById("matrixOT");
   const manageConsentBtnEl = document.getElementById("manageConsentBtn");
   const sendFeedbackBtnEl = document.getElementById("sendFeedbackBtn");
   const openProBtnEl = document.getElementById("openProBtn");
@@ -2485,7 +2440,6 @@
       addTask: "Add task",
       modalTitle: "Settings",
       close: "Close",
-      newListFormLabel: "Choose emoji and category name",
       newCategoryPlaceholder: "New category name",
       categoryIcon: "Category icon",
       add: "Add",
@@ -2636,16 +2590,15 @@
       tipsTileTitle: "Tips & ideas",
       tipsTileSubtitle: "Little ideas about habits and getting things done",
       tipsOverlayTitle: "💡 Tips & ideas",
-      showMatrix: "How are tasks sorted into these?",
       summaryImportant: "🎯 Important",
       summaryImportantUrgent: "🔥 Important & urgent",
       summaryUrgent: "⏰ Urgent",
       summaryHabit: "🔁 Habit",
       summaryHidden: "🙈 Hidden from partner",
-      matrixMI: "Tap Important, leave Urgent off",
-      matrixIU: "Tap both Important and Urgent",
-      matrixUN: "Tap Urgent, leave Important off",
-      matrixOT: "Leave both off",
+      mostImportantInfo: "🎯 Tasks land here when you mark them Important, but leave Urgent off.",
+      importantUrgentInfo: "🔥 Tasks land here when you mark them both Important and Urgent.",
+      urgentNotImportantInfo: "⏰ Tasks land here when you mark them Urgent, but leave Important off.",
+      otherInfo: "📦 Tasks land here when you leave both Important and Urgent off.",
       tip1Title: "🐣 Start stupidly small",
       tip1Body: "Instead of \"run for 30 minutes\", try \"put on running shoes\". Small steps are easier to repeat, and it's repetition — not intensity — that builds a habit.",
       tip2Title: "🔗 Stack it onto something you already do",
@@ -2753,7 +2706,6 @@
       addTask: "Dodaj zadanie",
       modalTitle: "Ustawienia",
       close: "Zamknij",
-      newListFormLabel: "Wybierz emoji i nazwę kategorii",
       newCategoryPlaceholder: "Nazwa nowej kategorii",
       categoryIcon: "Ikonka kategorii",
       add: "Dodaj",
@@ -2904,16 +2856,15 @@
       tipsTileTitle: "Wskazówki i pomysły",
       tipsTileSubtitle: "Małe pomysły o nawykach i ogarnianiu spraw",
       tipsOverlayTitle: "💡 Wskazówki i pomysły",
-      showMatrix: "Jak zadania trafiają do tych kategorii?",
       summaryImportant: "🎯 Ważne",
       summaryImportantUrgent: "🔥 Ważne i pilne",
       summaryUrgent: "⏰ Pilne",
       summaryHabit: "🔁 Nawyk",
       summaryHidden: "🙈 Ukryte przed partnerem",
-      matrixMI: "Zaznacz Ważne, zostaw Pilne wyłączone",
-      matrixIU: "Zaznacz i Ważne, i Pilne",
-      matrixUN: "Zaznacz Pilne, zostaw Ważne wyłączone",
-      matrixOT: "Zostaw oba wyłączone",
+      mostImportantInfo: "🎯 Zadania trafiają tutaj, gdy zaznaczysz Ważne, ale zostawisz Pilne wyłączone.",
+      importantUrgentInfo: "🔥 Zadania trafiają tutaj, gdy zaznaczysz i Ważne, i Pilne.",
+      urgentNotImportantInfo: "⏰ Zadania trafiają tutaj, gdy zaznaczysz Pilne, ale zostawisz Ważne wyłączone.",
+      otherInfo: "📦 Zadania trafiają tutaj, gdy zostawisz i Ważne, i Pilne wyłączone.",
       tip1Title: "🐣 Zacznij absurdalnie małym krokiem",
       tip1Body: "Zamiast „biegać 30 minut” spróbuj „załóż buty do biegania”. Małe kroki łatwiej powtarzać, a to powtarzalność - nie intensywność - buduje nawyk.",
       tip2Title: "🔗 Doczep to do czegoś, co już robisz",
@@ -3289,7 +3240,6 @@
     closeListOverlayBtn.setAttribute("aria-label", t("close"));
     newListInput.placeholder = t("newCategoryPlaceholder");
     newListIconEl.setAttribute("aria-label", t("categoryIcon"));
-    newListFormLabelEl.textContent = t("newListFormLabel");
     addListBtnEl.textContent = t("add");
     resetOrderBtnEl.textContent = t("resetOrder");
     manageConsentBtnEl.textContent = t("manageConsent");
@@ -3304,11 +3254,6 @@
     tipsTileSubtitleEl.textContent = t("tipsTileSubtitle");
     tipsOverlayTitleEl.textContent = t("tipsOverlayTitle");
     renderTips();
-    showMatrixBtnEl.textContent = t("showMatrix");
-    matrixMIEl.textContent = t("matrixMI");
-    matrixIUEl.textContent = t("matrixIU");
-    matrixUNEl.textContent = t("matrixUN");
-    matrixOTEl.textContent = t("matrixOT");
     consentTitleEl.textContent = t("consentTitle");
     consentBodyEl.textContent = t("consentBody");
     consentAcceptEl.textContent = t("consentAccept");
@@ -3897,13 +3842,13 @@
         name.textContent = (section.canManage && effectiveHidden ? t("hiddenPrefix") : "") + displayTitle;
         li.appendChild(name);
 
-        if (section.kind === "shared" || (list && list.presetType === "work")) {
+        if (section.kind === "builtin" || section.kind === "shared" || (list && list.presetType === "work")) {
           const info = document.createElement("button");
           info.type = "button";
           info.className = "info-btn";
           info.setAttribute("aria-label", t("sharedInfoLabel"));
           info.textContent = "ⓘ";
-          info.addEventListener("click", () => alert(t((list.sharedType || list.presetType) + "Info")));
+          info.addEventListener("click", () => alert(t(section.kind === "builtin" ? (section.key + "Info") : (list.sharedType || list.presetType) + "Info")));
           li.appendChild(info);
         }
 
@@ -5748,7 +5693,6 @@
   function openTipsOverlay() { tipsOverlayEl.hidden = false; }
   function closeTipsOverlay() { tipsOverlayEl.hidden = true; }
   openTipsBtnEl.addEventListener("click", () => { closeListOverlay(); openTipsOverlay(); });
-  showMatrixBtnEl.addEventListener("click", () => { matrixExplainerEl.hidden = !matrixExplainerEl.hidden; });
   closeTipsOverlayBtnEl.addEventListener("click", closeTipsOverlay);
   tipsOverlayEl.addEventListener("click", (e) => { if (e.target === tipsOverlayEl) closeTipsOverlay(); });
 
