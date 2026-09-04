@@ -796,9 +796,31 @@
   .pro-tile-text span { font-size: 0.78rem; opacity: 0.9; }
   .pro-tile-arrow { font-size: 1.2rem; opacity: 0.85; flex-shrink: 0; }
 
+  .tip-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+
+  .tip-tile .pro-tile-text span { opacity: 0.75; color: var(--text-muted); }
+
   .pro-benefits { margin: 0 0 14px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .pro-benefits li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.88rem; line-height: 1.4; }
   .pro-benefits li .glyph { flex-shrink: 0; }
+
+  .tip-item { display: block; padding: 12px 14px; background: var(--surface-2); border-radius: 12px; }
+  .tip-item strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+  .tip-item p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
 
   .empty {
     margin-top: 20vh;
@@ -1802,6 +1824,14 @@
       </span>
       <span class="pro-tile-arrow" aria-hidden="true">›</span>
     </button>
+    <button type="button" class="tip-tile" id="openTipsBtn">
+      <span class="pro-tile-icon">💡</span>
+      <span class="pro-tile-text">
+        <strong id="tipsTileTitle">Tips & ideas</strong>
+        <span id="tipsTileSubtitle">Little ideas about habits and getting things done</span>
+      </span>
+      <span class="pro-tile-arrow" aria-hidden="true">›</span>
+    </button>
     <div class="overlay-divider"></div>
     <p class="error-text" id="modalError" hidden></p>
     <p id="listsForLabel">Your task categories.</p>
@@ -1917,6 +1947,16 @@
     <p id="proOverlayIntro">A few things we're planning for people who want a little more from Tandem:</p>
     <ul class="pro-benefits" id="proBenefitsList"></ul>
     <p class="gate-hint" id="proComingSoon">Not available to buy yet - this is just a preview of what's coming.</p>
+  </div>
+</div>
+
+<div class="overlay" id="tipsOverlay" hidden>
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="tipsOverlayTitle">💡 Tips & ideas</h2>
+      <button type="button" class="overlay-close" id="closeTipsOverlay" aria-label="Close">✕</button>
+    </div>
+    <ul class="pro-benefits" id="tipsListEl"></ul>
   </div>
 </div>
 
@@ -2196,6 +2236,13 @@
   const proBenefitsListEl = document.getElementById("proBenefitsList");
   const proComingSoonEl = document.getElementById("proComingSoon");
   const closeProOverlayBtnEl = document.getElementById("closeProOverlay");
+  const openTipsBtnEl = document.getElementById("openTipsBtn");
+  const tipsTileTitleEl = document.getElementById("tipsTileTitle");
+  const tipsTileSubtitleEl = document.getElementById("tipsTileSubtitle");
+  const tipsOverlayEl = document.getElementById("tipsOverlay");
+  const tipsOverlayTitleEl = document.getElementById("tipsOverlayTitle");
+  const tipsListEl = document.getElementById("tipsListEl");
+  const closeTipsOverlayBtnEl = document.getElementById("closeTipsOverlay");
   const consentOverlay = document.getElementById("consentOverlay");
   const consentTitleEl = document.getElementById("consentTitle");
   const consentBodyEl = document.getElementById("consentBody");
@@ -2508,6 +2555,21 @@
       proBenefit3: "👥 Share more categories with more people at once",
       proBenefit4: "🔔 More flexible reminder scheduling",
       proBenefit5: "💛 Support an indie project you already use every day",
+      tipsTileTitle: "Tips & ideas",
+      tipsTileSubtitle: "Little ideas about habits and getting things done",
+      tipsOverlayTitle: "💡 Tips & ideas",
+      tip1Title: "🐣 Start stupidly small",
+      tip1Body: "Instead of \"run for 30 minutes\", try \"put on running shoes\". Small steps are easier to repeat, and it's repetition — not intensity — that builds a habit.",
+      tip2Title: "🔗 Stack it onto something you already do",
+      tip2Body: "Attach a new habit to something already part of your day, like \"after my morning coffee, I'll do 5 push-ups\".",
+      tip3Title: "👀 Keep it in sight",
+      tip3Body: "A book on your pillow, a yoga mat already unrolled - less friction to start means you're far more likely to actually do it.",
+      tip4Title: "🎉 Let yourself enjoy the small wins",
+      tip4Body: "Checking a task off isn't just admin - let yourself feel a little proud. Your brain likes rewards, even tiny ones.",
+      tip5Title: "🍅 Try short focused bursts",
+      tip5Body: "25 minutes of focus, 5 minutes of break (the \"Pomodoro\" technique) often works better than trying to power through 3 hours at once.",
+      tip6Title: "😌 Missing a day is fine",
+      tip6Body: "The rule isn't \"never miss\" - it's \"never miss twice in a row\". One off day doesn't undo your progress.",
       consentTitle: "Before we start 👋",
       consentBody: "We use Google Analytics to see which features are actually useful, so we know what's worth improving — no ads, no selling your data, no tracking you across other sites. Sound okay?",
       consentAccept: "Sure, I'm in",
@@ -2751,6 +2813,21 @@
       proBenefit3: "👥 Współdzielenie większej liczby kategorii z większą liczbą osób naraz",
       proBenefit4: "🔔 Bardziej elastyczne ustawianie przypomnień",
       proBenefit5: "💛 Wsparcie niezależnego projektu, z którego już codziennie korzystasz",
+      tipsTileTitle: "Wskazówki i pomysły",
+      tipsTileSubtitle: "Małe pomysły o nawykach i ogarnianiu spraw",
+      tipsOverlayTitle: "💡 Wskazówki i pomysły",
+      tip1Title: "🐣 Zacznij absurdalnie małym krokiem",
+      tip1Body: "Zamiast „biegać 30 minut” spróbuj „załóż buty do biegania”. Małe kroki łatwiej powtarzać, a to powtarzalność - nie intensywność - buduje nawyk.",
+      tip2Title: "🔗 Doczep to do czegoś, co już robisz",
+      tip2Body: "Przypnij nowy nawyk do czegoś, co już jest częścią Twojego dnia, np. „po porannej kawie zrobię 5 pompek”.",
+      tip3Title: "👀 Miej to na widoku",
+      tip3Body: "Książka na poduszce, rozłożona mata do jogi - mniej tarcia, żeby zacząć, oznacza, że dużo częściej faktycznie to zrobisz.",
+      tip4Title: "🎉 Pozwól sobie cieszyć się małymi sukcesami",
+      tip4Body: "Odhaczenie zadania to nie tylko formalność - pozwól sobie poczuć odrobinę dumy. Mózg lubi nagrody, nawet te małe.",
+      tip5Title: "🍅 Spróbuj krótkich, skupionych zrywów",
+      tip5Body: "25 minut skupienia, 5 minut przerwy (technika „Pomodoro”) często działa lepiej niż próba przepracowania 3 godzin na raz.",
+      tip6Title: "😌 Ominięcie jednego dnia to nic złego",
+      tip6Body: "Zasada nie brzmi „nigdy nie przegap” - brzmi „nigdy nie przegap dwa razy z rzędu”. Jeden gorszy dzień nie niszczy postępów.",
       consentTitle: "Zanim zaczniemy 👋",
       consentBody: "Korzystamy z Google Analytics, żeby zobaczyć, które funkcje faktycznie się przydają i co warto poprawić — bez reklam, bez sprzedawania Twoich danych, bez namierzania Cię po innych stronach. Zgadzasz się?",
       consentAccept: "Jasne, zgadzam się",
@@ -3124,6 +3201,10 @@
     proOverlayIntroEl.textContent = t("proOverlayIntro");
     proComingSoonEl.textContent = t("proComingSoon");
     renderProBenefits();
+    tipsTileTitleEl.textContent = t("tipsTileTitle");
+    tipsTileSubtitleEl.textContent = t("tipsTileSubtitle");
+    tipsOverlayTitleEl.textContent = t("tipsOverlayTitle");
+    renderTips();
     consentTitleEl.textContent = t("consentTitle");
     consentBodyEl.textContent = t("consentBody");
     consentAcceptEl.textContent = t("consentAccept");
@@ -5482,6 +5563,27 @@
   proBadgeBtnEl.addEventListener("click", openProOverlay);
   closeProOverlayBtnEl.addEventListener("click", closeProOverlay);
   proOverlayEl.addEventListener("click", (e) => { if (e.target === proOverlayEl) closeProOverlay(); });
+
+  const TIP_KEYS = ["tip1", "tip2", "tip3", "tip4", "tip5", "tip6"];
+  function renderTips() {
+    tipsListEl.innerHTML = "";
+    for (const key of TIP_KEYS) {
+      const li = document.createElement("li");
+      li.className = "tip-item";
+      const strong = document.createElement("strong");
+      strong.textContent = t(key + "Title");
+      const p = document.createElement("p");
+      p.textContent = t(key + "Body");
+      li.append(strong, p);
+      tipsListEl.appendChild(li);
+    }
+  }
+
+  function openTipsOverlay() { tipsOverlayEl.hidden = false; }
+  function closeTipsOverlay() { tipsOverlayEl.hidden = true; }
+  openTipsBtnEl.addEventListener("click", () => { closeListOverlay(); openTipsOverlay(); });
+  closeTipsOverlayBtnEl.addEventListener("click", closeTipsOverlay);
+  tipsOverlayEl.addEventListener("click", (e) => { if (e.target === tipsOverlayEl) closeTipsOverlay(); });
 
   function openListOverlay() {
     newListInput.value = "";
