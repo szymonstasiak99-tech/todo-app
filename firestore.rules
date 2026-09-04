@@ -9,6 +9,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/allowed_users/$(request.auth.token.email)).data.partnerEmail;
     }
 
+    // A pair_invites code justifies `me` and `target` becoming partners only
+    // when it was genuinely consumed between exactly those two people -
+    // either direction, since both the code's creator and its redeemer each
+    // write their own partnerEmail independently once pairing completes.
+    // Without this, any allowed user could set their own partnerEmail to any
+    // other allowed user directly, with no invite ever having happened.
+    function pairInviteJustifiesPartner(code, me, target) {
+      let invite = get(/databases/$(database)/documents/pair_invites/$(code)).data;
+      return (invite.consumedBy == me && invite.fromEmail == target)
+        || (invite.fromEmail == me && invite.consumedBy == target);
+    }
+
     // A person's write-role on a custom list: the owner is always a full
     // editor; anyone else defaults to "editor" too (preserves old behavior
     // for partner-shared lists that predate roles) unless the list's roles
@@ -50,7 +62,19 @@ service cloud.firestore {
         );
       allow update: if request.auth != null && (
         (isAllowed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name"]) && (email == request.auth.token.email || email == myPartner()))
-        || (request.auth.token.email == email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["partnerEmail"]))
+        // Unpairing: clearing my own partnerEmail is always allowed, no
+        // justification needed - it only ever removes access, never grants it.
+        || (request.auth.token.email == email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["partnerEmail"]) && request.resource.data.partnerEmail == null)
+        // Pairing (or re-pairing): setting a non-null partnerEmail requires
+        // a pair_invites code that actually ties me and that person together.
+        || (
+          request.auth.token.email == email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["partnerEmail", "pairedViaCode"])
+          && request.resource.data.partnerEmail != null
+          && "pairedViaCode" in request.resource.data
+          && exists(/databases/$(database)/documents/pair_invites/$(request.resource.data.pairedViaCode))
+          && pairInviteJustifiesPartner(request.resource.data.pairedViaCode, request.auth.token.email, request.resource.data.partnerEmail)
+        )
         || (request.auth.token.email == email && !("authDisplayName" in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["authDisplayName"]))
         || (request.auth.token.email == email && !("inviteCode" in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["inviteCode"]))
       );

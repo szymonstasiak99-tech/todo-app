@@ -916,25 +916,38 @@
 
   .info-btn:hover { color: var(--accent); }
 
+  .group-title-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .group-title-name span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   .shared-badge {
     display: inline-flex;
     align-items: center;
-    border: none;
-    background: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-2);
     color: var(--accent);
     cursor: pointer;
-    font-size: 0.78em;
+    font-size: 0.72em;
     font-weight: 600;
-    padding: 0 4px;
-    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 2px 8px;
+    line-height: 1.4;
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
-  .shared-badge:hover { text-decoration: underline; }
+  .shared-badge:hover { background: var(--surface); text-decoration: underline; }
 
   .group-title.collapsible:hover { background: var(--surface-2); }
 
-  .group-title.collapsible span:first-child { flex: 1; min-width: 0; }
+  .group-title.collapsible span.group-title-name { flex: 1; min-width: 0; }
 
   .group-badge {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -1911,6 +1924,10 @@
       <div class="rename-fields" id="renameFields"></div>
       <button type="submit" class="primary-btn" id="saveNamesBtn">Save names</button>
     </form>
+    <div class="overlay-divider" id="partnerDivider" hidden></div>
+    <p id="partnerRow" hidden><span id="partnerLabel">Partner</span>: <strong id="partnerValue">—</strong></p>
+    <button type="button" class="reset-order-btn" id="unpairBtn" hidden>Unpair</button>
+    <p class="gate-hint" id="unpairHint" hidden>This stops sharing your fridge/shopping lists and any category you haven't hidden from them. Your own tasks and categories - and anything you've shared through a category invite - stay exactly as they are.</p>
     <div class="overlay-divider"></div>
     <p id="languageDesc">App language.</p>
     <div class="theme-row" id="langRow">
@@ -2382,6 +2399,12 @@
   const renameForm = document.getElementById("renameForm");
   const renameFieldsEl = document.getElementById("renameFields");
   const saveNamesBtnEl = document.getElementById("saveNamesBtn");
+  const partnerDividerEl = document.getElementById("partnerDivider");
+  const partnerRowEl = document.getElementById("partnerRow");
+  const partnerLabelEl = document.getElementById("partnerLabel");
+  const partnerValueEl = document.getElementById("partnerValue");
+  const unpairBtnEl = document.getElementById("unpairBtn");
+  const unpairHintEl = document.getElementById("unpairHint");
   const customTitleDescEl = document.getElementById("customTitleDesc");
   const customTitleForm = document.getElementById("customTitleForm");
   const customTitleInput = document.getElementById("customTitleInput");
@@ -2591,6 +2614,10 @@
       yourTab: "Your tab",
       tabFor: "Tab: {email}",
       saveNames: "Save names",
+      partnerLabel: "Partner",
+      unpairBtn: "Unpair",
+      unpairHint: "This stops sharing your fridge/shopping lists and any category you haven't hidden from them. Your own tasks and categories - and anything you've shared through a category invite - stay exactly as they are.",
+      unpairConfirm: "Unpair from {name}? You'll each keep your own tasks and categories, but stop sharing the fridge/shopping lists and any category the other hasn't hidden.",
       languageDesc: "App language.",
       customTitleDesc: "Your own call to action (optional) — replaces the default text in the top-left corner.",
       customTitlePlaceholder: "Type what motivates you!",
@@ -2633,7 +2660,7 @@
       errInviteNotFound: "No account found with that email or code.",
       errInviteSelf: "You can't invite yourself.",
       errInviteAlreadyMember: "This person already has access.",
-      sharedBadge: "· Shared",
+      sharedBadge: "Shared",
       notifDesc: "Push notifications.",
       notifEnableBtn: "Enable notifications",
       notifEnabled: "Notifications enabled",
@@ -2880,6 +2907,10 @@
       yourTab: "Twoja zakładka",
       tabFor: "Zakładka: {email}",
       saveNames: "Zapisz nazwy",
+      partnerLabel: "Partner/partnerka",
+      unpairBtn: "Rozłącz parę",
+      unpairHint: "To przestaje udostępniać Waszą lodówkę/listę zakupów i każdą kategorię, której nie ukryliście przed sobą nawzajem. Wasze własne zadania i kategorie - oraz wszystko udostępnione przez zaproszenie do kategorii - zostają bez zmian.",
+      unpairConfirm: "Rozłączyć parę z {name}? Każde z Was zachowa swoje własne zadania i kategorie, ale przestaniecie współdzielić lodówkę/listę zakupów i każdą kategorię, której druga strona nie ukryła.",
       languageDesc: "Język aplikacji.",
       customTitleDesc: "Twoje własne wezwanie do działania (opcjonalne) - zastępuje domyślny napis w górnym lewym rogu.",
       customTitlePlaceholder: "Wpisz to, co Ciebie motywuje!",
@@ -2922,7 +2953,7 @@
       errInviteNotFound: "Nie znaleziono konta o tym mailu albo kodzie.",
       errInviteSelf: "Nie możesz zaprosić samego/samej siebie.",
       errInviteAlreadyMember: "Ta osoba już ma dostęp.",
-      sharedBadge: "· Współdzielone",
+      sharedBadge: "Współdzielone",
       notifDesc: "Powiadomienia push.",
       notifEnableBtn: "Włącz powiadomienia",
       notifEnabled: "Powiadomienia włączone",
@@ -3382,6 +3413,10 @@
     notifPromptDeclineEl.textContent = t("notifPromptDecline");
     tabNamesDescEl.textContent = t("tabNamesDesc");
     saveNamesBtnEl.textContent = t("saveNames");
+    partnerLabelEl.textContent = t("partnerLabel");
+    unpairBtnEl.textContent = t("unpairBtn");
+    unpairHintEl.textContent = t("unpairHint");
+    renderPartnerSection();
     languageDescEl.textContent = t("languageDesc");
     customTitleDescEl.textContent = t("customTitleDesc");
     customTitleInput.placeholder = t("customTitlePlaceholder");
@@ -3625,14 +3660,28 @@
     }
   }
 
+  // Point-11 invited people (tracked in a custom list's `roles` map) must
+  // never be dropped by the ambient members reconciliation below - they
+  // opted into this one list/task specifically, independent of my own
+  // partner-visibility default. Returns their emails for a given item.
+  function explicitlySharedMembersFor(collectionName, item) {
+    if (collectionName === "custom_lists") return Object.keys(item.roles || {});
+    if (item.customListId) {
+      const list = allLists.find(l => l.id === item.customListId);
+      return list && list.roles ? Object.keys(list.roles) : [];
+    }
+    return [];
+  }
+
   async function syncOwnMembers(collectionName, docs) {
-    // Every document I own must carry members = myMembers(hidden), since that's
-    // what the security rules use to decide who can read it going forward. The
+    // Every document I own must carry members = myMembers(hidden) plus
+    // anyone explicitly point-11-invited to it, since that's what the
+    // security rules use to decide who can read it going forward. The
     // correct value changes the moment I pair up or hide/unhide something —
     // reconciling it here on every snapshot keeps it correct with no manual step.
     for (const item of docs) {
       if (item.ownerEmail !== myEmail) continue;
-      const desired = myMembers(!!item.hidden);
+      const desired = Array.from(new Set([...myMembers(!!item.hidden), ...explicitlySharedMembersFor(collectionName, item)]));
       if (!membersEqual(item.members || [], desired)) {
         try { await updateDoc(doc(db, collectionName, item.id), { members: desired }); } catch (e) {}
       }
@@ -3670,7 +3719,11 @@
       tasksReady = true;
       backfillHidden("tasks", tasks);
       backfillOrder("tasks", tasks);
-      syncOwnMembers("tasks", tasks);
+      // Skip until custom_lists has loaded at least once - otherwise a task
+      // in a point-11 shared list would look up its list's `roles` against
+      // a still-empty allLists and wrongly strip the invited members before
+      // self-healing a moment later.
+      if (listsReady) syncOwnMembers("tasks", tasks);
       maybeRunSharedListMaintenance();
       renderList();
       updateScheduleBadgeDot();
@@ -3788,6 +3841,12 @@
       backfillHidden("custom_lists", allLists);
       backfillOrder("custom_lists", allLists);
       syncOwnMembers("custom_lists", allLists);
+      // Re-reconcile tasks too: their point-11 membership is derived from
+      // each task's list's `roles`, which just changed here - without this,
+      // a tasks snapshot that raced ahead of this one at cold start could
+      // have already (wrongly) stripped invited members using a stale,
+      // empty allLists.
+      if (tasksReady) syncOwnMembers("tasks", tasks);
       maybeRunSharedListMaintenance();
       refreshCustomListsView();
       renderCustomChips();
@@ -4824,7 +4883,7 @@
       const data = snap.data();
       if (data.consumedBy) {
         try {
-          await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: data.consumedBy });
+          await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: data.consumedBy, pairedViaCode: myPendingInviteCode });
           await setDoc(doc(db, "ui_state", myEmail), { pendingInviteCode: deleteField() }, { merge: true });
         } catch (e) {}
       }
@@ -4870,7 +4929,7 @@
         return;
       }
       await updateDoc(inviteRef, { consumedBy: myEmail });
-      await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: inviteSnap.data().fromEmail });
+      await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: inviteSnap.data().fromEmail, pairedViaCode: code });
       if (myPendingInviteCode) {
         try { await setDoc(doc(db, "ui_state", myEmail), { pendingInviteCode: deleteField() }, { merge: true }); } catch (e2) {}
       }
@@ -5034,9 +5093,11 @@
     const titleEl = document.createElement("div");
     titleEl.className = "group-title" + (featured ? " featured" : "");
 
+    const nameWrap = document.createElement("span");
+    nameWrap.className = "group-title-name";
     const label = document.createElement("span");
     label.textContent = title;
-    titleEl.appendChild(label);
+    nameWrap.appendChild(label);
 
     if (listObj && (listObj.sharedType || (listObj.roles && Object.keys(listObj.roles).length > 0))) {
       const sharedBtn = document.createElement("button");
@@ -5048,8 +5109,10 @@
         editingMembersId = editingMembersId === listObj.id ? null : listObj.id;
         renderList();
       });
-      titleEl.appendChild(sharedBtn);
+      nameWrap.appendChild(sharedBtn);
     }
+
+    titleEl.appendChild(nameWrap);
 
     if (infoType) {
       const info = document.createElement("button");
@@ -6250,17 +6313,65 @@
     renderList();
     renderStats();
     if (!newListOverlay.hidden) renderRenameFields();
+    renderPartnerSection();
     maybeRunSharedListMaintenance();
   }
+
+  function renderPartnerSection() {
+    const paired = !!myPartnerEmail;
+    partnerDividerEl.hidden = !paired;
+    partnerRowEl.hidden = !paired;
+    unpairBtnEl.hidden = !paired;
+    unpairHintEl.hidden = !paired;
+    if (paired) partnerValueEl.textContent = officialNameFor(myPartnerEmail);
+  }
+
+  unpairBtnEl.addEventListener("click", async () => {
+    if (!myPartnerEmail) return;
+    if (!confirm(t("unpairConfirm", { name: officialNameFor(myPartnerEmail) }))) return;
+    try {
+      await updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: null });
+    } catch (e) {
+      showModalError(e);
+    }
+  });
 
   function subscribePartnerProfile() {
     if (unsubPartnerProfile) { unsubPartnerProfile(); unsubPartnerProfile = null; }
     partnerProfile = null;
     if (!myPartnerEmail) { rebuildRoster(); return; }
     unsubPartnerProfile = onSnapshot(doc(db, "allowed_users", myPartnerEmail), (snap) => {
+      // If my partner's own record no longer points back at me - they
+      // unpaired (or paired with someone else) - I must unpair on my side
+      // too, so the relationship never goes stale/one-sided. Each side only
+      // ever writes its own document, so this reactive self-heal is what
+      // keeps both sides in sync no matter who initiated the unpair.
+      const theirPartnerEmail = snap.exists() ? (snap.data().partnerEmail || null) : null;
+      if (theirPartnerEmail !== myEmail) {
+        updateDoc(doc(db, "allowed_users", myEmail), { partnerEmail: null }).catch(() => {});
+        return;
+      }
       partnerProfile = { name: snap.exists() ? (snap.data().name || myPartnerEmail) : myPartnerEmail };
       rebuildRoster();
     });
+  }
+
+  // Cleans up my OWN presence in lists I don't own after unpairing: sharedType
+  // (fridge/shopping) lists never have a real owner to reconcile via
+  // syncOwnMembers, and an ex-partner's own plain categories are theirs to
+  // reconcile on their own client - so here I only ever remove myself, never
+  // touch someone else's document beyond that, and I never touch a list I
+  // was genuinely invited into via a point-11 role (that's unrelated to
+  // pairing and must survive an unpair untouched).
+  async function leaveAmbientListsOnUnpair() {
+    for (const list of allLists) {
+      if (list.ownerEmail === myEmail) continue;
+      if (!list.members || !list.members.includes(myEmail)) continue;
+      if (list.roles && (myEmail in list.roles)) continue;
+      try {
+        await updateDoc(doc(db, "custom_lists", list.id), { members: list.members.filter(m => m !== myEmail) });
+      } catch (e) {}
+    }
   }
 
   function subscribeMyProfile() {
@@ -6274,6 +6385,7 @@
       }
       const newPartnerEmail = data.partnerEmail || null;
       const justPaired = !myPartnerEmail && !!newPartnerEmail;
+      const justUnpaired = !!myPartnerEmail && !newPartnerEmail;
       if (newPartnerEmail !== myPartnerEmail) {
         myPartnerEmail = newPartnerEmail;
         subscribePartnerProfile();
@@ -6283,6 +6395,11 @@
       if (justPaired) {
         syncOwnMembers("tasks", tasks);
         syncOwnMembers("custom_lists", allLists);
+      }
+      if (justUnpaired) {
+        syncOwnMembers("tasks", tasks);
+        syncOwnMembers("custom_lists", allLists);
+        leaveAmbientListsOnUnpair();
       }
     });
   }
