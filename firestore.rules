@@ -20,6 +20,13 @@ service cloud.firestore {
         : (("roles" in list) && (request.auth.token.email in list.roles) ? list.roles[request.auth.token.email] : "editor");
     }
 
+    // The roles map, defaulting to empty when a list predates per-member
+    // roles entirely - lets self-join/self-removal diff the map safely
+    // whether or not it existed before this write.
+    function rolesOf(data) {
+      return ("roles" in data) ? data.roles : {};
+    }
+
     match /allowed_users/{email} {
       // Any signed-in allowed user can look up another allowed user's basic
       // profile (name/authDisplayName) by their exact email - needed so
@@ -149,18 +156,23 @@ service cloud.firestore {
         ||
         (
           // Accepting a pending invite: add exactly myself to members+roles,
-          // with the role that was actually offered - never a self-upgrade.
+          // with the role that was actually offered - never a self-upgrade,
+          // and the roles map may not touch any key but my own (no piggy-
+          // backed tampering with a co-member's role in the same write).
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["members", "roles"])
           && request.resource.data.members == resource.data.members.concat([request.auth.token.email])
+          && rolesOf(resource.data).diff(rolesOf(request.resource.data)).affectedKeys().hasOnly([request.auth.token.email])
           && get(/databases/$(database)/documents/list_invites/$(listId + "_" + request.auth.token.email)).data.status == "accepted"
           && request.resource.data.roles[request.auth.token.email] == get(/databases/$(database)/documents/list_invites/$(listId + "_" + request.auth.token.email)).data.role
         )
         ||
         (
-          // Leaving a shared list: remove only myself.
+          // Leaving a shared list: remove only myself, and - same guard as
+          // above - the roles map may only lose or leave alone my own key.
           ("members" in resource.data) && request.auth.token.email in resource.data.members
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["members", "roles"])
           && request.resource.data.members == resource.data.members.removeAll([request.auth.token.email])
+          && rolesOf(resource.data).diff(rolesOf(request.resource.data)).affectedKeys().hasOnly([request.auth.token.email])
         )
       );
       allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
