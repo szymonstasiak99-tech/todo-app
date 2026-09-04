@@ -155,7 +155,7 @@ exports.remindScheduledTasks = onSchedule("every 5 minutes", async () => {
     for (const email of recipientsFor(task)) {
       const uiState = await getUiState(email);
       const body = strings(uiState.lang).onceTaskBody(task.text);
-      await sendToUser(email, { title: "Tandem", body }, "taskReminders");
+      await sendToUser(email, { title: "DoDaily", body }, "taskReminders");
     }
     await docSnap.ref.update({ "schedule.notifiedAt": now });
   }
@@ -172,7 +172,7 @@ exports.remindScheduledTasks = onSchedule("every 5 minutes", async () => {
     for (const email of recipientsFor(task)) {
       const uiState = await getUiState(email);
       const body = strings(uiState.lang).recurringTaskBody(task.text);
-      await sendToUser(email, { title: "Tandem", body }, "taskReminders");
+      await sendToUser(email, { title: "DoDaily", body }, "taskReminders");
     }
     await docSnap.ref.update({ "schedule.notifiedAt": task.schedule.renewsAt });
   }
@@ -230,7 +230,7 @@ exports.remindHabits = onSchedule("every 15 minutes", async () => {
         body = strings(data.lang).habitBody(incompleteHabits.length);
       }
 
-      if (body) await sendToUser(email, { title: "Tandem", body });
+      if (body) await sendToUser(email, { title: "DoDaily", body });
       await userDoc.ref.set({ notif: { lastHabitReminderSlot: slotKey } }, { merge: true });
     }
   }
@@ -247,7 +247,7 @@ exports.notifyPartnerOnTaskCreate = onDocumentCreated("tasks/{taskId}", async (e
   for (const email of recipients) {
     const uiState = await getUiState(email);
     const body = strings(uiState.lang).partnerAdded(actorName, task.text);
-    await sendToUser(email, { title: "Tandem", body }, "partnerActivity");
+    await sendToUser(email, { title: "DoDaily", body }, "partnerActivity");
   }
 });
 
@@ -263,7 +263,7 @@ exports.notifyPartnerOnTaskUpdate = onDocumentUpdated("tasks/{taskId}", async (e
       for (const email of recipients) {
         const uiState = await getUiState(email);
         const body = strings(uiState.lang).partnerUnhid(actorName, after.text);
-        await sendToUser(email, { title: "Tandem", body }, "partnerActivity");
+        await sendToUser(email, { title: "DoDaily", body }, "partnerActivity");
       }
     }
   }
@@ -276,7 +276,7 @@ exports.notifyPartnerOnTaskUpdate = onDocumentUpdated("tasks/{taskId}", async (e
       for (const email of recipients) {
         const uiState = await getUiState(email);
         const body = strings(uiState.lang).partnerCompleted(actorName, after.text);
-        await sendToUser(email, { title: "Tandem", body }, "partnerActivity");
+        await sendToUser(email, { title: "DoDaily", body }, "partnerActivity");
       }
     }
   }

@@ -14,7 +14,7 @@ firebase.initializeApp({
 // are handled client-side instead, see onMessage() in index.html.
 const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
-  const title = (payload.notification && payload.notification.title) || "Tandem";
+  const title = (payload.notification && payload.notification.title) || "DoDaily";
   const body = (payload.notification && payload.notification.body) || "";
   self.registration.showNotification(title, {
     body,

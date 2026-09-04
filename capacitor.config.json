@@ -1,6 +1,6 @@
 {
   "appId": "com.szymonstasiak.tandem",
-  "appName": "Tandem",
+  "appName": "DoDaily",
   "webDir": "docs",
   "server": {
     "androidScheme": "https"

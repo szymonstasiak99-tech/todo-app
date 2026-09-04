@@ -1,6 +1,6 @@
 {
-  "name": "tandem-functions",
-  "description": "Push notification triggers for the Tandem to-do app",
+  "name": "dodaily-functions",
+  "description": "Push notification triggers for the DoDaily to-do app",
   "engines": {
     "node": "20"
   },

@@ -1,6 +1,6 @@
 {
-  "name": "Tandem — To Do List",
-  "short_name": "Tandem",
+  "name": "DoDaily — To Do List",
+  "short_name": "DoDaily",
   "description": "All-in-one to-do list with habit tracking and shared lists.",
   "start_url": "./index.html",
   "scope": "./",

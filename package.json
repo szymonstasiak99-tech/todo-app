@@ -1,7 +1,7 @@
 {
-  "name": "tandem",
+  "name": "dodaily",
   "version": "1.0.0",
-  "description": "Tandem - all-in-one to-do list, habit tracker and shared lists (Capacitor wrapper around docs/)",
+  "description": "DoDaily - all-in-one to-do list, habit tracker and shared lists (Capacitor wrapper around docs/)",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^8.5.1",
