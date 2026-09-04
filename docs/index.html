@@ -1327,6 +1327,16 @@
     font-size: 0.88rem;
   }
 
+  .member-row > span:first-child {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  .member-row .del-list {
+    flex-shrink: 0;
+  }
+
   .member-row select {
     flex: 1;
     min-width: 0;
@@ -2064,6 +2074,8 @@
   </div>
 </div>
 
+<datalist id="memberSuggestDatalist"></datalist>
+
 <div class="overlay" id="listInviteOverlay" hidden>
   <div class="overlay-card">
     <h2 id="listInviteOverlayTitle">👋 You've been invited</h2>
@@ -2371,6 +2383,7 @@
   const myInviteCodeLabelEl = document.getElementById("myInviteCodeLabel");
   const myInviteCodeValueEl = document.getElementById("myInviteCodeValue");
   const myInviteCodeHintEl = document.getElementById("myInviteCodeHint");
+  const memberSuggestDatalistEl = document.getElementById("memberSuggestDatalist");
   const listInviteOverlayEl = document.getElementById("listInviteOverlay");
   const listInviteOverlayTitleEl = document.getElementById("listInviteOverlayTitle");
   const listInviteListEl = document.getElementById("listInviteListEl");
@@ -3943,9 +3956,20 @@
 
   // Shared between the Settings category-editing panel and the main list's
   // "Shared" badge popup, so both surfaces show the exact same thing.
+  // Scrolls the just-opened members panel into view - both the Settings
+  // list (a short, independently-scrolling box) and the main list can leave
+  // it below the fold with no visual hint it opened at all. Call only right
+  // after OPENING a panel, never on incidental re-renders while one is
+  // already open, so it never fights the person's own scroll position.
+  function scrollToMembersPanel(listId) {
+    const el = document.querySelector('[data-members-panel-for="' + CSS.escape(listId) + '"]');
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
   function renderMembersPanel(list, canManage) {
     const panel = document.createElement("div");
     panel.className = "members-panel";
+    panel.dataset.membersPanelFor = list.id;
     const anchors = list.anchors || [];
     const roles = list.roles || {};
     // On a plain (non-preset) list, `members` also carries anyone who can
@@ -4003,6 +4027,17 @@
       input.type = "text";
       input.placeholder = t("inviteByEmailOrCode");
       input.maxLength = 60;
+      input.autocomplete = "off";
+      // Only the partner's real name is ever suggested here (via a shared
+      // datalist) - never raw email addresses, which the app has no general
+      // directory of anyway (Firestore rules block listing allowed_users).
+      if (myPartnerEmail && partnerProfile && partnerProfile.name) {
+        input.setAttribute("list", "memberSuggestDatalist");
+        memberSuggestDatalistEl.innerHTML = "";
+        const opt = document.createElement("option");
+        opt.value = partnerProfile.name;
+        memberSuggestDatalistEl.appendChild(opt);
+      }
       const roleSelect = document.createElement("select");
       roleSelect.setAttribute("aria-label", t("roleEditor"));
       const editorOpt = document.createElement("option");
@@ -4233,8 +4268,10 @@
               members.innerHTML = "<span class=\"glyph\">👥</span><span>" + t("manageMembers") + "</span>";
               members.addEventListener("click", () => {
                 closeListMenu();
-                editingMembersId = editingMembersId === section.key ? null : section.key;
+                const opening = editingMembersId !== section.key;
+                editingMembersId = opening ? section.key : null;
                 renderExistingLists();
+                if (opening) scrollToMembersPanel(section.key);
               });
               menu.appendChild(members);
             }
@@ -4818,6 +4855,9 @@
     if (!raw) return;
     try {
       let targetEmail = raw.includes("@") ? raw.toLowerCase() : null;
+      if (!targetEmail && myPartnerEmail && partnerProfile && partnerProfile.name && raw.toLowerCase() === partnerProfile.name.toLowerCase()) {
+        targetEmail = myPartnerEmail;
+      }
       if (!targetEmail) {
         const codeSnap = await getDoc(doc(db, "invite_codes", raw.toUpperCase()));
         if (!codeSnap.exists()) { showModalError({ code: "not-found", message: t("errInviteNotFound") }); return; }
@@ -5106,8 +5146,10 @@
       sharedBtn.textContent = t("sharedBadge");
       sharedBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        editingMembersId = editingMembersId === listObj.id ? null : listObj.id;
+        const opening = editingMembersId !== listObj.id;
+        editingMembersId = opening ? listObj.id : null;
         renderList();
+        if (opening) scrollToMembersPanel(listObj.id);
       });
       nameWrap.appendChild(sharedBtn);
     }
