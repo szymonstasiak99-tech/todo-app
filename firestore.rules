@@ -9,15 +9,28 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/allowed_users/$(request.auth.token.email)).data.partnerEmail;
     }
 
+    // A person's write-role on a custom list: the owner is always a full
+    // editor; anyone else defaults to "editor" too (preserves old behavior
+    // for partner-shared lists that predate roles) unless the list's roles
+    // map explicitly names them "viewer".
+    function roleOnList(listId) {
+      let list = get(/databases/$(database)/documents/custom_lists/$(listId)).data;
+      return list.ownerEmail == request.auth.token.email
+        ? "editor"
+        : (("roles" in list) && (request.auth.token.email in list.roles) ? list.roles[request.auth.token.email] : "editor");
+    }
+
     match /allowed_users/{email} {
-      allow get: if request.auth != null && (
-        email == request.auth.token.email ||
-        (isAllowed() && email == myPartner())
-      );
+      // Any signed-in allowed user can look up another allowed user's basic
+      // profile (name/authDisplayName) by their exact email - needed so
+      // shared-category members can see each other's real name. This never
+      // permits listing all users, only a get() when the email is already
+      // known (e.g. because they're inviting or sharing with that person).
+      allow get: if request.auth != null && (email == request.auth.token.email || isAllowed());
       allow list: if false;
       allow create: if request.auth != null
         && request.auth.token.email == email
-        && request.resource.data.keys().hasOnly(["name", "partnerEmail", "pairedViaCode", "createdAt"])
+        && request.resource.data.keys().hasOnly(["name", "partnerEmail", "pairedViaCode", "createdAt", "authDisplayName"])
         && (
           (!("partnerEmail" in request.resource.data) || request.resource.data.partnerEmail == null)
           ||
@@ -31,6 +44,8 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         (isAllowed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name"]) && (email == request.auth.token.email || email == myPartner()))
         || (request.auth.token.email == email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["partnerEmail"]))
+        || (request.auth.token.email == email && !("authDisplayName" in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["authDisplayName"]))
+        || (request.auth.token.email == email && !("inviteCode" in resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["inviteCode"]))
       );
       allow delete: if false;
     }
@@ -50,6 +65,48 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Permanent code -> email lookup, so someone can be invited to a
+    // category by code instead of by typing their email. One doc per user,
+    // doc ID is the code itself; a collision on create is simply denied
+    // (falls through to the disabled update rule) so the client can retry
+    // with a freshly generated code.
+    match /invite_codes/{code} {
+      allow get: if isAllowed();
+      allow list: if false;
+      allow create: if isAllowed()
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(["email"]);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Pending/resolved invitations to a single shared category. Doc ID is
+    // always "{listId}_{email}" so both rules and clients can look one up
+    // directly with get() instead of needing a query.
+    match /list_invites/{inviteId} {
+      allow read: if isAllowed() && (
+        resource.data.email == request.auth.token.email
+        || resource.data.invitedByEmail == request.auth.token.email
+        || (
+          exists(/databases/$(database)/documents/custom_lists/$(resource.data.listId))
+          && request.auth.token.email in get(/databases/$(database)/documents/custom_lists/$(resource.data.listId)).data.members
+        )
+      );
+      allow create: if isAllowed()
+        && inviteId == (request.resource.data.listId + "_" + request.resource.data.email)
+        && request.resource.data.invitedByEmail == request.auth.token.email
+        && get(/databases/$(database)/documents/custom_lists/$(request.resource.data.listId)).data.ownerEmail == request.auth.token.email
+        && request.resource.data.status == "pending"
+        && request.resource.data.role in ["editor", "viewer"]
+        && request.resource.data.keys().hasOnly(["listId", "listName", "listIcon", "email", "invitedByEmail", "invitedByName", "role", "status", "createdAt"]);
+      allow update: if isAllowed()
+        && request.auth.token.email == resource.data.email
+        && resource.data.status == "pending"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
+        && request.resource.data.status in ["accepted", "declined"];
+      allow delete: if isAllowed() && resource.data.invitedByEmail == request.auth.token.email && resource.data.status != "accepted";
+    }
+
     match /tasks/{taskId} {
       allow read: if isAllowed() && (
         ("members" in resource.data)
@@ -57,9 +114,22 @@ service cloud.firestore {
           : (resource.data.ownerEmail == request.auth.token.email
               || (resource.data.ownerEmail == myPartner() && (!("hidden" in resource.data) || resource.data.hidden != true)))
       );
-      allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
-      allow update: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
-      allow delete: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
+      allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email
+        && (!("customListId" in request.resource.data) || request.resource.data.customListId == null || roleOnList(request.resource.data.customListId) != "viewer");
+      allow update: if isAllowed() && (
+        resource.data.ownerEmail == request.auth.token.email
+        || (
+          ("members" in resource.data) && request.auth.token.email in resource.data.members
+          && (!("customListId" in resource.data) || resource.data.customListId == null || roleOnList(resource.data.customListId) != "viewer")
+        )
+      );
+      allow delete: if isAllowed() && (
+        resource.data.ownerEmail == request.auth.token.email
+        || (
+          ("members" in resource.data) && request.auth.token.email in resource.data.members
+          && (!("customListId" in resource.data) || resource.data.customListId == null || roleOnList(resource.data.customListId) != "viewer")
+        )
+      );
     }
 
     match /custom_lists/{listId} {
@@ -70,11 +140,30 @@ service cloud.firestore {
               || (resource.data.ownerEmail == myPartner() && (!("hidden" in resource.data) || resource.data.hidden != true)))
       );
       allow create: if isAllowed() && request.resource.data.createdByEmail == request.auth.token.email;
-      allow update: if isAllowed()
-        && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members))
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden", "order", "deleted", "deletedAt", "members"])
-        && (!("anchors" in resource.data) || request.resource.data.members.hasAll(resource.data.anchors));
-      allow delete: if isAllowed() && (resource.data.ownerEmail == request.auth.token.email || (("members" in resource.data) && request.auth.token.email in resource.data.members));
+      allow update: if isAllowed() && (
+        (
+          resource.data.ownerEmail == request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "icon", "hidden", "order", "deleted", "deletedAt", "members", "roles"])
+          && (!("anchors" in resource.data) || request.resource.data.members.hasAll(resource.data.anchors))
+        )
+        ||
+        (
+          // Accepting a pending invite: add exactly myself to members+roles,
+          // with the role that was actually offered - never a self-upgrade.
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["members", "roles"])
+          && request.resource.data.members == resource.data.members.concat([request.auth.token.email])
+          && get(/databases/$(database)/documents/list_invites/$(listId + "_" + request.auth.token.email)).data.status == "accepted"
+          && request.resource.data.roles[request.auth.token.email] == get(/databases/$(database)/documents/list_invites/$(listId + "_" + request.auth.token.email)).data.role
+        )
+        ||
+        (
+          // Leaving a shared list: remove only myself.
+          ("members" in resource.data) && request.auth.token.email in resource.data.members
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["members", "roles"])
+          && request.resource.data.members == resource.data.members.removeAll([request.auth.token.email])
+        )
+      );
+      allow delete: if isAllowed() && resource.data.ownerEmail == request.auth.token.email;
     }
 
     match /stats/{email} {
