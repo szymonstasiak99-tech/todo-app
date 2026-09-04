@@ -2002,6 +2002,17 @@
   </div>
 </div>
 
+<div class="overlay" id="notifPromptOverlay" hidden>
+  <div class="overlay-card">
+    <h2 id="notifPromptTitle">🔔 Stay in the loop?</h2>
+    <p id="notifPromptBody">Get a nudge for scheduled tasks, daily habit reminders, and when your partner adds or finishes something. You can change this anytime in Settings.</p>
+    <div class="consent-actions">
+      <button type="button" class="primary-btn" id="notifPromptAccept">Enable notifications</button>
+      <button type="button" class="secondary-btn" id="notifPromptDecline">Not now</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="pairOverlay" hidden>
   <div class="overlay-card">
     <div class="overlay-head">
@@ -2177,6 +2188,8 @@
   const DEFAULT_NOTIF = { enabled: false, taskReminders: true, habitReminder: true, habitReminderTime: "09:00", partnerActivity: true, tokens: [] };
   let myNotif = { ...DEFAULT_NOTIF }; // push notification prefs, synced via ui_state.notif
   let messaging = null; // lazily created once the person opts in, see ensureMessaging()
+  let notifPromptChecked = false; // whether we've already decided this session whether to show the post-login notification prompt
+  const NOTIF_PROMPT_SEEN_KEY = "todo-app-notif-prompt-seen";
   const CUSTOM_TITLE_MAX_LEN = 24;
   const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
   const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, urgentNotImportant: -1.9, other: -1.75 };
@@ -2280,6 +2293,11 @@
   const consentBodyEl = document.getElementById("consentBody");
   const consentAcceptEl = document.getElementById("consentAccept");
   const consentDeclineEl = document.getElementById("consentDecline");
+  const notifPromptOverlayEl = document.getElementById("notifPromptOverlay");
+  const notifPromptTitleEl = document.getElementById("notifPromptTitle");
+  const notifPromptBodyEl = document.getElementById("notifPromptBody");
+  const notifPromptAcceptEl = document.getElementById("notifPromptAccept");
+  const notifPromptDeclineEl = document.getElementById("notifPromptDecline");
   const closeListOverlayBtn = document.getElementById("closeListOverlay");
   const addListBtnEl = document.getElementById("addListBtn");
   const resetStatsBtnEl = document.getElementById("resetStatsBtn");
@@ -2615,6 +2633,10 @@
       consentBody: "We use Google Analytics to see which features are actually useful, so we know what's worth improving — no ads, no selling your data, no tracking you across other sites. Sound okay?",
       consentAccept: "Sure, I'm in",
       consentDecline: "No thanks",
+      notifPromptTitle: "🔔 Stay in the loop?",
+      notifPromptBody: "Get a nudge for scheduled tasks, daily habit reminders, and when your partner adds or finishes something. You can change this anytime in Settings.",
+      notifPromptAccept: "Enable notifications",
+      notifPromptDecline: "Not now",
       listsForLabelOther: "Categories for: {name} — you can add, but not delete.",
       footerAbout: "About",
       footerPrivacy: "Privacy Policy",
@@ -2881,6 +2903,10 @@
       consentBody: "Korzystamy z Google Analytics, żeby zobaczyć, które funkcje faktycznie się przydają i co warto poprawić — bez reklam, bez sprzedawania Twoich danych, bez namierzania Cię po innych stronach. Zgadzasz się?",
       consentAccept: "Jasne, zgadzam się",
       consentDecline: "Nie, dzięki",
+      notifPromptTitle: "🔔 Być na bieżąco?",
+      notifPromptBody: "Dostaniesz przypomnienie o zaplanowanych zadaniach, codzienne przypomnienie o nawykach, i powiadomienie gdy partner/partnerka doda lub odhaczy coś dla Ciebie. Możesz to zmienić w każdej chwili w Ustawieniach.",
+      notifPromptAccept: "Włącz powiadomienia",
+      notifPromptDecline: "Nie teraz",
       listsForLabelOther: "Kategorie dla: {name} — możesz dodawać, ale nie usuwać.",
       footerAbout: "O aplikacji",
       footerPrivacy: "Polityka prywatności",
@@ -3258,6 +3284,10 @@
     consentBodyEl.textContent = t("consentBody");
     consentAcceptEl.textContent = t("consentAccept");
     consentDeclineEl.textContent = t("consentDecline");
+    notifPromptTitleEl.textContent = t("notifPromptTitle");
+    notifPromptBodyEl.textContent = t("notifPromptBody");
+    notifPromptAcceptEl.textContent = t("notifPromptAccept");
+    notifPromptDeclineEl.textContent = t("notifPromptDecline");
     tabNamesDescEl.textContent = t("tabNamesDesc");
     saveNamesBtnEl.textContent = t("saveNames");
     languageDescEl.textContent = t("languageDesc");
@@ -4308,6 +4338,7 @@
       }
       myNotif = { ...DEFAULT_NOTIF, ...((snap.exists() && snap.data().notif) || {}) };
       renderNotifSettings();
+      if (!notifPromptChecked) { notifPromptChecked = true; checkNotifPrompt(); }
       appTitleEl.textContent = customTitle || t("appTitle");
       if (!newListOverlay.hidden && document.activeElement !== customTitleInput) {
         customTitleInput.value = customTitle;
@@ -5655,6 +5686,38 @@
 
   consentAcceptEl.addEventListener("click", () => { applyAnalyticsConsent(true); closeConsentOverlay(); });
   consentDeclineEl.addEventListener("click", () => { applyAnalyticsConsent(false); closeConsentOverlay(); });
+
+  function openNotifPromptOverlay() { notifPromptOverlayEl.hidden = false; }
+  function closeNotifPromptOverlay() { notifPromptOverlayEl.hidden = true; }
+
+  function markNotifPromptSeen() {
+    try { localStorage.setItem(NOTIF_PROMPT_SEEN_KEY, "1"); } catch (e) {}
+  }
+
+  // Asks once, right after the person's first ui_state snapshot loads, so we
+  // already know whether they enabled notifications on another device -
+  // never nags again once they've answered (or the browser already has an
+  // opinion, e.g. permission was previously granted/blocked elsewhere).
+  async function checkNotifPrompt() {
+    let seen = null;
+    try { seen = localStorage.getItem(NOTIF_PROMPT_SEEN_KEY); } catch (e) {}
+    if (seen) return;
+    if (myNotif.enabled) { markNotifPromptSeen(); return; }
+    if (("Notification" in window) && Notification.permission !== "default") { markNotifPromptSeen(); return; }
+    const msg = await ensureMessaging();
+    if (!msg) { markNotifPromptSeen(); return; }
+    openNotifPromptOverlay();
+  }
+
+  notifPromptAcceptEl.addEventListener("click", async () => {
+    markNotifPromptSeen();
+    closeNotifPromptOverlay();
+    await enableNotifications();
+  });
+  notifPromptDeclineEl.addEventListener("click", () => {
+    markNotifPromptSeen();
+    closeNotifPromptOverlay();
+  });
   manageConsentBtnEl.addEventListener("click", () => { closeListOverlay(); openConsentOverlay(); });
   consentOverlay.addEventListener("click", (e) => {
     if (e.target === consentOverlay) closeConsentOverlay();
