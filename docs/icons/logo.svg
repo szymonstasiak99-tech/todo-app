@@ -1,9 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#F5F5F5"/>
-  <circle cx="187.2" cy="256" r="155.2" fill="#2F6FD1" stroke="#1F4FA0" stroke-width="8"/>
-  <path d="M111.7 263.2 L163.2 314.8 L262.7 197.2" fill="none" stroke="#1F4FA0" stroke-width="41" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M111.7 263.2 L163.2 314.8 L262.7 197.2" fill="none" stroke="#FAFAFA" stroke-width="31" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="324.8" cy="256" r="155.2" fill="#CB3A3A" stroke="#9E2626" stroke-width="8"/>
-  <path d="M249.3 263.2 L300.8 314.8 L400.3 197.2" fill="none" stroke="#9E2626" stroke-width="41" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M249.3 263.2 L300.8 314.8 L400.3 197.2" fill="none" stroke="#FAFAFA" stroke-width="31" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 140 140">
+  <defs>
+    <filter id="ambient" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3A2A12" flood-opacity="0.15"/>
+    </filter>
+    <filter id="overlap" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="-1" dy="1" stdDeviation="1" flood-color="#3A2A12" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+  <rect width="140" height="140" fill="#F3EBDA"/>
+  <g filter="url(#ambient)">
+    <circle cx="46" cy="70" r="42" fill="#2F6FD1"/>
+    <path d="M26 72 L40 86 L68 54" fill="none" stroke="#FFCB3D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <g filter="url(#overlap)">
+      <circle cx="94" cy="70" r="42" fill="#CB3A3A"/>
+      <path d="M74 72 L88 86 L116 54" fill="none" stroke="#FFCB3D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
 </svg>
