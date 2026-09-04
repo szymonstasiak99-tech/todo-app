@@ -8,11 +8,25 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
+// Polish plural form picker: forms = [one, few (2-4), many (5+/0)].
+function plForm(n, forms) {
+  if (n === 1) return forms[0];
+  const mod10 = n % 10, mod100 = n % 100;
+  return (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) ? forms[1] : forms[2];
+}
+
 const STRINGS = {
   en: {
     onceTaskBody: (text) => `Reminder: "${text}"`,
     recurringTaskBody: (text) => `Time again for: "${text}"`,
     habitBody: (n) => (n === 1 ? "You still have 1 habit left today." : `You still have ${n} habits left today.`),
+    morningNudge: (habitCount, pendingCount) => {
+      const parts = [];
+      if (habitCount > 0) parts.push(habitCount === 1 ? "1 habit" : `${habitCount} habits`);
+      if (pendingCount > 0) parts.push(pendingCount === 1 ? "1 task" : `${pendingCount} tasks`);
+      if (!parts.length) return null;
+      return `Good morning! You have ${parts.join(" and ")} waiting for you today.`;
+    },
     partnerAdded: (name, text) => `${name} added: "${text}"`,
     partnerUnhid: (name, text) => `${name} shared a task with you: "${text}"`,
     partnerCompleted: (name, text) => `${name} checked off: "${text}"`
@@ -20,11 +34,13 @@ const STRINGS = {
   pl: {
     onceTaskBody: (text) => `Przypomnienie: „${text}”`,
     recurringTaskBody: (text) => `Znów czas na: „${text}”`,
-    habitBody: (n) => {
-      if (n === 1) return "Został Ci jeszcze 1 nieodhaczony nawyk dzisiaj.";
-      const mod10 = n % 10, mod100 = n % 100;
-      const word = mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20) ? "nawyki" : "nawyków";
-      return `Zostało Ci jeszcze ${n} nieodhaczonych ${word} dzisiaj.`;
+    habitBody: (n) => `Został${n === 1 ? "" : "o"} Ci jeszcze ${n} nieodhaczon${n === 1 ? "y" : "ych"} ${plForm(n, ["nawyk", "nawyki", "nawyków"])} dzisiaj.`,
+    morningNudge: (habitCount, pendingCount) => {
+      const parts = [];
+      if (habitCount > 0) parts.push(`${habitCount} ${plForm(habitCount, ["nawyk", "nawyki", "nawyków"])}`);
+      if (pendingCount > 0) parts.push(`${pendingCount} ${plForm(pendingCount, ["zadanie", "zadania", "zadań"])}`);
+      if (!parts.length) return null;
+      return `Dzień dobry! Masz dziś do zrobienia: ${parts.join(" i ")}.`;
     },
     partnerAdded: (name, text) => `${name} dodał(a): „${text}”`,
     partnerUnhid: (name, text) => `${name} odkrył(a) dla Ciebie zadanie: „${text}”`,
@@ -162,7 +178,19 @@ exports.remindScheduledTasks = onSchedule("every 5 minutes", async () => {
   }
 });
 
-// ---- 2) Daily habit reminder, at each person's own chosen local time ----
+// ---- 2) Daily habit reminder - fixed at 08:00 and 18:00 local time. The
+// morning slot also nudges about any other pending (non-habit) tasks, so
+// people don't forget to open the app even on days with no habits due. ----
+
+const REMINDER_TIMES = ["08:00", "18:00"];
+
+function isTaskPending(task, nowMs) {
+  if (task.deleted || task.isHabit) return false;
+  if (task.schedule && task.schedule.type === "recurring") {
+    return !(task.schedule.renewsAt && task.schedule.renewsAt > nowMs);
+  }
+  return !task.done;
+}
 
 exports.remindHabits = onSchedule("every 15 minutes", async () => {
   const now = new Date();
@@ -176,30 +204,35 @@ exports.remindHabits = onSchedule("every 15 minutes", async () => {
 
     const tz = data.timeZone || "UTC";
     const today = todayStrFor(now, tz);
-    if (notif.lastHabitReminderDate === today) continue;
 
-    // A 15-minute window matching the schedule's own cadence, rather than an
-    // exact "HH:MM === HH:MM" string match - the scheduler tick essentially
-    // never lands on the exact same minute as the person's chosen time.
-    const targetMs = zonedTimeToUtcMs(today, notif.habitReminderTime || "09:00", tz);
-    if (now.getTime() < targetMs || now.getTime() >= targetMs + 15 * 60 * 1000) continue;
+    for (const time of REMINDER_TIMES) {
+      const slotKey = today + "_" + time;
+      if (notif.lastHabitReminderSlot === slotKey) continue;
 
-    const habitsSnap = await db.collection("tasks")
-      .where("ownerEmail", "==", email)
-      .where("isHabit", "==", true)
-      .get();
-    const incomplete = habitsSnap.docs.filter((d) => {
-      const task = d.data();
-      if (task.hidden || task.deleted) return false;
-      const dates = task.completedDates || [];
-      return !dates.includes(today);
-    });
+      // A 15-minute window matching the schedule's own cadence, rather than
+      // an exact "HH:MM === HH:MM" string match - the scheduler tick
+      // essentially never lands on the exact same minute as the target.
+      const targetMs = zonedTimeToUtcMs(today, time, tz);
+      if (now.getTime() < targetMs || now.getTime() >= targetMs + 15 * 60 * 1000) continue;
 
-    if (incomplete.length > 0) {
-      const body = strings(data.lang).habitBody(incomplete.length);
-      await sendToUser(email, { title: "Tandem", body });
+      const tasksSnap = await db.collection("tasks").where("ownerEmail", "==", email).get();
+      const incompleteHabits = tasksSnap.docs.filter((d) => {
+        const task = d.data();
+        if (!task.isHabit || task.hidden || task.deleted) return false;
+        return !(task.completedDates || []).includes(today);
+      });
+
+      let body = null;
+      if (time === "08:00") {
+        const pendingCount = tasksSnap.docs.filter((d) => isTaskPending(d.data(), now.getTime())).length;
+        body = strings(data.lang).morningNudge(incompleteHabits.length, pendingCount);
+      } else if (incompleteHabits.length > 0) {
+        body = strings(data.lang).habitBody(incompleteHabits.length);
+      }
+
+      if (body) await sendToUser(email, { title: "Tandem", body });
+      await userDoc.ref.set({ notif: { lastHabitReminderSlot: slotKey } }, { merge: true });
     }
-    await userDoc.ref.set({ notif: { lastHabitReminderDate: today } }, { merge: true });
   }
 });
 

@@ -1936,15 +1936,17 @@
         <button type="button" class="theme-btn" id="notifTaskRemindersToggle"></button>
       </div>
       <div class="onboarding-category-row">
-        <span id="notifHabitReminderLabel">Daily habit reminder</span>
+        <span>
+          <span id="notifHabitReminderLabel">Daily habit reminder</span>
+          <button type="button" class="info-btn" id="notifHabitReminderInfoBtn" aria-label="Info">ⓘ</button>
+        </span>
         <button type="button" class="theme-btn" id="notifHabitReminderToggle"></button>
       </div>
-      <div class="onboarding-category-row" id="notifHabitTimeRow">
-        <span id="notifHabitTimeLabel">Reminder time</span>
-        <select id="notifHabitTimeSelect"></select>
-      </div>
       <div class="onboarding-category-row">
-        <span id="notifPartnerActivityLabel">Partner activity</span>
+        <span>
+          <span id="notifPartnerActivityLabel">Partner activity</span>
+          <button type="button" class="info-btn" id="notifPartnerActivityInfoBtn" aria-label="Info">ⓘ</button>
+        </span>
         <button type="button" class="theme-btn" id="notifPartnerActivityToggle"></button>
       </div>
     </div>
@@ -2185,7 +2187,7 @@
   let customTitle = "";          // my own optional headline, replacing the app name for me only
   let myTimeZone = null;         // IANA time zone (e.g. "Europe/Warsaw"), synced via ui_state so every one of my devices agrees on "today" for habit streaks
   let myPendingInviteCode = null; // an invite code I generated that's still waiting to be redeemed, if any
-  const DEFAULT_NOTIF = { enabled: false, taskReminders: true, habitReminder: true, habitReminderTime: "09:00", partnerActivity: true, tokens: [] };
+  const DEFAULT_NOTIF = { enabled: false, taskReminders: true, habitReminder: true, partnerActivity: true, tokens: [] };
   let myNotif = { ...DEFAULT_NOTIF }; // push notification prefs, synced via ui_state.notif
   let messaging = null; // lazily created once the person opts in, see ensureMessaging()
   let notifPromptChecked = false; // whether we've already decided this session whether to show the post-login notification prompt
@@ -2313,10 +2315,10 @@
   const notifTaskRemindersToggleEl = document.getElementById("notifTaskRemindersToggle");
   const notifHabitReminderLabelEl = document.getElementById("notifHabitReminderLabel");
   const notifHabitReminderToggleEl = document.getElementById("notifHabitReminderToggle");
-  const notifHabitTimeLabelEl = document.getElementById("notifHabitTimeLabel");
-  const notifHabitTimeSelectEl = document.getElementById("notifHabitTimeSelect");
+  const notifHabitReminderInfoBtnEl = document.getElementById("notifHabitReminderInfoBtn");
   const notifPartnerActivityLabelEl = document.getElementById("notifPartnerActivityLabel");
   const notifPartnerActivityToggleEl = document.getElementById("notifPartnerActivityToggle");
+  const notifPartnerActivityInfoBtnEl = document.getElementById("notifPartnerActivityInfoBtn");
   const themeButtons = document.querySelectorAll("[data-theme-choice]");
   const langButtons = document.querySelectorAll("[data-lang-choice]");
   const fontSizeButtons = document.querySelectorAll("[data-font-choice]");
@@ -2570,8 +2572,11 @@
       notifUnsupported: "Push notifications aren't supported in this browser.",
       notifTaskRemindersLabel: "Scheduled task reminders",
       notifHabitReminderLabel: "Daily habit reminder",
-      notifHabitTimeLabel: "Reminder time",
+      notifHabitReminderInfo: "Sent twice a day - at 8:00 and 18:00 - if you still have unchecked habits at that time.",
       notifPartnerActivityLabel: "Partner activity",
+      notifPartnerActivityInfo: "This is about your partner's activity, not your own - you'll be notified when they add a new shared task, share or unhide something with you, or check off something you can both see.",
+      notifOn: "On",
+      notifOff: "Off",
       replayTutorial: "Personalize categories / replay tutorial",
       resetStats: "Reset stats",
       resetStatsConfirm: "Reset all your stats? This can't be undone.",
@@ -2840,8 +2845,11 @@
       notifUnsupported: "Powiadomienia push nie są obsługiwane w tej przeglądarce.",
       notifTaskRemindersLabel: "Przypomnienia o zaplanowanych zadaniach",
       notifHabitReminderLabel: "Codzienne przypomnienie o nawykach",
-      notifHabitTimeLabel: "Godzina przypomnienia",
+      notifHabitReminderInfo: "Wysyłane dwa razy dziennie - o 8:00 i 18:00 - jeśli masz wtedy jeszcze nieodhaczone nawyki.",
       notifPartnerActivityLabel: "Aktywność partnera/partnerki",
+      notifPartnerActivityInfo: "Chodzi o aktywność partnera/partnerki, nie Twoją własną - dostaniesz powiadomienie, gdy doda nowe wspólne zadanie, udostępni lub odkryje coś dla Ciebie, albo odhaczy coś, co widzicie oboje.",
+      notifOn: "Włączone",
+      notifOff: "Wyłączone",
       replayTutorial: "Dostosuj kategorie / powtórz samouczek",
       resetStats: "Zresetuj statystyki",
       resetStatsConfirm: "Zresetować wszystkie Twoje statystyki? Tej operacji nie można cofnąć.",
@@ -3301,7 +3309,6 @@
     notifDescEl.textContent = t("notifDesc");
     notifTaskRemindersLabelEl.textContent = t("notifTaskRemindersLabel");
     notifHabitReminderLabelEl.textContent = t("notifHabitReminderLabel");
-    notifHabitTimeLabelEl.textContent = t("notifHabitTimeLabel");
     notifPartnerActivityLabelEl.textContent = t("notifPartnerActivityLabel");
     renderNotifSettings();
     replayTutorialBtnEl.textContent = t("replayTutorial");
@@ -4433,19 +4440,6 @@
     }
   }
 
-  function populateNotifTimeSelect() {
-    notifHabitTimeSelectEl.innerHTML = "";
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const value = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-        const opt = document.createElement("option");
-        opt.value = value;
-        opt.textContent = value;
-        notifHabitTimeSelectEl.appendChild(opt);
-      }
-    }
-  }
-
   function renderNotifSettings() {
     const denied = ("Notification" in window) && Notification.permission === "denied";
     notifEnableBtnEl.classList.toggle("active", myNotif.enabled);
@@ -4457,12 +4451,11 @@
     }
     notifDetailRowsEl.hidden = !myNotif.enabled;
     notifTaskRemindersToggleEl.classList.toggle("active", myNotif.taskReminders);
-    notifTaskRemindersToggleEl.textContent = myNotif.taskReminders ? t("onbCategoryVisible") : t("onbCategoryHidden");
+    notifTaskRemindersToggleEl.textContent = myNotif.taskReminders ? t("notifOn") : t("notifOff");
     notifHabitReminderToggleEl.classList.toggle("active", myNotif.habitReminder);
-    notifHabitReminderToggleEl.textContent = myNotif.habitReminder ? t("onbCategoryVisible") : t("onbCategoryHidden");
+    notifHabitReminderToggleEl.textContent = myNotif.habitReminder ? t("notifOn") : t("notifOff");
     notifPartnerActivityToggleEl.classList.toggle("active", myNotif.partnerActivity);
-    notifPartnerActivityToggleEl.textContent = myNotif.partnerActivity ? t("onbCategoryVisible") : t("onbCategoryHidden");
-    notifHabitTimeSelectEl.value = myNotif.habitReminderTime || DEFAULT_NOTIF.habitReminderTime;
+    notifPartnerActivityToggleEl.textContent = myNotif.partnerActivity ? t("notifOn") : t("notifOff");
   }
 
   notifEnableBtnEl.addEventListener("click", () => {
@@ -4472,8 +4465,8 @@
   notifTaskRemindersToggleEl.addEventListener("click", () => saveNotif({ taskReminders: !myNotif.taskReminders }));
   notifHabitReminderToggleEl.addEventListener("click", () => saveNotif({ habitReminder: !myNotif.habitReminder }));
   notifPartnerActivityToggleEl.addEventListener("click", () => saveNotif({ partnerActivity: !myNotif.partnerActivity }));
-  notifHabitTimeSelectEl.addEventListener("change", () => saveNotif({ habitReminderTime: notifHabitTimeSelectEl.value }));
-  populateNotifTimeSelect();
+  notifHabitReminderInfoBtnEl.addEventListener("click", () => alert(t("notifHabitReminderInfo")));
+  notifPartnerActivityInfoBtnEl.addEventListener("click", () => alert(t("notifPartnerActivityInfo")));
 
   ensureMessaging().then((msg) => {
     if (!msg) return;
