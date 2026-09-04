@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 140 140">
   <defs>
     <filter id="ambient" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3A2A12" flood-opacity="0.15"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#33383D" flood-opacity="0.15"/>
     </filter>
     <filter id="overlap" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="-1" dy="1" stdDeviation="1" flood-color="#3A2A12" flood-opacity="0.5"/>
+      <feDropShadow dx="-1" dy="1" stdDeviation="1" flood-color="#33383D" flood-opacity="0.5"/>
     </filter>
   </defs>
   <rect width="140" height="140" rx="31" ry="31" fill="#F5F5F5"/>
