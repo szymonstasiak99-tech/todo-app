@@ -3788,6 +3788,24 @@
     return !list || !list.sharedType || SHARED_LIST_TYPES[list.sharedType].allowHide;
   }
 
+  // Whether a new task would actually end up hidden from the partner, once
+  // saved - factors in not just the 🙈 chip but also category defaults (e.g.
+  // "Work" defaults to hidden) and whole-section hide state. Shared between
+  // the composer submit path and the live selection-summary preview so the
+  // two can never silently disagree.
+  function computeEffectiveHidden() {
+    if (!selectedListAllowsHide()) return false;
+    if (composerHidden) return true;
+    if (selectedCustomListId) {
+      const list = customLists.find(l => l.id === selectedCustomListId);
+      return !!(list && list.hidden);
+    }
+    const bucketKey = composerImportant
+      ? (composerUrgent ? "importantUrgent" : "mostImportant")
+      : (composerUrgent ? "urgentNotImportant" : "other");
+    return !!(activeHiddenSections && activeHiddenSections[bucketKey]);
+  }
+
   function updateHiddenChipAvailability() {
     const allowed = selectedListAllowsHide();
     chipHidden.disabled = !allowed;
@@ -4961,16 +4979,7 @@
 
   async function proceedAddTask(text, selectedList, isSharedTask) {
     inputEl.value = "";
-    const bucketKey = composerImportant
-      ? (composerUrgent ? "importantUrgent" : "mostImportant")
-      : (composerUrgent ? "urgentNotImportant" : "other");
-    const defaultHidden = !selectedListAllowsHide()
-      ? false
-      : composerHidden
-        ? true
-        : selectedCustomListId
-          ? !!(selectedList && selectedList.hidden)
-          : !!(activeHiddenSections && activeHiddenSections[bucketKey]);
+    const defaultHidden = computeEffectiveHidden();
     const taskData = {
       text,
       done: false,
@@ -5071,7 +5080,7 @@
     const scheduleSummary = formatComposerScheduleSummary();
     if (scheduleSummary) chips.push(scheduleSummary);
     if (composerHabit) chips.push(t("summaryHabit"));
-    if (composerHidden) chips.push(t("summaryHidden"));
+    if (computeEffectiveHidden()) chips.push(t("summaryHidden"));
 
     selectionSummaryEl.innerHTML = "";
     selectionSummaryEl.hidden = chips.length === 0;
