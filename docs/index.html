@@ -3764,12 +3764,17 @@
   function refreshCustomListsView() {
     // customLists is the tab-scoped view rendering code expects: the active
     // tab owner's own lists, every shared (fridge/shopping) list regardless
-    // of tab, and - only on my own tab - any category someone else invited
-    // me into individually (not owned by me, not a preset shared type).
+    // of tab, and - only on my own tab - any category someone explicitly
+    // invited me into individually via the point-11 flow. Membership from
+    // the OLD partner-default-visibility mechanism (a partner's category
+    // that simply isn't marked hidden-from-partner) also puts me in
+    // `members`, but must stay under the partner's own tab, not mine - so
+    // this checks `roles[myEmail]`, which only ever gets set by an accepted
+    // point-11 invite, never by the default partner-visibility path.
     customLists = allLists.filter(l =>
       l.ownerEmail === activeTab
       || l.sharedType
-      || (activeTab === myEmail && l.members && l.members.includes(myEmail))
+      || (activeTab === myEmail && l.roles && (myEmail in l.roles))
     ).sort(byOrder);
   }
 
@@ -3884,8 +3889,15 @@
     panel.className = "members-panel";
     const anchors = list.anchors || [];
     const roles = list.roles || {};
+    // On a plain (non-preset) list, `members` also carries anyone who can
+    // merely see it via the older, unrelated "not hidden from partner"
+    // default - that person never opted into this list specifically, so
+    // they must not appear as a "shared with" participant here. Only the
+    // owner and people who actually went through a point-11 invite (always
+    // present in `roles`) count as real members of this panel.
+    const visibleMembers = list.sharedType ? list.members : list.members.filter(email => email === list.ownerEmail || (email in roles));
 
-    for (const email of list.members) {
+    for (const email of visibleMembers) {
       const row = document.createElement("div");
       row.className = "member-row";
       const memberName = document.createElement("span");
@@ -4961,7 +4973,13 @@
         canEditNameIcon: list.ownerEmail === myEmail,
         canDelete: list.ownerEmail === myEmail,
         canManageMembers: list.ownerEmail === myEmail,
-        canViewMembers: list.ownerEmail === myEmail || (list.members && list.members.length > 1)
+        // A plain category's `members` also includes my partner by default
+        // whenever I haven't marked it hidden-from-partner (an older,
+        // unrelated mechanism) - that alone must NOT count as "shared" here,
+        // or every ordinary partner-visible category would wrongly show the
+        // members panel. Only an explicit point-11 invite (which always
+        // writes into `roles`) or a preset shared list counts.
+        canViewMembers: list.ownerEmail === myEmail || isShared || (list.roles && Object.keys(list.roles).length > 0)
       };
     });
 
@@ -5020,7 +5038,7 @@
     label.textContent = title;
     titleEl.appendChild(label);
 
-    if (listObj && listObj.members && listObj.members.length > 1) {
+    if (listObj && (listObj.sharedType || (listObj.roles && Object.keys(listObj.roles).length > 0))) {
       const sharedBtn = document.createElement("button");
       sharedBtn.type = "button";
       sharedBtn.className = "shared-badge";
@@ -5090,7 +5108,7 @@
     clearDoneEl.hidden = true;
 
     const tabTasks = tasks.filter(t2 => t2.ownerEmail === activeTab || (t2.customListId && allLists.some(l =>
-      l.id === t2.customListId && (l.sharedType || (activeTab === myEmail && l.members && l.members.includes(myEmail)))
+      l.id === t2.customListId && (l.sharedType || (activeTab === myEmail && l.roles && (myEmail in l.roles)))
     )));
     emptyEl.hidden = tabTasks.length > 0;
 
