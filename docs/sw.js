@@ -30,7 +30,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(clients.openWindow(link));
 });
 
-const CACHE_NAME = "tandem-shell-v1";
+const CACHE_NAME = "dodaily-shell-v1";
 const APP_SHELL = [
   "./index.html",
   "./icons/icon-192.png",
