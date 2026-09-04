@@ -822,6 +822,23 @@
   .tip-item strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
   .tip-item p { margin: 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
 
+  .matrix-explainer { margin: 4px 0 12px; }
+  .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .matrix-cell {
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+  .matrix-emoji { font-size: 1.3rem; }
+
   .empty {
     margin-top: 20vh;
     text-align: center;
@@ -1835,6 +1852,27 @@
     <div class="overlay-divider"></div>
     <p class="error-text" id="modalError" hidden></p>
     <p id="listsForLabel">Your task categories.</p>
+    <button type="button" class="footer-link-btn" id="showMatrixBtn">How are tasks sorted into these?</button>
+    <div class="matrix-explainer" id="matrixExplainer" hidden>
+      <div class="matrix-grid">
+        <div class="matrix-cell">
+          <span class="matrix-emoji">🎯</span>
+          <span id="matrixMI">Tap Important, leave Urgent off</span>
+        </div>
+        <div class="matrix-cell">
+          <span class="matrix-emoji">🔥</span>
+          <span id="matrixIU">Tap both Important and Urgent</span>
+        </div>
+        <div class="matrix-cell">
+          <span class="matrix-emoji">⏰</span>
+          <span id="matrixUN">Tap Urgent, leave Important off</span>
+        </div>
+        <div class="matrix-cell">
+          <span class="matrix-emoji">📦</span>
+          <span id="matrixOT">Leave both off</span>
+        </div>
+      </div>
+    </div>
     <ul class="existing-lists" id="existingLists"></ul>
     <button type="button" class="reset-order-btn" id="resetOrderBtn">Reset default order</button>
     <form id="newListForm">
@@ -2136,6 +2174,7 @@
   let myHiddenCategories = {};   // any category (builtin section, own list, or shared list) I've personally hidden from my own view — never affects what anyone else sees
   let activeHiddenSections = {}; // hidden built-in sections, as set by whoever owns the active tab
   let activeSectionOrder = {};   // custom position of the 3 built-in sections, as set by whoever owns the active tab
+  let activeBuiltinNames = {};   // custom display names for built-in sections, as set by whoever owns the active tab
   let openTaskMenuId = null;     // id of the task whose "more actions" menu is expanded, if any
   let openListMenuId = null;     // key of the category row (in Edytuj) whose "more actions" menu is expanded, if any
   let editingMembersId = null;   // id of the shared list whose member list is expanded for editing, if any
@@ -2224,6 +2263,12 @@
   const modalTitleEl = document.getElementById("modalTitle");
   const existingListsEl = document.getElementById("existingLists");
   const resetOrderBtnEl = document.getElementById("resetOrderBtn");
+  const showMatrixBtnEl = document.getElementById("showMatrixBtn");
+  const matrixExplainerEl = document.getElementById("matrixExplainer");
+  const matrixMIEl = document.getElementById("matrixMI");
+  const matrixIUEl = document.getElementById("matrixIU");
+  const matrixUNEl = document.getElementById("matrixUN");
+  const matrixOTEl = document.getElementById("matrixOT");
   const manageConsentBtnEl = document.getElementById("manageConsentBtn");
   const sendFeedbackBtnEl = document.getElementById("sendFeedbackBtn");
   const openProBtnEl = document.getElementById("openProBtn");
@@ -2542,7 +2587,7 @@
       addAnotherFridge: "+ Add another fridge",
       addAnotherShopping: "+ Add another shopping list",
       listsForLabelMine: "Your task categories.",
-      resetOrder: "Reset default order",
+      resetOrder: "Reset default order & names",
       manageConsent: "Manage analytics consent",
       sendFeedback: "Send feedback",
       proTileTitle: "Tandem Pro",
@@ -2558,6 +2603,11 @@
       tipsTileTitle: "Tips & ideas",
       tipsTileSubtitle: "Little ideas about habits and getting things done",
       tipsOverlayTitle: "💡 Tips & ideas",
+      showMatrix: "How are tasks sorted into these?",
+      matrixMI: "Tap Important, leave Urgent off",
+      matrixIU: "Tap both Important and Urgent",
+      matrixUN: "Tap Urgent, leave Important off",
+      matrixOT: "Leave both off",
       tip1Title: "🐣 Start stupidly small",
       tip1Body: "Instead of \"run for 30 minutes\", try \"put on running shoes\". Small steps are easier to repeat, and it's repetition — not intensity — that builds a habit.",
       tip2Title: "🔗 Stack it onto something you already do",
@@ -2800,7 +2850,7 @@
       addAnotherFridge: "+ Dodaj kolejną lodówkę",
       addAnotherShopping: "+ Dodaj kolejną listę zakupów",
       listsForLabelMine: "Twoje kategorie zadań.",
-      resetOrder: "Przywróć domyślną kolejność",
+      resetOrder: "Przywróć domyślną kolejność i nazwy",
       manageConsent: "Zarządzaj zgodą na analitykę",
       sendFeedback: "Wyślij opinię",
       proTileTitle: "Tandem Pro",
@@ -2816,6 +2866,11 @@
       tipsTileTitle: "Wskazówki i pomysły",
       tipsTileSubtitle: "Małe pomysły o nawykach i ogarnianiu spraw",
       tipsOverlayTitle: "💡 Wskazówki i pomysły",
+      showMatrix: "Jak zadania trafiają do tych kategorii?",
+      matrixMI: "Zaznacz Ważne, zostaw Pilne wyłączone",
+      matrixIU: "Zaznacz i Ważne, i Pilne",
+      matrixUN: "Zaznacz Pilne, zostaw Ważne wyłączone",
+      matrixOT: "Zostaw oba wyłączone",
       tip1Title: "🐣 Zacznij absurdalnie małym krokiem",
       tip1Body: "Zamiast „biegać 30 minut” spróbuj „załóż buty do biegania”. Małe kroki łatwiej powtarzać, a to powtarzalność - nie intensywność - buduje nawyk.",
       tip2Title: "🔗 Doczep to do czegoś, co już robisz",
@@ -3205,6 +3260,11 @@
     tipsTileSubtitleEl.textContent = t("tipsTileSubtitle");
     tipsOverlayTitleEl.textContent = t("tipsOverlayTitle");
     renderTips();
+    showMatrixBtnEl.textContent = t("showMatrix");
+    matrixMIEl.textContent = t("matrixMI");
+    matrixIUEl.textContent = t("matrixIU");
+    matrixUNEl.textContent = t("matrixUN");
+    matrixOTEl.textContent = t("matrixOT");
     consentTitleEl.textContent = t("consentTitle");
     consentBodyEl.textContent = t("consentBody");
     consentAcceptEl.textContent = t("consentAccept");
@@ -3749,31 +3809,38 @@
     sections.forEach((section, index) => {
       const li = document.createElement("li");
       const list = section.list;
-      const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
+      const displayTitle = section.displayTitle;
 
       if (section.canEditNameIcon && editingListId === section.key) {
         li.className = "editing";
-        const iconSelect = document.createElement("select");
-        iconSelect.setAttribute("aria-label", t("categoryIcon"));
-        populateIconSelect(iconSelect, list.icon || "");
+        let iconSelect = null;
+        if (section.kind !== "builtin") {
+          iconSelect = document.createElement("select");
+          iconSelect.setAttribute("aria-label", t("categoryIcon"));
+          populateIconSelect(iconSelect, list.icon || "");
+        }
         const nameInput = document.createElement("input");
         nameInput.type = "text";
-        nameInput.value = list.name;
+        nameInput.value = displayTitle;
         nameInput.maxLength = 40;
         const save = document.createElement("button");
         save.type = "button";
         save.className = "del-list";
         save.setAttribute("aria-label", t("save"));
         save.textContent = "✔";
-        save.addEventListener("click", () => saveEditedList(list, iconSelect.value, nameInput.value.trim()));
+        save.addEventListener("click", () => saveEditedList(section, iconSelect ? iconSelect.value : null, nameInput.value.trim()));
         const cancel = document.createElement("button");
         cancel.type = "button";
         cancel.className = "del-list";
         cancel.setAttribute("aria-label", t("cancel"));
         cancel.textContent = "✕";
         cancel.addEventListener("click", () => { editingListId = null; renderExistingLists(); });
-        li.append(iconSelect, nameInput, save, cancel);
-      } else {
+        if (iconSelect) li.appendChild(iconSelect);
+        li.append(nameInput, save, cancel);
+        existingListsEl.appendChild(li);
+        return;
+      }
+      {
         const effectiveHidden = section.hidden || section.selfHidden;
         if (section.kind !== "builtin") {
           const icon = document.createElement("span");
@@ -3944,10 +4011,14 @@
     }
   }
 
-  async function saveEditedList(list, icon, name) {
+  async function saveEditedList(section, icon, name) {
     if (!name) return;
     try {
-      await updateDoc(doc(db, "custom_lists", list.id), { name, icon });
+      if (section.kind === "builtin") {
+        await setDoc(doc(db, "ui_state", myEmail), { builtinNames: { [section.key]: name } }, { merge: true });
+      } else {
+        await updateDoc(doc(db, "custom_lists", section.list.id), { name, icon });
+      }
       editingListId = null;
       renderExistingLists();
     } catch (e) {
@@ -4484,6 +4555,7 @@
     unsubActiveUiState = onSnapshot(doc(db, "ui_state", email), (snap) => {
       activeHiddenSections = (snap.exists() && snap.data().hiddenSections) || {};
       activeSectionOrder = (snap.exists() && snap.data().sectionOrder) || {};
+      activeBuiltinNames = (snap.exists() && snap.data().builtinNames) || {};
       renderList();
       renderStats();
       if (!newListOverlay.hidden) renderExistingLists();
@@ -4536,6 +4608,7 @@
       key: b.key,
       list: null,
       title: b.titleKey,
+      displayTitle: (activeBuiltinNames && activeBuiltinNames[b.key]) || t(b.titleKey),
       tasks: b.tasks,
       order: (activeSectionOrder && activeSectionOrder[b.key] !== undefined) ? activeSectionOrder[b.key] : BUILTIN_ORDER_DEFAULTS[b.key],
       featured: b.featured,
@@ -4545,7 +4618,7 @@
       selfHidden: !!(myHiddenCategories && myHiddenCategories[b.key]),
       canManage: isMine,
       canHideOthers: true,
-      canEditNameIcon: false,
+      canEditNameIcon: true,
       canDelete: false
     }));
 
@@ -4556,6 +4629,7 @@
         key: list.id,
         list,
         title: list.name,
+        displayTitle: list.name,
         tasks: tabTasks.filter(t2 => t2.customListId === list.id),
         order: list.order ?? list.createdAt ?? 0,
         featured: false,
@@ -4598,6 +4672,12 @@
     try {
       await setDoc(doc(db, "ui_state", myEmail), {
         sectionOrder: {
+          mostImportant: deleteField(),
+          importantUrgent: deleteField(),
+          urgentNotImportant: deleteField(),
+          other: deleteField()
+        },
+        builtinNames: {
           mostImportant: deleteField(),
           importantUrgent: deleteField(),
           urgentNotImportant: deleteField(),
@@ -4676,7 +4756,7 @@
     const sections = getSections(tabTasks, isMine);
     for (const section of sections) {
       if (section.selfHidden) continue;
-      const displayTitle = section.kind === "builtin" ? t(section.title) : section.title;
+      const displayTitle = section.displayTitle;
       const hiddenPrefix = (section.canManage && section.hidden) ? t("hiddenPrefix") : "";
       const infoType = section.kind === "shared" ? section.list.sharedType : (section.list && section.list.presetType === "work" ? "work" : null);
       const g = renderGroup(hiddenPrefix + displayTitle, section.tasks, section.canManage, section.muted, section.featured, section.collapseKey, infoType);
@@ -5582,6 +5662,7 @@
   function openTipsOverlay() { tipsOverlayEl.hidden = false; }
   function closeTipsOverlay() { tipsOverlayEl.hidden = true; }
   openTipsBtnEl.addEventListener("click", () => { closeListOverlay(); openTipsOverlay(); });
+  showMatrixBtnEl.addEventListener("click", () => { matrixExplainerEl.hidden = !matrixExplainerEl.hidden; });
   closeTipsOverlayBtnEl.addEventListener("click", closeTipsOverlay);
   tipsOverlayEl.addEventListener("click", (e) => { if (e.target === tipsOverlayEl) closeTipsOverlay(); });
 
