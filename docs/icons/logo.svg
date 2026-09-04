@@ -7,7 +7,7 @@
       <feDropShadow dx="-1" dy="1" stdDeviation="1" flood-color="#3A2A12" flood-opacity="0.5"/>
     </filter>
   </defs>
-  <rect width="140" height="140" fill="#F3EBDA"/>
+  <rect width="140" height="140" fill="#F5F5F5"/>
   <g filter="url(#ambient)">
     <circle cx="46" cy="70" r="42" fill="#2F6FD1"/>
     <path d="M26 72 L40 86 L68 54" fill="none" stroke="#FFCB3D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
