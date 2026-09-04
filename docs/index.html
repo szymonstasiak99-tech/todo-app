@@ -837,6 +837,18 @@
   .invite-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .invite-row input { flex: 1; min-width: 90px; }
 
+  .members-settings-link {
+    align-self: flex-start;
+    border: none;
+    background: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.82em;
+    font-weight: 600;
+    padding: 2px 0;
+    text-decoration: underline;
+  }
+
 
   .selection-summary {
     display: flex;
@@ -2673,6 +2685,8 @@
       errInviteNotFound: "No account found with that email or code.",
       errInviteSelf: "You can't invite yourself.",
       errInviteAlreadyMember: "This person already has access.",
+      errInviteAlreadyPending: "You already invited this person - they haven't responded yet.",
+      editMembersInSettings: "Edit in Settings",
       sharedBadge: "Shared",
       notifDesc: "Push notifications.",
       notifEnableBtn: "Enable notifications",
@@ -2966,6 +2980,8 @@
       errInviteNotFound: "Nie znaleziono konta o tym mailu albo kodzie.",
       errInviteSelf: "Nie możesz zaprosić samego/samej siebie.",
       errInviteAlreadyMember: "Ta osoba już ma dostęp.",
+      errInviteAlreadyPending: "Już zaprosiłeś/aś tę osobę - jeszcze nie odpowiedziała.",
+      editMembersInSettings: "Edytuj w Ustawieniach",
       sharedBadge: "Współdzielone",
       notifDesc: "Powiadomienia push.",
       notifEnableBtn: "Włącz powiadomienia",
@@ -3966,7 +3982,7 @@
     if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
-  function renderMembersPanel(list, canManage) {
+  function renderMembersPanel(list, canManage, showSettingsLink) {
     const panel = document.createElement("div");
     panel.className = "members-panel";
     panel.dataset.membersPanelFor = list.id;
@@ -4055,6 +4071,18 @@
       add.addEventListener("click", () => { inviteToList(list, input.value, roleSelect.value); input.value = ""; });
       addRow.append(input, roleSelect, add);
       panel.appendChild(addRow);
+    }
+
+    if (showSettingsLink) {
+      const link = document.createElement("button");
+      link.type = "button";
+      link.className = "members-settings-link";
+      link.textContent = t("editMembersInSettings");
+      link.addEventListener("click", () => {
+        openListOverlay();
+        scrollToMembersPanel(list.id);
+      });
+      panel.appendChild(link);
     }
 
     return panel;
@@ -4864,7 +4892,20 @@
         targetEmail = codeSnap.data().email;
       }
       if (targetEmail === myEmail) { showModalError({ code: "self", message: t("errInviteSelf") }); return; }
-      if (list.members.includes(targetEmail)) { showModalError({ code: "already-member", message: t("errInviteAlreadyMember") }); return; }
+      // Being in `members` alone doesn't mean they were actually invited
+      // here - a partner is ambiently in `members` on any category that
+      // isn't hidden from them, without ever having been added through this
+      // feature. Only the owner or someone with a real roles entry (from an
+      // accepted invite) genuinely already has this category.
+      const roles = list.roles || {};
+      if (targetEmail === list.ownerEmail || (targetEmail in roles)) {
+        showModalError({ code: "already-member", message: t("errInviteAlreadyMember") });
+        return;
+      }
+      if (mySentInvites.some(inv => inv.listId === list.id && inv.email === targetEmail && inv.status === "pending")) {
+        showModalError({ code: "already-pending", message: t("errInviteAlreadyPending") });
+        return;
+      }
       const targetSnap = await getDoc(doc(db, "allowed_users", targetEmail));
       if (!targetSnap.exists()) { showModalError({ code: "not-found", message: t("errInviteNotFound") }); return; }
       const inviteId = list.id + "_" + targetEmail;
@@ -5071,7 +5112,11 @@
         canHideOthers: !isShared,
         canEditNameIcon: list.ownerEmail === myEmail,
         canDelete: list.ownerEmail === myEmail,
-        canManageMembers: list.ownerEmail === myEmail,
+        // A preset shared list (fridge/shopping) has no single real owner
+        // (ownerEmail is the literal "shared") - anyone currently on it can
+        // invite another person in (e.g. a housemate), same as any of the
+        // 1-2 people who already jointly manage it today.
+        canManageMembers: list.ownerEmail === myEmail || (isShared && list.members && list.members.includes(myEmail)),
         // A plain category's `members` also includes my partner by default
         // whenever I haven't marked it hidden-from-partner (an older,
         // unrelated mechanism) - that alone must NOT count as "shared" here,
@@ -5167,12 +5212,13 @@
     }
 
     if (!collapseKey) {
+      group.appendChild(titleEl);
+      if (listObj && editingMembersId === listObj.id) {
+        group.appendChild(renderMembersPanel(listObj, false, canManageMembers));
+      }
       const ul = document.createElement("ul");
       list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
-      group.append(titleEl, ul);
-      if (listObj && editingMembersId === listObj.id) {
-        group.appendChild(renderMembersPanel(listObj, canManageMembers));
-      }
+      group.appendChild(ul);
       return group;
     }
 
@@ -5195,13 +5241,13 @@
     titleEl.addEventListener("click", () => toggleSectionCollapsed(storageKey));
 
     group.appendChild(titleEl);
+    if (listObj && editingMembersId === listObj.id) {
+      group.appendChild(renderMembersPanel(listObj, false, canManageMembers));
+    }
     if (!collapsed) {
       const ul = document.createElement("ul");
       list.forEach((task, index) => ul.appendChild(makeItem(task, isMine, index === 0, index === list.length - 1)));
       group.appendChild(ul);
-    }
-    if (listObj && editingMembersId === listObj.id) {
-      group.appendChild(renderMembersPanel(listObj, canManageMembers));
     }
     return group;
   }

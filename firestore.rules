@@ -32,6 +32,15 @@ service cloud.firestore {
         : (("roles" in list) && (request.auth.token.email in list.roles) ? list.roles[request.auth.token.email] : "editor");
     }
 
+    // Who may invite a new person into a category: the real owner, or - for
+    // a preset shared list (fridge/shopping), which has no single real
+    // owner (ownerEmail is the literal "shared") - anyone already on it.
+    function canInviteToList(listId) {
+      let list = get(/databases/$(database)/documents/custom_lists/$(listId)).data;
+      return list.ownerEmail == request.auth.token.email
+        || (list.ownerEmail == "shared" && request.auth.token.email in list.members);
+    }
+
     // The roles map, defaulting to empty when a list predates per-member
     // roles entirely - lets self-join/self-removal diff the map safely
     // whether or not it existed before this write.
@@ -126,7 +135,7 @@ service cloud.firestore {
       allow create: if isAllowed()
         && inviteId == (request.resource.data.listId + "_" + request.resource.data.email)
         && request.resource.data.invitedByEmail == request.auth.token.email
-        && get(/databases/$(database)/documents/custom_lists/$(request.resource.data.listId)).data.ownerEmail == request.auth.token.email
+        && canInviteToList(request.resource.data.listId)
         && request.resource.data.status == "pending"
         && request.resource.data.role in ["editor", "viewer"]
         && request.resource.data.keys().hasOnly(["listId", "listName", "listIcon", "email", "invitedByEmail", "invitedByName", "role", "status", "createdAt"]);
