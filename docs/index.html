@@ -470,6 +470,40 @@
     border-style: dashed;
   }
 
+  .pro-badge {
+    flex-shrink: 0;
+    background: var(--surface-2);
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .pro-badge:hover { border-color: var(--accent); color: var(--accent); }
+
+  .pro-badge.active {
+    border-style: solid;
+    border-color: #C9A227;
+    color: #5B4600;
+    background: linear-gradient(115deg, #F5D35B 0%, #FFF3C4 25%, #C9A227 50%, #FFF3C4 75%, #F5D35B 100%);
+    background-size: 220% 100%;
+    animation: pro-shine 3s linear infinite;
+  }
+
+  @keyframes pro-shine {
+    0% { background-position: 0% 0; }
+    100% { background-position: -220% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pro-badge.active { animation: none; }
+  }
+
   .tab-group {
     display: flex;
     direction: ltr;
@@ -740,6 +774,31 @@
   }
 
   .footer-link-btn:hover { color: var(--accent); text-decoration: underline; }
+
+  .pro-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    background: linear-gradient(120deg, #7B5CFA, #B45CFA 55%, #FA5C9E);
+    color: #FFFFFF;
+  }
+
+  .pro-tile-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .pro-tile-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+  .pro-tile-text strong { font-size: 0.95rem; }
+  .pro-tile-text span { font-size: 0.78rem; opacity: 0.9; }
+  .pro-tile-arrow { font-size: 1.2rem; opacity: 0.85; flex-shrink: 0; }
+
+  .pro-benefits { margin: 0 0 14px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .pro-benefits li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.88rem; line-height: 1.4; }
+  .pro-benefits li .glyph { flex-shrink: 0; }
 
   .empty {
     margin-top: 20vh;
@@ -1693,6 +1752,7 @@
         <button type="button" id="headerEditBtn">Edit</button>
       </div>
       <div class="stats-strip" id="statsStrip"></div>
+      <button type="button" class="pro-badge" id="proBadgeBtn" aria-label="Tandem Pro">PRO</button>
     </div>
     <div class="status-note" id="statusNote"></div>
   </header>
@@ -1734,6 +1794,15 @@
       <h2 id="modalTitle">Settings</h2>
       <button type="button" class="overlay-close" id="closeListOverlay" aria-label="Close">✕</button>
     </div>
+    <button type="button" class="pro-tile" id="openProBtn">
+      <span class="pro-tile-icon">✨</span>
+      <span class="pro-tile-text">
+        <strong id="proTileTitle">Tandem Pro</strong>
+        <span id="proTileSubtitle">See what's coming</span>
+      </span>
+      <span class="pro-tile-arrow" aria-hidden="true">›</span>
+    </button>
+    <div class="overlay-divider"></div>
     <p class="error-text" id="modalError" hidden></p>
     <p id="listsForLabel">Your task categories.</p>
     <ul class="existing-lists" id="existingLists"></ul>
@@ -1825,6 +1894,8 @@
     <div class="overlay-divider"></div>
     <button type="button" class="reset-stats-btn" id="modalSignOutBtn">Sign out</button>
     <div class="overlay-divider"></div>
+    <a href="mailto:szymonstasiak99@gmail.com?subject=Tandem%20feedback" class="footer-link-btn" id="sendFeedbackBtn">Send feedback</a>
+    <div class="overlay-divider"></div>
     <button type="button" class="footer-link-btn" id="manageConsentBtn">Manage analytics consent</button>
     <div class="overlay-divider"></div>
     <footer class="app-footer">
@@ -1834,6 +1905,18 @@
       <span aria-hidden="true">·</span>
       <a href="terms.html" target="_blank" rel="noopener" id="footerTerms">Terms of Service</a>
     </footer>
+  </div>
+</div>
+
+<div class="overlay" id="proOverlay" hidden>
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="proOverlayTitle">✨ Tandem Pro</h2>
+      <button type="button" class="overlay-close" id="closeProOverlay" aria-label="Close">✕</button>
+    </div>
+    <p id="proOverlayIntro">A few things we're planning for people who want a little more from Tandem:</p>
+    <ul class="pro-benefits" id="proBenefitsList"></ul>
+    <p class="gate-hint" id="proComingSoon">Not available to buy yet - this is just a preview of what's coming.</p>
   </div>
 </div>
 
@@ -2102,6 +2185,17 @@
   const existingListsEl = document.getElementById("existingLists");
   const resetOrderBtnEl = document.getElementById("resetOrderBtn");
   const manageConsentBtnEl = document.getElementById("manageConsentBtn");
+  const sendFeedbackBtnEl = document.getElementById("sendFeedbackBtn");
+  const openProBtnEl = document.getElementById("openProBtn");
+  const proBadgeBtnEl = document.getElementById("proBadgeBtn");
+  const proTileTitleEl = document.getElementById("proTileTitle");
+  const proTileSubtitleEl = document.getElementById("proTileSubtitle");
+  const proOverlayEl = document.getElementById("proOverlay");
+  const proOverlayTitleEl = document.getElementById("proOverlayTitle");
+  const proOverlayIntroEl = document.getElementById("proOverlayIntro");
+  const proBenefitsListEl = document.getElementById("proBenefitsList");
+  const proComingSoonEl = document.getElementById("proComingSoon");
+  const closeProOverlayBtnEl = document.getElementById("closeProOverlay");
   const consentOverlay = document.getElementById("consentOverlay");
   const consentTitleEl = document.getElementById("consentTitle");
   const consentBodyEl = document.getElementById("consentBody");
@@ -2403,6 +2497,17 @@
       listsForLabelMine: "Your task categories.",
       resetOrder: "Reset default order",
       manageConsent: "Manage analytics consent",
+      sendFeedback: "Send feedback",
+      proTileTitle: "Tandem Pro",
+      proTileSubtitle: "See what's coming",
+      proOverlayTitle: "✨ Tandem Pro",
+      proOverlayIntro: "A few things we're planning for people who want a little more from Tandem:",
+      proComingSoon: "Not available to buy yet - this is just a preview of what's coming.",
+      proBenefit1: "🎨 More color themes and customization options",
+      proBenefit2: "☁️ Extended habit & task history, with backups",
+      proBenefit3: "👥 Share more categories with more people at once",
+      proBenefit4: "🔔 More flexible reminder scheduling",
+      proBenefit5: "💛 Support an indie project you already use every day",
       consentTitle: "Before we start 👋",
       consentBody: "We use Google Analytics to see which features are actually useful, so we know what's worth improving — no ads, no selling your data, no tracking you across other sites. Sound okay?",
       consentAccept: "Sure, I'm in",
@@ -2635,6 +2740,17 @@
       listsForLabelMine: "Twoje kategorie zadań.",
       resetOrder: "Przywróć domyślną kolejność",
       manageConsent: "Zarządzaj zgodą na analitykę",
+      sendFeedback: "Wyślij opinię",
+      proTileTitle: "Tandem Pro",
+      proTileSubtitle: "Zobacz co planujemy",
+      proOverlayTitle: "✨ Tandem Pro",
+      proOverlayIntro: "Kilka rzeczy, które planujemy dla osób, które chcą wycisnąć z Tandem jeszcze więcej:",
+      proComingSoon: "Na razie nie można tego kupić - to tylko podgląd tego, co nadchodzi.",
+      proBenefit1: "🎨 Więcej kolorystyk i opcji personalizacji",
+      proBenefit2: "☁️ Dłuższa historia zadań i nawyków, wraz z kopiami zapasowymi",
+      proBenefit3: "👥 Współdzielenie większej liczby kategorii z większą liczbą osób naraz",
+      proBenefit4: "🔔 Bardziej elastyczne ustawianie przypomnień",
+      proBenefit5: "💛 Wsparcie niezależnego projektu, z którego już codziennie korzystasz",
       consentTitle: "Zanim zaczniemy 👋",
       consentBody: "Korzystamy z Google Analytics, żeby zobaczyć, które funkcje faktycznie się przydają i co warto poprawić — bez reklam, bez sprzedawania Twoich danych, bez namierzania Cię po innych stronach. Zgadzasz się?",
       consentAccept: "Jasne, zgadzam się",
@@ -3001,6 +3117,13 @@
     addListBtnEl.textContent = t("add");
     resetOrderBtnEl.textContent = t("resetOrder");
     manageConsentBtnEl.textContent = t("manageConsent");
+    sendFeedbackBtnEl.textContent = t("sendFeedback");
+    proTileTitleEl.textContent = t("proTileTitle");
+    proTileSubtitleEl.textContent = t("proTileSubtitle");
+    proOverlayTitleEl.textContent = t("proOverlayTitle");
+    proOverlayIntroEl.textContent = t("proOverlayIntro");
+    proComingSoonEl.textContent = t("proComingSoon");
+    renderProBenefits();
     consentTitleEl.textContent = t("consentTitle");
     consentBodyEl.textContent = t("consentBody");
     consentAcceptEl.textContent = t("consentAccept");
@@ -5343,6 +5466,22 @@
   consentOverlay.addEventListener("click", (e) => {
     if (e.target === consentOverlay) closeConsentOverlay();
   });
+
+  function renderProBenefits() {
+    proBenefitsListEl.innerHTML = "";
+    for (const key of ["proBenefit1", "proBenefit2", "proBenefit3", "proBenefit4", "proBenefit5"]) {
+      const li = document.createElement("li");
+      li.textContent = t(key);
+      proBenefitsListEl.appendChild(li);
+    }
+  }
+
+  function openProOverlay() { proOverlayEl.hidden = false; }
+  function closeProOverlay() { proOverlayEl.hidden = true; }
+  openProBtnEl.addEventListener("click", () => { closeListOverlay(); openProOverlay(); });
+  proBadgeBtnEl.addEventListener("click", openProOverlay);
+  closeProOverlayBtnEl.addEventListener("click", closeProOverlay);
+  proOverlayEl.addEventListener("click", (e) => { if (e.target === proOverlayEl) closeProOverlay(); });
 
   function openListOverlay() {
     newListInput.value = "";
