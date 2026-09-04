@@ -839,6 +839,26 @@
   }
   .matrix-emoji { font-size: 1.3rem; }
 
+  .selection-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   .empty {
     margin-top: 20vh;
     text-align: center;
@@ -1809,6 +1829,7 @@
         <span id="editingBannerText">Editing task</span>
         <button type="button" id="cancelEditBtn" aria-label="Cancel">✕</button>
       </div>
+      <div class="selection-summary" id="selectionSummary" hidden></div>
       <div class="chip-row" id="chipRow">
         <button type="button" class="chip hidden" id="chipHidden" aria-label="Add as hidden">🙈</button>
         <button type="button" class="chip schedule" id="chipSchedule" aria-label="Schedule">📅</button>
@@ -2250,6 +2271,7 @@
   const composerWrap = document.getElementById("composerWrap");
   const chipImportant = document.getElementById("chipImportant");
   const chipHidden = document.getElementById("chipHidden");
+  const selectionSummaryEl = document.getElementById("selectionSummary");
   const chipUrgent = document.getElementById("chipUrgent");
   const chipHabit = document.getElementById("chipHabit");
   const chipNewList = document.getElementById("chipNewList");
@@ -2604,6 +2626,11 @@
       tipsTileSubtitle: "Little ideas about habits and getting things done",
       tipsOverlayTitle: "💡 Tips & ideas",
       showMatrix: "How are tasks sorted into these?",
+      summaryImportant: "🎯 Important",
+      summaryImportantUrgent: "🔥 Important & urgent",
+      summaryUrgent: "⏰ Urgent",
+      summaryHabit: "🔁 Habit",
+      summaryHidden: "🙈 Hidden from partner",
       matrixMI: "Tap Important, leave Urgent off",
       matrixIU: "Tap both Important and Urgent",
       matrixUN: "Tap Urgent, leave Important off",
@@ -2867,6 +2894,11 @@
       tipsTileSubtitle: "Małe pomysły o nawykach i ogarnianiu spraw",
       tipsOverlayTitle: "💡 Wskazówki i pomysły",
       showMatrix: "Jak zadania trafiają do tych kategorii?",
+      summaryImportant: "🎯 Ważne",
+      summaryImportantUrgent: "🔥 Ważne i pilne",
+      summaryUrgent: "⏰ Pilne",
+      summaryHabit: "🔁 Nawyk",
+      summaryHidden: "🙈 Ukryte przed partnerem",
       matrixMI: "Zaznacz Ważne, zostaw Pilne wyłączone",
       matrixIU: "Zaznacz i Ważne, i Pilne",
       matrixUN: "Zaznacz Pilne, zostaw Ważne wyłączone",
@@ -3233,6 +3265,7 @@
     chipUrgent.textContent = t("chipUrgent");
     chipHabit.textContent = t("chipHabit");
     chipNewList.textContent = t("chipEdit");
+    renderSelectionSummary();
     addTaskBtnEl.setAttribute("aria-label", editingTaskId ? t("saveTaskEdit") : t("addTask"));
     editingBannerTextEl.textContent = t("editingTaskBanner");
     noCategoryConfirmTextEl.textContent = t("noCategoryConfirmText");
@@ -3793,6 +3826,7 @@
       customChipsEl.appendChild(btn);
     }
     updateHiddenChipAvailability();
+    renderSelectionSummary();
   }
 
   let editingListId = null;
@@ -5009,6 +5043,7 @@
         if (!myPartnerEmail) showStatus(t("hiddenNoPartnerInfo"));
       }
       chipEl.classList.toggle("on");
+      renderSelectionSummary();
     });
   }
   setChip(chipImportant, "important");
@@ -5018,6 +5053,47 @@
 
   function updateScheduleChipState() {
     chipScheduleEl.classList.toggle("on", !!composerSchedule);
+    renderSelectionSummary();
+  }
+
+  function formatComposerScheduleSummary() {
+    const s = composerSchedule;
+    if (!s) return null;
+    if (s.type === "recurring") {
+      const value = s.intervalValue || 1;
+      const unit = s.intervalUnit === "hours"
+        ? pluralForm(value, { en: ["hour", "hours"], pl: ["godzinę", "godziny", "godzin"] })
+        : pluralForm(value, { en: ["day", "days"], pl: ["dzień", "dni", "dni"] });
+      return "📅 " + t("scheduleEvery", { n: value, unit }) + (s.time ? ", " + s.time : "");
+    }
+    return "📅 " + formatScheduleDate(s.date, s.time);
+  }
+
+  function renderSelectionSummary() {
+    const chips = [];
+    if (selectedCustomListId) {
+      const list = customLists.find(l => l.id === selectedCustomListId);
+      if (list) chips.push((list.icon ? list.icon + " " : "") + list.name);
+    } else if (composerImportant && composerUrgent) {
+      chips.push(t("summaryImportantUrgent"));
+    } else if (composerImportant) {
+      chips.push(t("summaryImportant"));
+    } else if (composerUrgent) {
+      chips.push(t("summaryUrgent"));
+    }
+    const scheduleSummary = formatComposerScheduleSummary();
+    if (scheduleSummary) chips.push(scheduleSummary);
+    if (composerHabit) chips.push(t("summaryHabit"));
+    if (composerHidden) chips.push(t("summaryHidden"));
+
+    selectionSummaryEl.innerHTML = "";
+    selectionSummaryEl.hidden = chips.length === 0;
+    for (const text of chips) {
+      const span = document.createElement("span");
+      span.className = "summary-chip";
+      span.textContent = text;
+      selectionSummaryEl.appendChild(span);
+    }
   }
 
   function renderScheduleOverlay() {
