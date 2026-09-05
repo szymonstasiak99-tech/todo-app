@@ -2686,8 +2686,8 @@
       saveNames: "Save names",
       partnerLabel: "Partner",
       unpairBtn: "Unpair",
-      unpairHint: "This stops sharing your fridge/shopping lists and any category you haven't hidden from them. Your own tasks and categories - and anything you've shared through a category invite - stay exactly as they are.",
-      unpairConfirm: "Unpair from {name}? You'll each keep your own tasks and categories, but stop sharing the fridge/shopping lists and any category the other hasn't hidden.",
+      unpairHint: "This stops sharing your fridge/shopping lists, any category you haven't hidden from them, and any category you've invited each other into directly. Anything shared with someone else entirely stays exactly as it is.",
+      unpairConfirm: "Unpair from {name}? You'll each keep your own tasks and categories, but stop sharing the fridge/shopping lists and any category shared between the two of you, directly or by default.",
       languageDesc: "App language.",
       customTitleDesc: "Your own call to action (optional) — replaces the default text in the top-left corner.",
       customTitlePlaceholder: "Type what motivates you!",
@@ -2986,8 +2986,8 @@
       saveNames: "Zapisz nazwy",
       partnerLabel: "Partner/partnerka",
       unpairBtn: "Rozłącz parę",
-      unpairHint: "To przestaje udostępniać Waszą lodówkę/listę zakupów i każdą kategorię, której nie ukryliście przed sobą nawzajem. Wasze własne zadania i kategorie - oraz wszystko udostępnione przez zaproszenie do kategorii - zostają bez zmian.",
-      unpairConfirm: "Rozłączyć parę z {name}? Każde z Was zachowa swoje własne zadania i kategorie, ale przestaniecie współdzielić lodówkę/listę zakupów i każdą kategorię, której druga strona nie ukryła.",
+      unpairHint: "To przestaje udostępniać Waszą lodówkę/listę zakupów, każdą kategorię, której nie ukryliście przed sobą nawzajem, oraz każdą kategorię, do której zaprosiliście się nawzajem bezpośrednio. To, czym dzielicie się z kimś innym, zostaje bez zmian.",
+      unpairConfirm: "Rozłączyć parę z {name}? Każde z Was zachowa swoje własne zadania i kategorie, ale przestaniecie współdzielić lodówkę/listę zakupów oraz każdą kategorię współdzieloną między Wami - domyślnie albo przez bezpośrednie zaproszenie.",
       languageDesc: "Język aplikacji.",
       customTitleDesc: "Twoje własne wezwanie do działania (opcjonalne) - zastępuje domyślny napis w górnym lewym rogu.",
       customTitlePlaceholder: "Wpisz to, co Ciebie motywuje!",
@@ -6601,6 +6601,48 @@
     }
   }
 
+  // Point-11 sharing is deliberately independent of the partner relationship
+  // in general (inviting a roommate to the fridge list survives an unpair
+  // between the two partners) - but a connection made specifically WITH the
+  // person I just unpaired from should go too, in both directions: a role
+  // I gave her on my own list, a role she gave me on hers, and any invite
+  // either of us sent the other that's still pending.
+  async function severPoint11ConnectionsWith(exPartnerEmail) {
+    if (!exPartnerEmail) return;
+    for (const list of allLists) {
+      if (list.ownerEmail === myEmail && list.roles && (exPartnerEmail in list.roles)) {
+        try {
+          const restRoles = { ...list.roles };
+          delete restRoles[exPartnerEmail];
+          await updateDoc(doc(db, "custom_lists", list.id), {
+            members: list.members.filter((m) => m !== exPartnerEmail),
+            roles: restRoles
+          });
+        } catch (e) {}
+      }
+      if (list.ownerEmail === exPartnerEmail && list.roles && (myEmail in list.roles)) {
+        try {
+          const restRoles = { ...list.roles };
+          delete restRoles[myEmail];
+          await updateDoc(doc(db, "custom_lists", list.id), {
+            members: list.members.filter((m) => m !== myEmail),
+            roles: restRoles
+          });
+        } catch (e) {}
+      }
+    }
+    for (const invite of mySentInvites) {
+      if (invite.email === exPartnerEmail && invite.status === "pending") {
+        try { await deleteDoc(doc(db, "list_invites", invite.id)); } catch (e) {}
+      }
+    }
+    for (const invite of myIncomingInvites) {
+      if (invite.invitedByEmail === exPartnerEmail && invite.status === "pending") {
+        try { await updateDoc(doc(db, "list_invites", invite.id), { status: "declined" }); } catch (e) {}
+      }
+    }
+  }
+
   function subscribeMyProfile() {
     if (unsubRoster) unsubRoster();
     unsubRoster = onSnapshot(doc(db, "allowed_users", myEmail), (snap) => {
@@ -6613,6 +6655,7 @@
       const newPartnerEmail = data.partnerEmail || null;
       const justPaired = !myPartnerEmail && !!newPartnerEmail;
       const justUnpaired = !!myPartnerEmail && !newPartnerEmail;
+      const oldPartnerEmail = myPartnerEmail;
       if (newPartnerEmail !== myPartnerEmail) {
         myPartnerEmail = newPartnerEmail;
         subscribePartnerProfile();
@@ -6627,6 +6670,7 @@
         syncOwnMembers("tasks", tasks);
         syncOwnMembers("custom_lists", allLists);
         leaveAmbientListsOnUnpair();
+        severPoint11ConnectionsWith(oldPartnerEmail);
       }
     });
   }
