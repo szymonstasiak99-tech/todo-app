@@ -2258,7 +2258,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, updateDoc, doc, getDoc, getDocs, setDoc, deleteDoc,
-    onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField
+    onSnapshot, query, where, arrayUnion, arrayRemove, increment, deleteField, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
   import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
@@ -5571,7 +5571,22 @@
   clearDoneEl.addEventListener("click", async () => {
     const done = tasks.filter(t2 => (t2.ownerEmail === myEmail || (t2.members && t2.members.includes(myEmail))) && !t2.isHabit && t2.done);
     if (!confirm(t("deleteDoneConfirm", { n: done.length }))) return;
-    for (const t2 of done) { try { await updateDoc(doc(db, "tasks", t2.id), { deleted: true, deletedAt: Date.now() }); } catch (e) {} }
+    // One batched commit (chunked at Firestore's 500-write limit) instead of
+    // N sequential updateDoc calls - each of those used to land as its own
+    // snapshot event, re-rendering the whole list once per task and making
+    // bulk deletes visibly jump/reflow N times instead of settling once.
+    try {
+      const deletedAt = Date.now();
+      for (let i = 0; i < done.length; i += 500) {
+        const batch = writeBatch(db);
+        for (const t2 of done.slice(i, i + 500)) {
+          batch.update(doc(db, "tasks", t2.id), { deleted: true, deletedAt });
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      showStatus(t("errSaveChange"));
+    }
   });
 
   function setChip(chipEl, key) {
