@@ -884,12 +884,35 @@
     gap: 4px;
     background: var(--accent-soft);
     color: var(--accent);
+    border: none;
     border-radius: 999px;
     padding: 4px 10px;
+    font-family: inherit;
     font-size: 0.74rem;
     font-weight: 600;
     white-space: nowrap;
+    cursor: pointer;
   }
+
+  .summary-chip.static { cursor: default; }
+
+  .summary-clear-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .summary-clear-all:hover { background: var(--surface-2); color: var(--danger); }
 
   .empty {
     margin-top: 20vh;
@@ -2765,6 +2788,8 @@
       summaryUrgent: "⏰ Urgent",
       summaryHabit: "🔁 Habit",
       summaryHidden: "🙈 Hidden from partner",
+      summaryChipRemove: "Remove {label}",
+      summaryClearAll: "Clear all selections",
       mostImportantInfo: "🎯 Tasks land here when you mark them Important, but leave Urgent off.",
       importantUrgentInfo: "🔥 Tasks land here when you mark them both Important and Urgent.",
       urgentNotImportantInfo: "⏰ Tasks land here when you mark them Urgent, but leave Important off.",
@@ -3063,6 +3088,8 @@
       summaryUrgent: "⏰ Pilne",
       summaryHabit: "🔁 Nawyk",
       summaryHidden: "🙈 Ukryte przed partnerem",
+      summaryChipRemove: "Usuń {label}",
+      summaryClearAll: "Wyczyść cały wybór",
       mostImportantInfo: "🎯 Zadania trafiają tutaj, gdy zaznaczysz Ważne, ale zostawisz Pilne wyłączone.",
       importantUrgentInfo: "🔥 Zadania trafiają tutaj, gdy zaznaczysz i Ważne, i Pilne.",
       urgentNotImportantInfo: "⏰ Zadania trafiają tutaj, gdy zaznaczysz Pilne, ale zostawisz Ważne wyłączone.",
@@ -3653,7 +3680,7 @@
     const pill = document.createElement("span");
     pill.className = "stat-pill";
     pill.innerHTML = icon + ' <span class="n">' + total + "</span>" +
-      (habit > 0 ? ' <span class="h">🔁' + habit + "</span>" : "");
+      (habit > 0 ? ' <span class="h">🔁 ' + habit + "</span>" : "");
     statsStripEl.appendChild(pill);
   }
 
@@ -4145,6 +4172,10 @@
   }
 
   function selectedListAllowsHide() {
+    // "Hidden" always means hidden from my partner - adding something on
+    // their own tab while hiding it from them makes no sense (and would
+    // leave them out of the resulting task's own members).
+    if (activeTab !== myEmail) return false;
     if (!selectedCustomListId) return true;
     const list = customLists.find(l => l.id === selectedCustomListId);
     return !list || !list.sharedType || SHARED_LIST_TYPES[list.sharedType].allowHide;
@@ -4186,7 +4217,17 @@
       btn.className = "chip list" + (selectedCustomListId === list.id ? " on list" : "");
       btn.textContent = (list.icon ? list.icon + " " : "") + list.name;
       btn.addEventListener("click", () => {
-        selectedCustomListId = selectedCustomListId === list.id ? null : list.id;
+        const turningOn = selectedCustomListId !== list.id;
+        selectedCustomListId = turningOn ? list.id : null;
+        // A category and the Important/Urgent quadrant are two different
+        // ways of placing a task - picking one now clears the other, so a
+        // saved task never silently carries both at once.
+        if (turningOn && (composerImportant || composerUrgent)) {
+          composerImportant = false;
+          composerUrgent = false;
+          chipImportant.classList.remove("on");
+          chipUrgent.classList.remove("on");
+        }
         renderCustomChips();
       });
       customChipsEl.appendChild(btn);
@@ -4461,6 +4502,7 @@
     if (editingTaskId) cancelEditingTask();
     activeTab = email;
     refreshCustomListsView();
+    renderCustomChips();
     renderTabs();
     renderList();
     renderStats();
@@ -5534,15 +5576,23 @@
 
   function setChip(chipEl, key) {
     chipEl.addEventListener("click", () => {
-      if (key === "important") composerImportant = !composerImportant;
-      if (key === "urgent") composerUrgent = !composerUrgent;
+      if (key === "important") {
+        composerImportant = !composerImportant;
+        // Same reasoning as the category chips, in reverse: picking a
+        // quadrant clears whatever named category was selected.
+        if (composerImportant) selectedCustomListId = null;
+      }
+      if (key === "urgent") {
+        composerUrgent = !composerUrgent;
+        if (composerUrgent) selectedCustomListId = null;
+      }
       if (key === "habit") composerHabit = !composerHabit;
       if (key === "hidden") {
         composerHidden = !composerHidden;
         if (!myPartnerEmail) showStatus(t("hiddenNoPartnerInfo"));
       }
       chipEl.classList.toggle("on");
-      renderSelectionSummary();
+      renderCustomChips();
     });
   }
   setChip(chipImportant, "important");
@@ -5568,30 +5618,87 @@
     return "📅 " + formatScheduleDate(s.date, s.time);
   }
 
+  // Each chip is removable by tapping it (except one shown only because the
+  // category itself defaults to hidden - there's nothing to remove there
+  // short of leaving the category, so that one renders as plain text).
   function renderSelectionSummary() {
     const chips = [];
     if (selectedCustomListId) {
       const list = customLists.find(l => l.id === selectedCustomListId);
-      if (list) chips.push((list.icon ? list.icon + " " : "") + list.name);
+      if (list) chips.push({
+        text: (list.icon ? list.icon + " " : "") + list.name,
+        onClick: () => { selectedCustomListId = null; renderCustomChips(); }
+      });
     } else if (composerImportant && composerUrgent) {
-      chips.push(t("summaryImportantUrgent"));
+      chips.push({
+        text: t("summaryImportantUrgent"),
+        onClick: () => {
+          composerImportant = false; composerUrgent = false;
+          chipImportant.classList.remove("on"); chipUrgent.classList.remove("on");
+          renderSelectionSummary();
+        }
+      });
     } else if (composerImportant) {
-      chips.push(t("summaryImportant"));
+      chips.push({
+        text: t("summaryImportant"),
+        onClick: () => { composerImportant = false; chipImportant.classList.remove("on"); renderSelectionSummary(); }
+      });
     } else if (composerUrgent) {
-      chips.push(t("summaryUrgent"));
+      chips.push({
+        text: t("summaryUrgent"),
+        onClick: () => { composerUrgent = false; chipUrgent.classList.remove("on"); renderSelectionSummary(); }
+      });
     }
     const scheduleSummary = formatComposerScheduleSummary();
-    if (scheduleSummary) chips.push(scheduleSummary);
-    if (composerHabit) chips.push(t("summaryHabit"));
-    if (computeEffectiveHidden()) chips.push(t("summaryHidden"));
+    if (scheduleSummary) chips.push({
+      text: scheduleSummary,
+      onClick: () => { composerSchedule = null; updateScheduleChipState(); }
+    });
+    if (composerHabit) chips.push({
+      text: t("summaryHabit"),
+      onClick: () => { composerHabit = false; chipHabit.classList.remove("on"); renderSelectionSummary(); }
+    });
+    if (computeEffectiveHidden()) {
+      chips.push(composerHidden
+        ? { text: t("summaryHidden"), onClick: () => { composerHidden = false; chipHidden.classList.remove("on"); renderSelectionSummary(); } }
+        : { text: t("summaryHidden"), onClick: null });
+    }
 
     selectionSummaryEl.innerHTML = "";
     selectionSummaryEl.hidden = chips.length === 0;
-    for (const text of chips) {
-      const span = document.createElement("span");
-      span.className = "summary-chip";
-      span.textContent = text;
-      selectionSummaryEl.appendChild(span);
+    for (const chip of chips) {
+      const el = document.createElement(chip.onClick ? "button" : "span");
+      el.className = "summary-chip" + (chip.onClick ? "" : " static");
+      if (chip.onClick) {
+        el.type = "button";
+        el.setAttribute("aria-label", t("summaryChipRemove", { label: chip.text }));
+        el.addEventListener("click", chip.onClick);
+      }
+      el.textContent = chip.text;
+      selectionSummaryEl.appendChild(el);
+    }
+    if (chips.some((c) => c.onClick)) {
+      const clearAll = document.createElement("button");
+      clearAll.type = "button";
+      clearAll.className = "summary-clear-all";
+      clearAll.setAttribute("aria-label", t("summaryClearAll"));
+      clearAll.textContent = "✕";
+      clearAll.addEventListener("click", () => {
+        selectedCustomListId = null;
+        composerImportant = false;
+        composerUrgent = false;
+        composerHabit = false;
+        composerHidden = false;
+        composerSchedule = null;
+        chipImportant.classList.remove("on");
+        chipUrgent.classList.remove("on");
+        chipHabit.classList.remove("on");
+        chipHidden.classList.remove("on");
+        chipScheduleEl.classList.remove("on");
+        renderCustomChips();
+        renderSelectionSummary();
+      });
+      selectionSummaryEl.appendChild(clearAll);
     }
   }
 
