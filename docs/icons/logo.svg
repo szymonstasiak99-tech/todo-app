@@ -9,11 +9,11 @@
   </defs>
   <rect width="140" height="140" rx="31" ry="31" fill="#F5F5F5"/>
   <g filter="url(#ambient)">
-    <circle cx="46" cy="70" r="42" fill="#2F6FD1"/>
-    <path d="M26 72 L40 86 L68 54" fill="none" stroke="#FFCB3D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="49" cy="70" r="42" fill="#2F6FD1"/>
+    <path d="M29 72 L43 86 L71 54" fill="none" stroke="#FFD93D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
     <g filter="url(#overlap)">
-      <circle cx="94" cy="70" r="42" fill="#CB3A3A"/>
-      <path d="M74 72 L88 86 L116 54" fill="none" stroke="#FFCB3D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="91" cy="70" r="42" fill="#CB3A3A"/>
+      <path d="M71 72 L85 86 L113 54" fill="none" stroke="#FFD93D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
   </g>
 </svg>
