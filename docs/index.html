@@ -2322,6 +2322,8 @@
   let messaging = null; // lazily created once the person opts in, see ensureMessaging()
   let notifPromptChecked = false; // whether we've already decided this session whether to show the post-login notification prompt
   const NOTIF_PROMPT_SEEN_KEY = "todo-app-notif-prompt-seen";
+  const URGENT_IMPORTANT_HINT_SEEN_KEY = "todo-app-urgent-important-hint-seen";
+  const HABIT_HINT_SEEN_KEY = "todo-app-habit-hint-seen";
   const CUSTOM_TITLE_MAX_LEN = 24;
   const ANALYTICS_CONSENT_KEY = "todo-app-analytics-consent";
   const BUILTIN_ORDER_DEFAULTS = { mostImportant: -3, importantUrgent: -2, urgentNotImportant: -1.9, other: -1.75 };
@@ -2794,6 +2796,8 @@
       importantUrgentInfo: "🔥 Tasks land here when you mark them both Important and Urgent.",
       urgentNotImportantInfo: "⏰ Tasks land here when you mark them Urgent, but leave Important off.",
       otherInfo: "📦 Tasks land here when you leave both Important and Urgent off.",
+      urgentImportantHint: "You can combine Important and Urgent, or just use one on its own - together they mean \"do this first\"; alone, each puts the task in its own quadrant instead.",
+      habitHint: "A habit can be combined with any category - including Important-but-not-urgent, the highest-priority quadrant in the Important/Urgent method.",
       tip1Title: "🐣 Start stupidly small",
       tip1Body: "Instead of \"run for 30 minutes\", try \"put on running shoes\". Small steps are easier to repeat, and it's repetition — not intensity — that builds a habit.",
       tip2Title: "🔗 Stack it onto something you already do",
@@ -3094,6 +3098,8 @@
       importantUrgentInfo: "🔥 Zadania trafiają tutaj, gdy zaznaczysz i Ważne, i Pilne.",
       urgentNotImportantInfo: "⏰ Zadania trafiają tutaj, gdy zaznaczysz Pilne, ale zostawisz Ważne wyłączone.",
       otherInfo: "📦 Zadania trafiają tutaj, gdy zostawisz i Ważne, i Pilne wyłączone.",
+      urgentImportantHint: "Możesz łączyć Ważne i Pilne, albo użyć tylko jednego z nich - razem oznaczają \"zrób to najpierw\"; osobno każde umieszcza zadanie we własnej ćwiartce.",
+      habitHint: "Nawyk możesz łączyć z dowolną kategorią - w tym z Ważne-ale-niepilne, czyli ćwiartką o najwyższym priorytecie w metodyce ważne/pilne.",
       tip1Title: "🐣 Zacznij absurdalnie małym krokiem",
       tip1Body: "Zamiast „biegać 30 minut” spróbuj „załóż buty do biegania”. Małe kroki łatwiej powtarzać, a to powtarzalność - nie intensywność - buduje nawyk.",
       tip2Title: "🔗 Doczep to do czegoś, co już robisz",
@@ -5589,6 +5595,17 @@
     }
   });
 
+  // A one-time explanatory alert, shown the first time someone turns a chip
+  // on and never again - a persistent "matrix explainer" UI was tried and
+  // deliberately removed earlier as too naggy, so this only ever fires once.
+  function showHintOnce(storageKey, message) {
+    let seen = null;
+    try { seen = localStorage.getItem(storageKey); } catch (e) {}
+    if (seen) return;
+    try { localStorage.setItem(storageKey, "1"); } catch (e) {}
+    alert(message);
+  }
+
   function setChip(chipEl, key) {
     chipEl.addEventListener("click", () => {
       if (key === "important") {
@@ -5596,12 +5613,17 @@
         // Same reasoning as the category chips, in reverse: picking a
         // quadrant clears whatever named category was selected.
         if (composerImportant) selectedCustomListId = null;
+        if (composerImportant || composerUrgent) showHintOnce(URGENT_IMPORTANT_HINT_SEEN_KEY, t("urgentImportantHint"));
       }
       if (key === "urgent") {
         composerUrgent = !composerUrgent;
         if (composerUrgent) selectedCustomListId = null;
+        if (composerImportant || composerUrgent) showHintOnce(URGENT_IMPORTANT_HINT_SEEN_KEY, t("urgentImportantHint"));
       }
-      if (key === "habit") composerHabit = !composerHabit;
+      if (key === "habit") {
+        composerHabit = !composerHabit;
+        if (composerHabit) showHintOnce(HABIT_HINT_SEEN_KEY, t("habitHint"));
+      }
       if (key === "hidden") {
         composerHidden = !composerHidden;
         if (!myPartnerEmail) showStatus(t("hiddenNoPartnerInfo"));
