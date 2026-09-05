@@ -110,6 +110,33 @@ async function displayNameFor(email) {
   }
 }
 
+// Mirrors the client/rules roleOnList(): the list owner is always an editor;
+// anyone else defaults to editor too (legacy partner-shared lists never set
+// roles) unless the list's roles map explicitly names them a viewer. A
+// viewer only ever looks - they can't act on a new/changed task - so
+// activity notifications skip them regardless of which relationship
+// (partner or a point-11 invite) put them on the list.
+async function roleOnListForEmail(listId, email) {
+  if (!listId) return "editor";
+  try {
+    const snap = await db.doc(`custom_lists/${listId}`).get();
+    if (!snap.exists) return "editor";
+    const list = snap.data();
+    if (list.ownerEmail === email) return "editor";
+    return (list.roles && list.roles[email]) || "editor";
+  } catch (e) {
+    return "editor";
+  }
+}
+
+async function filterOutViewers(emails, listId) {
+  const kept = [];
+  for (const email of emails) {
+    if ((await roleOnListForEmail(listId, email)) !== "viewer") kept.push(email);
+  }
+  return kept;
+}
+
 // Sends a push to every device registered for `email`, respecting their
 // notification prefs, and prunes any tokens FCM reports as dead.
 async function sendToUser(email, notification, notifTypeKey) {
@@ -241,7 +268,7 @@ exports.remindHabits = onSchedule("every 15 minutes", async () => {
 exports.notifyPartnerOnTaskCreate = onDocumentCreated("tasks/{taskId}", async (event) => {
   const task = event.data.data();
   if (task.hidden || !task.members || task.members.length < 2) return;
-  const recipients = task.members.filter((email) => email !== task.createdByEmail);
+  const recipients = await filterOutViewers(task.members.filter((email) => email !== task.createdByEmail), task.customListId);
   if (!recipients.length) return;
   const actorName = await displayNameFor(task.createdByEmail);
   for (const email of recipients) {
@@ -257,7 +284,7 @@ exports.notifyPartnerOnTaskUpdate = onDocumentUpdated("tasks/{taskId}", async (e
   if (after.deleted || !after.members || after.members.length < 2) return;
 
   if (before.hidden === true && after.hidden === false) {
-    const recipients = after.members.filter((email) => email !== after.ownerEmail);
+    const recipients = await filterOutViewers(after.members.filter((email) => email !== after.ownerEmail), after.customListId);
     if (recipients.length) {
       const actorName = await displayNameFor(after.ownerEmail);
       for (const email of recipients) {
@@ -270,7 +297,7 @@ exports.notifyPartnerOnTaskUpdate = onDocumentUpdated("tasks/{taskId}", async (e
 
   if (!after.isHabit && before.done === false && after.done === true && after.lastModifiedByEmail) {
     const actor = after.lastModifiedByEmail;
-    const recipients = after.members.filter((email) => email !== actor);
+    const recipients = await filterOutViewers(after.members.filter((email) => email !== actor), after.customListId);
     if (recipients.length) {
       const actorName = await displayNameFor(actor);
       for (const email of recipients) {
