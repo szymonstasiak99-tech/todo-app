@@ -2180,6 +2180,7 @@
       <input id="scheduleDateInput" type="date">
       <input id="scheduleTimeInput" type="time">
     </div>
+    <button type="button" class="reset-order-btn" id="scheduleTomorrowBtn">Tomorrow</button>
     <p id="scheduleAllDayHint" class="char-counter">Leave the time empty for an all-day reminder.</p>
     <div id="scheduleIntervalWrap" hidden>
       <div class="overlay-divider"></div>
@@ -2517,6 +2518,7 @@
   const scheduleDateRowEl = document.getElementById("scheduleDateRow");
   const scheduleDateInput = document.getElementById("scheduleDateInput");
   const scheduleTimeInput = document.getElementById("scheduleTimeInput");
+  const scheduleTomorrowBtnEl = document.getElementById("scheduleTomorrowBtn");
   const scheduleAllDayHintEl = document.getElementById("scheduleAllDayHint");
   const scheduleIntervalWrap = document.getElementById("scheduleIntervalWrap");
   const scheduleIntervalLabelEl = document.getElementById("scheduleIntervalLabel");
@@ -2852,6 +2854,8 @@
       sectionImportantUrgent: "Important & urgent",
       sectionUrgentNotImportant: "Urgent (not important)",
       sectionOther: "Other",
+      sectionTomorrow: "📅 Tomorrow",
+      scheduleTomorrowBtn: "Tomorrow",
       deleteTaskConfirm: "Delete this task?",
       deleteDoneConfirm: "Delete {n} completed tasks?",
       nudgeMessage: "Nice, done! 🎉 Now's a good time for something important but not urgent 🎯",
@@ -3154,6 +3158,8 @@
       sectionImportantUrgent: "Ważne i pilne",
       sectionUrgentNotImportant: "Pilne (niekonieczne ważne)",
       sectionOther: "Pozostałe",
+      sectionTomorrow: "📅 Jutro",
+      scheduleTomorrowBtn: "Jutro",
       deleteTaskConfirm: "Na pewno chcesz usunąć to zadanie?",
       deleteDoneConfirm: "Usunąć {n} ukończonych zadań?",
       nudgeMessage: "Super, zrobione! 🎉 Teraz czas na coś ważnego, niepilnego 🎯",
@@ -3304,6 +3310,13 @@
     return !task.done && s.date <= todayStr();
   }
 
+  // Deliberately one-time schedules only - a recurring task's "next due day"
+  // isn't a fixed calendar date the way this section's name implies.
+  function isScheduledForTomorrow(task) {
+    const s = task.schedule;
+    return !!s && s.type === "once" && !task.done && s.date === addDaysToDateStr(todayStr(), 1);
+  }
+
   // A calendar day's entries for the currently active tab (mine, or my
   // partner's when I'm viewing their tab — their hidden tasks never even
   // reach this client, so nothing extra needs filtering here). For
@@ -3437,6 +3450,7 @@
     pairRedeemBtnEl.textContent = t("pairRedeemBtn");
     chipScheduleEl.setAttribute("aria-label", t("chipSchedule"));
     scheduleTitleEl.textContent = t("scheduleTitle");
+    scheduleTomorrowBtnEl.textContent = t("scheduleTomorrowBtn");
     closeScheduleOverlayBtn.setAttribute("aria-label", t("close"));
     for (const btn of scheduleTypeButtons) {
       btn.textContent = t(btn.dataset.scheduleType === "recurring" ? "scheduleRecurring" : "scheduleOnce");
@@ -5343,6 +5357,13 @@
     )));
     emptyEl.hidden = tabTasks.length > 0;
 
+    // Always first, never reordered/renamed/hidden like the other builtin
+    // sections - it's a rolling one-day window, not a fixed bucket, so the
+    // usual per-section customization doesn't really apply to it.
+    const tomorrowTasks = tabTasks.filter(isScheduledForTomorrow);
+    const tomorrowGroup = renderGroup(t("sectionTomorrow"), tomorrowTasks, isMine, false, true, "tomorrow", null, null, undefined);
+    if (tomorrowGroup) groupsEl.appendChild(tomorrowGroup);
+
     const sections = getSections(tabTasks, isMine);
     for (const section of sections) {
       if (section.selfHidden) continue;
@@ -5755,6 +5776,7 @@
     scheduleDateLabelEl.hidden = hideDateTimeRow;
     scheduleDateRowEl.hidden = hideDateTimeRow;
     scheduleDateInput.hidden = isRecurringType; // recurring never needs a start date, only "once" does
+    scheduleTomorrowBtnEl.hidden = isRecurringType;
     scheduleDateLabelEl.textContent = isRecurringType ? t("scheduleTimeOfDayLabel") : t("scheduleDateLabel");
     scheduleAllDayHintEl.hidden = false;
     scheduleAllDayHintEl.textContent = hideDateTimeRow
@@ -5781,6 +5803,10 @@
   function closeScheduleOverlay() {
     scheduleOverlay.hidden = true;
   }
+
+  scheduleTomorrowBtnEl.addEventListener("click", () => {
+    scheduleDateInput.value = addDaysToDateStr(todayStr(), 1);
+  });
 
   chipScheduleEl.addEventListener("click", openScheduleOverlay);
   closeScheduleOverlayBtn.addEventListener("click", closeScheduleOverlay);
